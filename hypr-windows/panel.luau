@@ -50,26 +50,15 @@ local function selectPreset(preset)
 end
 
 local function render()
-  local children = {
-    ui.row({ align = "center", justify = "space_between" }, {
-      ui.label({ text = noctalia.tr("title"), fontSize = 16, fontWeight = "bold", color = "primary", flexGrow = 1 }),
-      ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
-    }),
-    ui.separator({}),
-    ui.label({
-      text = noctalia.tr("panel.presets", { count = tostring(#presets), dir = DIR }),
-      fontSize = 11,
-      color = "on_surface_variant",
-    }),
-  }
+  local listChildren = {}
 
   if status ~= "" then
-    table.insert(children, ui.label({ text = status, color = "error", maxLines = 2 }))
+    table.insert(listChildren, ui.label({ text = status, color = "error", maxLines = 2 }))
   elseif #presets == 0 then
-    table.insert(children, ui.label({ text = noctalia.tr("error.no_presets"), maxLines = 2 }))
+    table.insert(listChildren, ui.label({ text = noctalia.tr("error.no_presets"), maxLines = 2 }))
   else
     for _, preset in ipairs(presets) do
-      table.insert(children, ui.button({
+      table.insert(listChildren, ui.button({
         key = "preset-" .. preset.file,
         text = preset.name,
         glyph = GLYPH,
@@ -82,7 +71,19 @@ local function render()
     end
   end
 
-  panel.render(ui.column({ gap = 6, padding = 10 }, children))
+  panel.render(ui.column({ flexGrow = 1, gap = 6, padding = 10 }, {
+    ui.row({ align = "center", justify = "space_between" }, {
+      ui.label({ text = noctalia.tr("title"), fontSize = 16, fontWeight = "bold", color = "primary", flexGrow = 1 }),
+      ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
+    }),
+    ui.separator({}),
+    ui.label({
+      text = noctalia.tr("panel.presets", { count = tostring(#presets), dir = DIR }),
+      fontSize = 11,
+      color = "on_surface_variant",
+    }),
+    ui.scroll({ flexGrow = 1, gap = 6 }, listChildren),
+  }))
 end
 
 function onOpen(_context)

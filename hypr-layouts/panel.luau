@@ -43,18 +43,12 @@ local function selectLayout(layout)
 end
 
 local function render()
-  local children = {
-    ui.row({ align = "center", justify = "space_between" }, {
-      ui.label({ text = noctalia.tr("title"), fontSize = 16, fontWeight = "bold", color = "primary", flexGrow = 1 }),
-      ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
-    }),
-    ui.separator({}),
-  }
+  local listChildren = {}
 
   for _, layout in ipairs(layouts) do
     local selected = currentLayout ~= ""
       and (currentLayout == layout.value or ("lua:" .. currentLayout) == layout.value)
-    table.insert(children, ui.button({
+    table.insert(listChildren, ui.button({
       key = "layout-" .. layout.value,
       text = layout.name,
       glyph = layout.glyph,
@@ -66,7 +60,14 @@ local function render()
     }))
   end
 
-  panel.render(ui.column({ gap = 6, padding = 10 }, children))
+  panel.render(ui.column({ flexGrow = 1, gap = 6, padding = 10 }, {
+    ui.row({ align = "center", justify = "space_between" }, {
+      ui.label({ text = noctalia.tr("title"), fontSize = 16, fontWeight = "bold", color = "primary", flexGrow = 1 }),
+      ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
+    }),
+    ui.separator({}),
+    ui.scroll({ flexGrow = 1, gap = 6 }, listChildren),
+  }))
 end
 
 function onOpen(_context)
