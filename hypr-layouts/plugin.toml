@@ -1,0 +1,26 @@
+id = "mindset/hypr-layouts"
+name = "Hypr Layouts"
+version = "1.0.0"
+plugin_api = 13
+author = "mindset"
+license = "MIT"
+icon = "layout-grid"
+description = "Pick the tiling layout of the active workspace from a centered panel. Replaces the rofi layout picker."
+tags = ["hyprland", "bar", "panel", "service", "indicator"]
+dependencies = ["hyprland"]
+
+[[service]]
+id = "poller"
+entry = "service.luau"
+
+[[widget]]
+id = "toggle"
+entry = "widget.luau"
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 360
+height = 420
+placement = "floating"
+position = "center"

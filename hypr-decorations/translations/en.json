@@ -1,0 +1,22 @@
+{
+  "title": "Hypr Decorations",
+  "tooltip": "Decoration presets · click for picker",
+  "panel": {
+    "close": "Close",
+    "presets": "{count} decoration preset(s) in {dir}"
+  },
+  "notification": {
+    "switched": "Decorations switched to {name}."
+  },
+  "error": {
+    "no_presets": "No decoration presets found.",
+    "read_dir": "Could not read {dir}.",
+    "apply_failed": "Could not apply the decoration preset."
+  },
+  "settings": {
+    "presets_dir": {
+      "label": "Presets directory",
+      "description": "Folder containing *.lua decoration presets."
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "title": "Hypr Decorations",
+  "tooltip": "Preset dekorasi · klik untuk pemilih",
+  "panel": {
+    "close": "Tutup",
+    "presets": "{count} preset dekorasi di {dir}"
+  },
+  "notification": {
+    "switched": "Dekorasi diganti ke {name}."
+  },
+  "error": {
+    "no_presets": "Tidak ada preset dekorasi.",
+    "read_dir": "Tidak bisa membaca {dir}.",
+    "apply_failed": "Gagal menerapkan preset dekorasi."
+  },
+  "settings": {
+    "presets_dir": {
+      "label": "Direktori preset",
+      "description": "Folder berisi preset dekorasi *.lua."
+    }
+  }
+}

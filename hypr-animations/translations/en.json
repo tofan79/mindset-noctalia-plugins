@@ -1,0 +1,22 @@
+{
+  "title": "Hypr Animations",
+  "tooltip": "Animation presets · click for picker",
+  "panel": {
+    "close": "Close",
+    "presets": "{count} animation preset(s) in {dir}"
+  },
+  "notification": {
+    "switched": "Animations switched to {name}."
+  },
+  "error": {
+    "no_presets": "No animation presets found.",
+    "read_dir": "Could not read {dir}.",
+    "apply_failed": "Could not apply the animation preset."
+  },
+  "settings": {
+    "presets_dir": {
+      "label": "Presets directory",
+      "description": "Folder containing *.lua animation presets."
+    }
+  }
+}

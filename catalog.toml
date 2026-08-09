@@ -14,3 +14,59 @@ description = "Toggle a Wi-Fi hotspot concurrently with the main Wi-Fi connectio
 deprecated = false
 plugin_api = 13
 tags = ["network", "bar", "panel", "service", "utility", "system", "indicator"]
+
+[[plugin]]
+id = "mindset/hypr-layouts"
+name = "Hypr Layouts"
+version = "1.0.0"
+updated_at = 1786340000
+added_at = 1786340000
+author = "mindset"
+license = "MIT"
+icon = "layout-grid"
+description = "Pick the tiling layout of the active workspace from a centered panel. Replaces the rofi layout picker."
+deprecated = false
+plugin_api = 13
+tags = ["hyprland", "bar", "panel", "service", "indicator"]
+
+[[plugin]]
+id = "mindset/hypr-animations"
+name = "Hypr Animations"
+version = "1.0.0"
+updated_at = 1786340000
+added_at = 1786340000
+author = "mindset"
+license = "MIT"
+icon = "palette"
+description = "Pick an animation preset from ~/.config/hypr/animations. Replaces the rofi animation picker."
+deprecated = false
+plugin_api = 13
+tags = ["hyprland", "bar", "panel", "utility"]
+
+[[plugin]]
+id = "mindset/hypr-decorations"
+name = "Hypr Decorations"
+version = "1.0.0"
+updated_at = 1786340000
+added_at = 1786340000
+author = "mindset"
+license = "MIT"
+icon = "wand"
+description = "Pick a decoration preset from ~/.config/hypr/decorations. Replaces the rofi decoration picker."
+deprecated = false
+plugin_api = 13
+tags = ["hyprland", "bar", "panel", "utility"]
+
+[[plugin]]
+id = "mindset/hypr-windows"
+name = "Hypr Windows"
+version = "1.0.0"
+updated_at = 1786340000
+added_at = 1786340000
+author = "mindset"
+license = "MIT"
+icon = "square-dashed"
+description = "Pick a window/gaps preset from ~/.config/hypr/windows. Replaces the rofi window picker."
+deprecated = false
+plugin_api = 13
+tags = ["hyprland", "bar", "panel", "utility"]

@@ -1,0 +1,22 @@
+{
+  "title": "Hypr Windows",
+  "tooltip": "Preset window · klik untuk pemilih",
+  "panel": {
+    "close": "Tutup",
+    "presets": "{count} preset window di {dir}"
+  },
+  "notification": {
+    "switched": "Window diganti ke {name}."
+  },
+  "error": {
+    "no_presets": "Tidak ada preset window.",
+    "read_dir": "Tidak bisa membaca {dir}.",
+    "apply_failed": "Gagal menerapkan preset window."
+  },
+  "settings": {
+    "presets_dir": {
+      "label": "Direktori preset",
+      "description": "Folder berisi preset window *.lua."
+    }
+  }
+}

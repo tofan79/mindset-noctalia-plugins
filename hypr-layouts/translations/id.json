@@ -1,0 +1,17 @@
+{
+  "title": "Hypr Layouts",
+  "tooltip": {
+    "unknown": "Layout tidak dikenal",
+    "description": "Layout: {name} · klik untuk pemilih"
+  },
+  "panel": {
+    "close": "Tutup"
+  },
+  "notification": {
+    "switched": "Layout diganti ke {name}."
+  },
+  "error": {
+    "no_workspace": "Tidak bisa membaca workspace aktif.",
+    "apply_failed": "Gagal menerapkan layout."
+  }
+}

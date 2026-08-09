@@ -1,0 +1,22 @@
+{
+  "title": "Hypr Animations",
+  "tooltip": "Preset animasi · klik untuk pemilih",
+  "panel": {
+    "close": "Tutup",
+    "presets": "{count} preset animasi di {dir}"
+  },
+  "notification": {
+    "switched": "Animasi diganti ke {name}."
+  },
+  "error": {
+    "no_presets": "Tidak ada preset animasi.",
+    "read_dir": "Tidak bisa membaca {dir}.",
+    "apply_failed": "Gagal menerapkan preset animasi."
+  },
+  "settings": {
+    "presets_dir": {
+      "label": "Direktori preset",
+      "description": "Folder berisi preset animasi *.lua."
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "title": "Hypr Windows",
+  "tooltip": "Window presets · click for picker",
+  "panel": {
+    "close": "Close",
+    "presets": "{count} window preset(s) in {dir}"
+  },
+  "notification": {
+    "switched": "Windows switched to {name}."
+  },
+  "error": {
+    "no_presets": "No window presets found.",
+    "read_dir": "Could not read {dir}.",
+    "apply_failed": "Could not apply the window preset."
+  },
+  "settings": {
+    "presets_dir": {
+      "label": "Presets directory",
+      "description": "Folder containing *.lua window presets."
+    }
+  }
+}

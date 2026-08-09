@@ -1,0 +1,29 @@
+id = "mindset/hypr-windows"
+name = "Hypr Windows"
+version = "1.0.0"
+plugin_api = 13
+author = "mindset"
+license = "MIT"
+icon = "square-dashed"
+description = "Pick a window/gaps preset from ~/.config/hypr/windows. Replaces the rofi window picker."
+tags = ["hyprland", "bar", "panel", "utility"]
+dependencies = ["hyprland"]
+
+[[setting]]
+key = "presets_dir"
+type = "string"
+label_key = "settings.presets_dir.label"
+description_key = "settings.presets_dir.description"
+default = "~/.config/hypr/windows"
+
+[[widget]]
+id = "toggle"
+entry = "widget.luau"
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 380
+height = 480
+placement = "floating"
+position = "center"

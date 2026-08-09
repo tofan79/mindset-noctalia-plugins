@@ -1,0 +1,17 @@
+{
+  "title": "Hypr Layouts",
+  "tooltip": {
+    "unknown": "Unknown layout",
+    "description": "Layout: {name} · click for picker"
+  },
+  "panel": {
+    "close": "Close"
+  },
+  "notification": {
+    "switched": "Layout switched to {name}."
+  },
+  "error": {
+    "no_workspace": "Could not read the active workspace.",
+    "apply_failed": "Could not apply the layout."
+  }
+}
