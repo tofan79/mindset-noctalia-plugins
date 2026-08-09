@@ -26,11 +26,12 @@ local function visibleRange(total)
   if total <= CAPACITY then
     return 1, total
   end
-  local sel = selectedIndex + 1
-  local size = (sel < total) and (CAPACITY + 1) or CAPACITY
-  local last = math.min(total, sel + 1)
-  local first = math.max(1, last - size + 1)
-  return first, last
+  local half = math.floor(CAPACITY / 2)
+  local start = math.max(1, selectedIndex + 1 - half)
+  if start + CAPACITY > total + 1 then
+    start = math.max(1, total - CAPACITY + 1)
+  end
+  return start, math.min(total, start + CAPACITY - 1)
 end
 
 local function cachePath()
