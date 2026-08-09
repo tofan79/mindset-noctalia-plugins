@@ -3,7 +3,9 @@
   "tooltip": "Preset animasi · klik untuk pemilih",
   "panel": {
     "close": "Tutup",
-    "presets": "{count} preset animasi di {dir}"
+    "presets": "{count} preset animasi di {dir}",
+    "search": "Cari preset…",
+    "hint": "↑↓ pilih · Enter terapkan"
   },
   "notification": {
     "switched": "Animasi diganti ke {name}."

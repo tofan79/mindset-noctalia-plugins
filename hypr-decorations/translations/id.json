@@ -3,7 +3,9 @@
   "tooltip": "Preset dekorasi · klik untuk pemilih",
   "panel": {
     "close": "Tutup",
-    "presets": "{count} preset dekorasi di {dir}"
+    "presets": "{count} preset dekorasi di {dir}",
+    "search": "Cari preset…",
+    "hint": "↑↓ pilih · Enter terapkan"
   },
   "notification": {
     "switched": "Dekorasi diganti ke {name}."

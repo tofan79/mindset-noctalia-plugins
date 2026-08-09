@@ -5,7 +5,10 @@
     "description": "Layout: {name} · click for picker"
   },
   "panel": {
-    "close": "Close"
+    "close": "Close",
+    "layouts": "{count} layout(s)",
+    "search": "Search layouts…",
+    "hint": "↑↓ navigate · Enter apply"
   },
   "notification": {
     "switched": "Layout switched to {name}."

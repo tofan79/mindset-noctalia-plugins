@@ -3,14 +3,52 @@
 -- Lists ~/.config/hypr/windows/*.lua and applies the chosen file with
 -- `hyprctl eval` after stripping `--` comments, exactly like
 -- ~/.config/hypr/scripts/switch-windows.sh.
+--
+-- Keyboard: type to filter, Up/Down to move, Enter to apply (capture_keys).
+-- The last applied preset is remembered and shown in primary (blue).
 
+local PLUGIN_ID = "mindset/hypr-windows"
 local DIR = noctalia.getConfig("presets_dir") or "~/.config/hypr/windows"
 local GLYPH = "square-dashed"
 local NAME_PATTERN = 'name:%s*"([^"]*)"'
 
 local presets = {}
-local isOpen = false
+local filtered = {}
+local selectedIndex = 0
+local searchText = ""
+local searchRevision = 0
+local activeFile = ""
 local status = ""
+local isOpen = false
+
+local function cachePath()
+  local directory = noctalia.pluginDataDir()
+  if directory == nil then
+    return nil
+  end
+  return directory .. "/current.txt"
+end
+
+local function loadActive()
+  local path = cachePath()
+  if path == nil then
+    activeFile = ""
+    return
+  end
+  local raw = noctalia.readFile(path)
+  activeFile = raw ~= nil and noctalia.string.trim(raw) or ""
+end
+
+local function saveActive(file)
+  local path = cachePath()
+  if path == nil then
+    return
+  end
+  local ok, err = noctalia.writeFile(path, file)
+  if not ok then
+    noctalia.log("could not save active preset: " .. tostring(err))
+  end
+end
 
 local function extractName(text, fallback)
   local name = string.match(text or "", NAME_PATTERN)
@@ -38,9 +76,27 @@ local function shellQuote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
 end
 
+local function applyFilter()
+  filtered = {}
+  local needle = string.lower(searchText or "")
+  for _, preset in ipairs(presets) do
+    if needle == "" or string.find(string.lower(preset.name), needle, 1, true) ~= nil then
+      table.insert(filtered, preset)
+    end
+  end
+  if selectedIndex >= #filtered then
+    selectedIndex = math.max(0, #filtered - 1)
+  end
+  if selectedIndex < 0 then
+    selectedIndex = 0
+  end
+end
+
 local function selectPreset(preset)
   noctalia.runAsync("hyprctl eval " .. shellQuote(preset.code), function(result)
     if result.exitCode == 0 then
+      activeFile = preset.file
+      saveActive(preset.file)
       noctalia.notify(noctalia.tr("title"), noctalia.tr("notification.switched", { name = preset.name }))
     else
       noctalia.notifyError(noctalia.tr("title"), noctalia.tr("error.apply_failed"))
@@ -49,25 +105,42 @@ local function selectPreset(preset)
   end)
 end
 
-local function render()
-  local listChildren = {}
+local function renderRow(preset, index)
+  local isSelected = (index - 1) == selectedIndex
+  local isActive = preset.file == activeFile
+  local children = {}
+  if isSelected then
+    table.insert(children, ui.box({ width = 3, height = 20, radius = 2, fill = "secondary" }))
+  end
+  table.insert(children, ui.button({
+    key = "preset-" .. preset.file .. (isSelected and "-sel" or ""),
+    text = preset.name,
+    glyph = GLYPH,
+    variant = isActive and "primary" or "default",
+    contentAlign = "start",
+    flexGrow = 1,
+    onClick = function()
+      selectPreset(preset)
+    end,
+  }))
+  return ui.row({
+    key = "row-" .. preset.file,
+    align = "center",
+    gap = 8,
+    paddingH = 4,
+    paddingV = 1,
+  }, children)
+end
 
+local function render()
+  local rows = {}
   if status ~= "" then
-    table.insert(listChildren, ui.label({ text = status, color = "error", maxLines = 2 }))
-  elseif #presets == 0 then
-    table.insert(listChildren, ui.label({ text = noctalia.tr("error.no_presets"), maxLines = 2 }))
+    table.insert(rows, ui.label({ text = status, color = "error", maxLines = 2 }))
+  elseif #filtered == 0 then
+    table.insert(rows, ui.label({ text = noctalia.tr("error.no_presets"), maxLines = 2 }))
   else
-    for _, preset in ipairs(presets) do
-      table.insert(listChildren, ui.button({
-        key = "preset-" .. preset.file,
-        text = preset.name,
-        glyph = GLYPH,
-        variant = "default",
-        contentAlign = "start",
-        onClick = function()
-          selectPreset(preset)
-        end,
-      }))
+    for index, preset in ipairs(filtered) do
+      table.insert(rows, renderRow(preset, index))
     end
   end
 
@@ -77,12 +150,26 @@ local function render()
       ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
     }),
     ui.separator({}),
-    ui.label({
-      text = noctalia.tr("panel.presets", { count = tostring(#presets), dir = DIR }),
-      fontSize = 11,
-      color = "on_surface_variant",
+    ui.row({ align = "center", gap = 8 }, {
+      ui.glyph({ name = "search", size = 14, color = "on_surface_variant" }),
+      ui.input({
+        key = "search-" .. searchRevision,
+        placeholder = noctalia.tr("panel.search"),
+        value = searchText,
+        flexGrow = 1,
+        focus = true,
+        onChange = "onSearch",
+      }),
     }),
-    ui.scroll({ flexGrow = 1, gap = 6 }, listChildren),
+    ui.row({ align = "center", justify = "space_between" }, {
+      ui.label({
+        text = noctalia.tr("panel.presets", { count = tostring(#filtered), dir = DIR }),
+        fontSize = 11,
+        color = "on_surface_variant",
+      }),
+      ui.label({ text = noctalia.tr("panel.hint"), fontSize = 10, color = "on_surface_variant" }),
+    }),
+    ui.scroll({ flexGrow = 1, gap = 4 }, rows),
   }))
 end
 
@@ -90,6 +177,9 @@ function onOpen(_context)
   isOpen = true
   presets = {}
   status = ""
+  searchText = ""
+  searchRevision += 1
+  loadActive()
   local entries, err = noctalia.listDir(DIR)
   if entries == nil then
     status = noctalia.tr("error.read_dir", { dir = DIR }) .. (err ~= nil and " · " .. err or "")
@@ -108,6 +198,8 @@ function onOpen(_context)
       })
     end
   end
+  selectedIndex = 0
+  applyFilter()
   render()
 end
 
@@ -117,4 +209,34 @@ end
 
 function onCloseClicked()
   panel.close()
+end
+
+function onSearch(value)
+  searchText = value or ""
+  selectedIndex = 0
+  applyFilter()
+  if isOpen then render() end
+end
+
+function onKey(chord, pressed)
+  if not pressed or #filtered == 0 then
+    return
+  end
+  if chord == "Up" then
+    selectedIndex = selectedIndex - 1
+    if selectedIndex < 0 then
+      selectedIndex = #filtered - 1
+    end
+    render()
+  elseif chord == "Down" then
+    selectedIndex = selectedIndex + 1
+    if selectedIndex >= #filtered then
+      selectedIndex = 0
+    end
+    render()
+  elseif chord == "Return" then
+    if selectedIndex >= 0 and selectedIndex < #filtered then
+      selectPreset(filtered[selectedIndex + 1])
+    end
+  end
 end

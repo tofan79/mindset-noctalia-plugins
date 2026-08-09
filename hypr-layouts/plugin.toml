@@ -24,3 +24,5 @@ width = 360
 height = 420
 placement = "floating"
 position = "center"
+capture_keys = ["Up", "Down", "Return"]
+keyboard_focus = "exclusive"

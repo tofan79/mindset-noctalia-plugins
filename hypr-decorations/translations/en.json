@@ -3,7 +3,9 @@
   "tooltip": "Decoration presets · click for picker",
   "panel": {
     "close": "Close",
-    "presets": "{count} decoration preset(s) in {dir}"
+    "presets": "{count} decoration preset(s) in {dir}",
+    "search": "Search presets…",
+    "hint": "↑↓ navigate · Enter apply"
   },
   "notification": {
     "switched": "Decorations switched to {name}."

@@ -5,7 +5,10 @@
     "description": "Layout: {name} · klik untuk pemilih"
   },
   "panel": {
-    "close": "Tutup"
+    "close": "Tutup",
+    "layouts": "{count} layout",
+    "search": "Cari layout…",
+    "hint": "↑↓ pilih · Enter terapkan"
   },
   "notification": {
     "switched": "Layout diganti ke {name}."
