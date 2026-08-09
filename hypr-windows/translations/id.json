@@ -3,9 +3,7 @@
   "tooltip": "Preset window · klik untuk pemilih",
   "panel": {
     "close": "Tutup",
-    "presets": "{count} preset window di {dir}",
-    "search": "Cari preset…",
-    "hint": "↑↓ pilih · Enter terapkan"
+    "search": "Cari preset…"
   },
   "notification": {
     "switched": "Window diganti ke {name}."

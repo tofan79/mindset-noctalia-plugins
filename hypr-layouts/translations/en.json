@@ -6,9 +6,7 @@
   },
   "panel": {
     "close": "Close",
-    "layouts": "{count} layout(s)",
-    "search": "Search layouts…",
-    "hint": "↑↓ navigate · Enter apply"
+    "search": "Search layouts…"
   },
   "notification": {
     "switched": "Layout switched to {name}."

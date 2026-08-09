@@ -6,9 +6,7 @@
   },
   "panel": {
     "close": "Tutup",
-    "layouts": "{count} layout",
-    "search": "Cari layout…",
-    "hint": "↑↓ pilih · Enter terapkan"
+    "search": "Cari layout…"
   },
   "notification": {
     "switched": "Layout diganti ke {name}."

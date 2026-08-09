@@ -168,14 +168,6 @@ local function render()
         onChange = "onSearch",
       }),
     }),
-    ui.row({ align = "center", justify = "space_between" }, {
-      ui.label({
-        text = noctalia.tr("panel.layouts", { count = tostring(#filtered) }),
-        fontSize = 11,
-        color = "on_surface_variant",
-      }),
-      ui.label({ text = noctalia.tr("panel.hint"), fontSize = 10, color = "on_surface_variant" }),
-    }),
     ui.scroll({ flexGrow = 1, gap = 4 }, rows),
   }))
 end

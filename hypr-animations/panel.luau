@@ -7,7 +7,8 @@
 -- Keyboard: type to filter, Up/Down to move, Enter to apply (capture_keys).
 
 local PLUGIN_ID = "mindset/hypr-animations"
-local DIR = noctalia.getConfig("presets_dir") or "~/.config/hypr/animations"
+local DEFAULT_DIR = "~/.config/hypr/animations"
+local DIR = DEFAULT_DIR
 local GLYPH = "palette"
 local NAME_PATTERN = 'name%s+"([^"]*)"'
 
@@ -19,7 +20,7 @@ local searchRevision = 0
 local activeFile = ""
 local status = ""
 local isOpen = false
-local WINDOW_SIZE = 8
+local WINDOW_SIZE = 6
 
 local function visibleRange(total)
   if total <= WINDOW_SIZE then
@@ -174,14 +175,6 @@ local function render()
         onChange = "onSearch",
       }),
     }),
-    ui.row({ align = "center", justify = "space_between" }, {
-      ui.label({
-        text = noctalia.tr("panel.presets", { count = tostring(#filtered), dir = DIR }),
-        fontSize = 11,
-        color = "on_surface_variant",
-      }),
-      ui.label({ text = noctalia.tr("panel.hint"), fontSize = 10, color = "on_surface_variant" }),
-    }),
     ui.scroll({ key = "rows-" .. searchRevision .. "-" .. selectedIndex, flexGrow = 1, gap = 4 }, rows),
   }))
 end
@@ -192,6 +185,7 @@ function onOpen(_context)
   status = ""
   searchText = ""
   searchRevision += 1
+  DIR = noctalia.getConfig("presets_dir") or DEFAULT_DIR
   loadActive()
   local entries, err = noctalia.listDir(DIR)
   if entries == nil then

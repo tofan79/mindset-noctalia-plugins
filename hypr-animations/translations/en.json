@@ -3,9 +3,7 @@
   "tooltip": "Animation presets · click for picker",
   "panel": {
     "close": "Close",
-    "presets": "{count} animation preset(s) in {dir}",
-    "search": "Search presets…",
-    "hint": "↑↓ navigate · Enter apply"
+    "search": "Search presets…"
   },
   "notification": {
     "switched": "Animations switched to {name}."

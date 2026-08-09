@@ -3,9 +3,7 @@
   "tooltip": "Window presets · click for picker",
   "panel": {
     "close": "Close",
-    "presets": "{count} window preset(s) in {dir}",
-    "search": "Search presets…",
-    "hint": "↑↓ navigate · Enter apply"
+    "search": "Search presets…"
   },
   "notification": {
     "switched": "Windows switched to {name}."
