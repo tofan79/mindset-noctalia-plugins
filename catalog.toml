@@ -1,0 +1,16 @@
+# Noctalia plugins catalog — mindset source
+# Index of every plugin this source ships. plugin.toml stays authoritative.
+
+[[plugin]]
+id = "mindset/hotspot"
+name = "Wi-Fi Hotspot"
+version = "1.0.0"
+updated_at = 1786257372
+added_at = 1786257372
+author = "mindset"
+license = "MIT"
+icon = "router"
+description = "Toggle a Wi-Fi hotspot concurrently with the main Wi-Fi connection (Windows-like) using a virtual AP interface, with connected device list."
+deprecated = false
+plugin_api = 13
+tags = ["network", "bar", "panel", "service", "utility", "system", "indicator"]

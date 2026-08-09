@@ -1,0 +1,76 @@
+{
+  "error": {
+    "command_failed": "Perintah hotspot gagal.",
+    "command_start": "Noctalia tidak bisa menjalankan perintah hotspot.",
+    "missing_dependencies": "nmcli, iw dan pkexec wajib ada.",
+    "missing_ssid": "Atur nama hotspot di pengaturan plugin.",
+    "no_wifi_device": "Tidak ditemukan adapter Wi-Fi yang terhubung.",
+    "no_pkexec": "pkexec wajib ada agar kamu bisa memasukkan password.",
+    "password_too_short": "Password hotspot minimal 8 karakter.",
+    "state_mismatch": "Status hotspot tidak bisa dikonfirmasi.",
+    "status_failed": "Status NetworkManager tidak bisa dibaca."
+  },
+  "notification": {
+    "disabled": {
+      "body": "Hotspot Wi-Fi dimatikan. Wi-Fi utama tetap nyambung.",
+      "title": "Hotspot dimatikan"
+    },
+    "enabled": {
+      "body": "Perangkat lain bisa terhubung ke {ssid}. Wi-Fi utama tetap nyambung.",
+      "title": "Hotspot aktif"
+    }
+  },
+  "panel": {
+    "action": {
+      "start": "Nyalakan hotspot",
+      "starting": "Menyala…",
+      "stop": "Matikan hotspot",
+      "stopping": "Mematikan…"
+    },
+    "clients_inactive": "Nyalakan hotspot untuk melihat perangkat yang terhubung.",
+    "clients_title": "Perangkat terhubung",
+    "close": "Tutup",
+    "gateway": "Gateway: {address}",
+    "no_clients": "Belum ada perangkat yang terhubung.",
+    "refresh": "Muat ulang",
+    "status": {
+      "active_message": "{ssid} menyiarkan di {interface} sementara Wi-Fi utama tetap nyambung.",
+      "active_title": "Hotspot aktif",
+      "error_title": "Tidak tersedia",
+      "inactive_message": "Atur nama dan password di pengaturan, lalu nyalakan hotspot.",
+      "inactive_title": "Hotspot mati",
+      "starting_message": "Membuat access point concurrent…",
+      "starting_title": "Menyala",
+      "stopping_message": "Mematikan access point…",
+      "stopping_title": "Mematikan"
+    }
+  },
+  "settings": {
+    "glyph": {
+      "label": "Glyph bar"
+    },
+    "interface": {
+      "description": "Nama interface Wi-Fi (opsional). Kosongkan untuk memakai adapter yang sedang terhubung.",
+      "label": "Interface Wi-Fi"
+    },
+    "password": {
+      "description": "Password WPA untuk perangkat yang terhubung. Minimal 8 karakter.",
+      "label": "Password"
+    },
+    "refresh_interval": {
+      "description": "Seberapa sering layanan memperbarui status hotspot dan daftar perangkat, dalam detik.",
+      "label": "Interval refresh"
+    },
+    "ssid": {
+      "description": "Nama jaringan yang disiarkan hotspot.",
+      "label": "Nama hotspot"
+    }
+  },
+  "title": "Wi-Fi Hotspot",
+  "tooltip": {
+    "active": "{ssid} aktif · {count} perangkat terhubung · klik untuk panel · klik kanan untuk mematikan",
+    "changing": "Mengubah status hotspot…",
+    "inactive": "Hotspot mati · klik untuk panel · klik kanan untuk menyalakan",
+    "unavailable": "NetworkManager atau pkexec tidak tersedia"
+  }
+}
