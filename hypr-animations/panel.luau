@@ -19,6 +19,19 @@ local searchRevision = 0
 local activeFile = ""
 local status = ""
 local isOpen = false
+local WINDOW_SIZE = 8
+
+local function visibleRange(total)
+  if total <= WINDOW_SIZE then
+    return 1, total
+  end
+  local half = math.floor(WINDOW_SIZE / 2)
+  local start = math.max(1, selectedIndex + 1 - half)
+  if start + WINDOW_SIZE > total + 1 then
+    start = math.max(1, total - WINDOW_SIZE + 1)
+  end
+  return start, math.min(total, start + WINDOW_SIZE - 1)
+end
 
 local function cachePath()
   local directory = noctalia.pluginDataDir()
@@ -138,8 +151,9 @@ local function render()
   elseif #filtered == 0 then
     table.insert(rows, ui.label({ text = noctalia.tr("error.no_presets"), maxLines = 2 }))
   else
-    for index, preset in ipairs(filtered) do
-      table.insert(rows, renderRow(preset, index))
+    local first, last = visibleRange(#filtered)
+    for index = first, last do
+      table.insert(rows, renderRow(filtered[index], index))
     end
   end
 
@@ -168,7 +182,7 @@ local function render()
       }),
       ui.label({ text = noctalia.tr("panel.hint"), fontSize = 10, color = "on_surface_variant" }),
     }),
-    ui.scroll({ flexGrow = 1, gap = 4 }, rows),
+    ui.scroll({ key = "rows-" .. searchRevision .. "-" .. selectedIndex, flexGrow = 1, gap = 4 }, rows),
   }))
 end
 

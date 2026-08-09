@@ -4,8 +4,10 @@
 -- ~/.config/hypr/scripts/switch-layouts.sh: a workspace rule scoped to the
 -- current workspace id, so each workspace keeps its own layout.
 --
+-- The active layout is tracked per workspace in the plugin data dir: Hyprland
+-- 0.56 reports a wrong `tiledLayout` for lua layouts (deck reports as fair),
+-- so the mark follows what the panel last applied instead of hyprctl.
 -- Keyboard: type to filter, Up/Down to move, Enter to apply (capture_keys).
--- The current layout is shown in primary (blue).
 
 local layouts = {
   { name = "Deck Stack", value = "lua:deck",  glyph = "layers-difference" },
@@ -23,6 +25,43 @@ local filtered = {}
 local selectedIndex = 0
 local searchText = ""
 local searchRevision = 0
+
+local function layoutCachePath()
+  local directory = noctalia.pluginDataDir()
+  if directory == nil then
+    return nil
+  end
+  return directory .. "/layouts.json"
+end
+
+local function readLayoutMap()
+  local path = layoutCachePath()
+  if path == nil then
+    return {}
+  end
+  local raw = noctalia.readFile(path)
+  if raw == nil or raw == "" then
+    return {}
+  end
+  local data = noctalia.json.decode(raw)
+  if data == nil or type(data) ~= "table" then
+    return {}
+  end
+  return data
+end
+
+local function saveLayout(id, value)
+  local path = layoutCachePath()
+  if path == nil then
+    return
+  end
+  local map = readLayoutMap()
+  map[tostring(id)] = value
+  local ok, err = noctalia.writeFile(path, noctalia.json.encode(map))
+  if not ok then
+    noctalia.log("could not save active layout: " .. tostring(err))
+  end
+end
 
 local function activeLayoutIndex()
   if currentLayout == "" then
@@ -53,7 +92,8 @@ local function selectLayout(layout)
   )
   noctalia.runAsync("hyprctl eval " .. shellQuote(lua), function(result)
     if result.exitCode == 0 then
-      currentLayout = layout.value:gsub("^lua:", "")
+      currentLayout = layout.value
+      saveLayout(id, layout.value)
       noctalia.notify(noctalia.tr("title"), noctalia.tr("notification.switched", { name = layout.name }))
     else
       noctalia.notifyError(noctalia.tr("title"), noctalia.tr("error.apply_failed"))
@@ -148,8 +188,9 @@ function onOpen(_context)
     if result.exitCode == 0 then
       local data = noctalia.json.decode(result.stdout)
       if data ~= nil then
-        currentLayout = data.tiledLayout or ""
         workspaceId = data.id
+        local cached = readLayoutMap()[tostring(data.id)]
+        currentLayout = cached or (data.tiledLayout or "")
       end
     end
     local idx = activeLayoutIndex()
