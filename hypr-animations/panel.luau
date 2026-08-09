@@ -20,18 +20,17 @@ local searchRevision = 0
 local activeFile = ""
 local status = ""
 local isOpen = false
-local WINDOW_SIZE = 6
+local CAPACITY = 6
 
 local function visibleRange(total)
-  if total <= WINDOW_SIZE then
+  if total <= CAPACITY then
     return 1, total
   end
-  local half = math.floor(WINDOW_SIZE / 2)
-  local start = math.max(1, selectedIndex + 1 - half)
-  if start + WINDOW_SIZE > total + 1 then
-    start = math.max(1, total - WINDOW_SIZE + 1)
-  end
-  return start, math.min(total, start + WINDOW_SIZE - 1)
+  local sel = selectedIndex + 1
+  local size = (sel < total) and (CAPACITY + 1) or CAPACITY
+  local last = math.min(total, sel + 1)
+  local first = math.max(1, last - size + 1)
+  return first, last
 end
 
 local function cachePath()
