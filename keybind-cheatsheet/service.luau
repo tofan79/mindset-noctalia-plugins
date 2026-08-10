@@ -837,23 +837,27 @@ local function scanHyprLuaContent(content, sourceFile, context)
       category = heading
     end
 
-    local code = rawLine:gsub("%-%-.*$", "")
-    local module = code:match('require%s*%(%s*"([^"]+)"')
-      or code:match("require%s*%(%s*'([^']+)'")
-      or code:match('require%s+"([^"]+)"')
-      or code:match("require%s+'([^']+)'")
-    if module ~= nil then
-      local modulePath = module:gsub("%.", "/") .. ".lua"
-      table.insert(includes, { path = pathJoin(context.luaRoot, modulePath), optional = false })
+    local code = rawLine
+    if rawLine:find("--", 1, true) ~= nil then
+      code = rawLine:gsub("%-%-.*$", "")
     end
 
-    local description = code:match('description%s*=%s*"([^"]*)"')
-      or code:match("description%s*=%s*'([^']*)'")
-      or code:match('desc%s*=%s*"([^"]*)"')
-      or code:match("desc%s*=%s*'([^']*)'")
-    if description ~= nil and description ~= "" then
-      local kind = code:find("%.%.") ~= nil and "prefix" or "exact"
-      table.insert(context.rules, { kind = kind, value = description, category = category ~= "" and category or "Other" })
+    if code:find("require", 1, true) ~= nil then
+      local module = code:match('require%s*%(%s*["\']([^"\']+)["\']')
+        or code:match('require%s*["\']([^"\']+)["\']')
+      if module ~= nil then
+        local modulePath = module:gsub("%.", "/") .. ".lua"
+        table.insert(includes, { path = pathJoin(context.luaRoot, modulePath), optional = false })
+      end
+    end
+
+    if code:find("description", 1, true) ~= nil or code:find("desc", 1, true) ~= nil then
+      local description = code:match('description%s*=%s*["\']([^"\']*)["\']')
+        or code:match('desc%s*=%s*["\']([^"\']*)["\']')
+      if description ~= nil and description ~= "" then
+        local kind = code:find("..", 1, true) ~= nil and "prefix" or "exact"
+        table.insert(context.rules, { kind = kind, value = description, category = category ~= "" and category or "Other" })
+      end
     end
     previousLine = rawLine
   end
@@ -906,16 +910,25 @@ local function scanHyprLua(rootPath)
   return context
 end
 
-local function categoryFromHyprRules(description, rules)
+local function buildRuleIndex(rules)
+  local exact = {}
+  local prefixes = {}
+
   for _, rule in ipairs(rules) do
-    if rule.kind == "exact" and description == rule.value then
-      return rule.category
+    if rule.kind == "exact" then
+      if exact[rule.value] == nil then exact[rule.value] = rule.category end
+    else
+      table.insert(prefixes, rule)
     end
   end
-  for _, rule in ipairs(rules) do
-    if rule.kind == "prefix" and startsWith(description, rule.value) then
-      return rule.category
-    end
+
+  return exact, prefixes
+end
+
+local function categoryFromHyprRules(description, exact, prefixes)
+  if exact[description] ~= nil then return exact[description] end
+  for _, rule in ipairs(prefixes) do
+    if startsWith(description, rule.value) then return rule.category end
   end
   return "Other"
 end
@@ -945,6 +958,8 @@ local function parseHyprJson(raw, rules)
   if type(decoded) ~= "table" then
     return nil, err or "Invalid hyprctl JSON"
   end
+
+  local exact, prefixes = buildRuleIndex(rules)
   local result = {}
   for _, entry in ipairs(decoded) do
     if type(entry) == "table" then
@@ -963,7 +978,7 @@ local function parseHyprJson(raw, rules)
           key = key,
           action = trim(dispatcher .. " " .. argument),
           description = description,
-          category = description ~= "" and categoryFromHyprRules(description, rules) or "",
+          category = description ~= "" and categoryFromHyprRules(description, exact, prefixes) or "",
           sourceFile = "hyprctl binds -j",
           sourceLine = 0,
           submap = entry.submap or "",
