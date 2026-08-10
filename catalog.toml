@@ -2,6 +2,20 @@
 # Index of every plugin this source ships. plugin.toml stays authoritative.
 
 [[plugin]]
+id = "mindset/keybind-cheatsheet"
+name = "Keybind Cheatsheet"
+version = "0.3.0"
+updated_at = 1786324698
+added_at = 1786324698
+author = "mindset"
+license = "MIT"
+icon = "keyboard"
+description = "Searchable keybindings for Hyprland, Mango, and Niri. Groups bindings into categories from Lua config section headings."
+deprecated = false
+plugin_api = 9
+tags = ["bar", "panel", "utility", "system", "hyprland", "mangowc", "niri"]
+
+[[plugin]]
 id = "mindset/hotspot"
 name = "Wi-Fi Hotspot"
 version = "1.0.0"
