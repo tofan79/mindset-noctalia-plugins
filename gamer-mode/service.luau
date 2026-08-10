@@ -1287,10 +1287,13 @@ function M.enable(profileOverride)
                 )
                 return
             end
+            -- Boost is applied as soon as the session is committed, not after the async
+            -- suspend finishes, so the Hyprland strip lands the moment the toggle fires
+            -- rather than waiting on any polkit or systemctl round-trips.
+            applyBoost(true)
             suspendAll(probed, function(stopped)
                 busy = false
                 M.publishGameMode()
-                applyBoost(true)
                 if autoPerformance() and powerState.available and powerSupports("performance") then
                     M.setPowerProfile("performance")
                 end
@@ -1326,6 +1329,10 @@ function M.disable()
     busy = true
     M.publishGameMode()
 
+    -- Restore Hyprland's decorations immediately; the thaw/restart batch is async and
+    -- may wait on polkit, but the desktop should look normal the moment the toggle lands.
+    applyBoost(false)
+
     local thawTargets = M.thawPlan(snap)
     -- Filter to stop targets recorded as up; the "still down" half of the check is a live
     -- probe per target below, so a manual restart in the meantime wins.
@@ -1342,7 +1349,6 @@ function M.disable()
         M.deleteSnapshot()
         busy = false
         M.publishGameMode()
-        applyBoost(false)
         if autoPerformance() and snap.power_profile_before then
             M.setPowerProfile(snap.power_profile_before)
         end
