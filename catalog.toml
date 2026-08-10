@@ -84,3 +84,17 @@ description = "Pick a window/gaps preset from ~/.config/hypr/windows. Replaces t
 deprecated = false
 plugin_api = 13
 tags = ["hyprland", "bar", "panel", "utility"]
+
+[[plugin]]
+id = "mindset/gamer-mode"
+name = "Gamer Mode"
+version = "0.7.0"
+updated_at = 1786327078
+added_at = 1786327078
+author = "mindset"
+license = "MIT"
+icon = "device-gamepad-2"
+description = "Live CPU/RAM/GPU metrics and a one-click gamer mode that suspends background resource hogs, switches to the performance profile, and strips Hyprland decorations for maximum FPS."
+deprecated = false
+plugin_api = 19
+tags = ["bar", "panel", "service", "gaming", "system", "hardware"]
