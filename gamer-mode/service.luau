@@ -8,6 +8,13 @@
 -- all filesystem access goes through noctalia.readFile/writeFile/removeFile/mkdirAll
 -- and the snapshot is stored as JSON via noctalia.json.
 
+local noctalia = noctalia
+if noctalia == nil then
+  -- Standalone (tests): run against the host mock instead of the real shell.
+  local host = dofile("tests/host_mock.luau")
+  noctalia = host.noctalia
+end
+
 local M = {}
 
 local BYTES_PER_MIB = 1048576
@@ -716,11 +723,12 @@ function M.currentBootId()
     return id ~= "" and id or nil
 end
 
-function M.buildSnapshot(profile, powerProfileBefore, probedTargets)
+function M.buildSnapshot(profile, powerProfileBefore, probedTargets, wallpaperAutomationBefore)
     return {
         version = SNAPSHOT_VERSION,
         profile = profile,
         power_profile_before = powerProfileBefore,
+        wallpaper_automation_before = wallpaperAutomationBefore,
         boot_id = M.currentBootId(),
         targets = probedTargets,
     }
@@ -847,6 +855,7 @@ function M.readSnapshot()
         version = decoded.version,
         profile = type(decoded.profile) == "string" and decoded.profile or "light",
         power_profile_before = type(decoded.power_profile_before) == "string" and decoded.power_profile_before or nil,
+        wallpaper_automation_before = type(decoded.wallpaper_automation_before) == "boolean" and decoded.wallpaper_automation_before or nil,
         boot_id = type(decoded.boot_id) == "string" and decoded.boot_id or nil,
         targets = targets,
     }
@@ -1119,6 +1128,91 @@ function M.publishGameMode()
     })
 end
 
+-- ── wallpaper automation pause ──
+--
+-- Noctalia can cycle the wallpaper while gamer mode is on. There is no command to pause
+-- that, so the toggle edits `[wallpaper.automation].enabled` in the Noctalia settings file
+-- directly. The value that was in place when gamer mode turned on is recorded in the
+-- session snapshot so disable restores it exactly, whatever it was.
+
+function M.settingsTomlPath()
+    return noctalia.expandPath("~") .. "/.local/state/noctalia/settings.toml"
+end
+
+-- applyAutomationEnabled rewrites `enabled` inside the `[wallpaper.automation]` section of
+-- a settings.toml text. Only that section is touched; a same-named key in any other
+-- section is left alone. Returns the new text, or nil when the section is not present.
+function M.applyAutomationEnabled(text, enabled)
+    if type(text) ~= "string" then
+        return nil
+    end
+    local wanted = enabled and "true" or "false"
+    local lines = {}
+    local inSection = false
+    local changed = false
+    local index = 1
+    for line in text:gmatch("([^\n]*)\n?") do
+        local section = line:match("^%s*%[([^%]]*)%]%s*$")
+        if section ~= nil then
+            inSection = trim(section) == "wallpaper.automation"
+        end
+        if inSection then
+            local indent, key, value = line:match("^(%s*)([%w_]+)%s*=%s*(%w+)%s*$")
+            if indent ~= nil and key == "enabled" and (value == "true" or value == "false") then
+                if value ~= wanted then
+                    line = indent .. key .. " = " .. wanted
+                    changed = true
+                end
+                -- `enabled` is unique in the section; stop editing further lines.
+                inSection = false
+            end
+        end
+        lines[index] = line
+        index = index + 1
+    end
+    if not changed then
+        return nil
+    end
+    return table.concat(lines, "\n")
+end
+
+-- readWallpaperAutomation returns the live `[wallpaper.automation].enabled` value, or nil
+-- when the file or the section is missing (treated as "not automated", so enable records
+-- nothing to restore).
+function M.readWallpaperAutomation()
+    local contents = noctalia.readFile(M.settingsTomlPath())
+    if not contents then
+        return nil
+    end
+    local inSection = false
+    for line in contents:gmatch("([^\n]*)\n?") do
+        local section = line:match("^%s*%[([^%]]*)%]%s*$")
+        if section ~= nil then
+            inSection = trim(section) == "wallpaper.automation"
+        elseif inSection then
+            local value = line:match("^%s*enabled%s*=%s*(%w+)%s*$")
+            if value ~= nil and (value == "true" or value == "false") then
+                return value == "true"
+            end
+        end
+    end
+    return nil
+end
+
+-- setWallpaperAutomation rewrites the file. Returns false when the file cannot be read or
+-- the section is absent (we never invent a `[wallpaper.automation]` section).
+function M.setWallpaperAutomation(enabled)
+    local contents = noctalia.readFile(M.settingsTomlPath())
+    if not contents then
+        return false
+    end
+    local updated = M.applyAutomationEnabled(contents, enabled)
+    if not updated then
+        return false
+    end
+    return noctalia.writeFile(M.settingsTomlPath(), updated) == true
+end
+
 -- ── enable ──
 
 -- probeAll fans out one probe per target and reports once every answer is in. Results
@@ -1278,7 +1372,12 @@ function M.enable(profileOverride)
             -- command then failed, which is the harmless direction. Thawing is
             -- unconditional and SIGCONT to a running process is a no-op, and a stop
             -- target is only restarted after a live probe says it is still down.
-            if not M.writeSnapshot(M.buildSnapshot(profile, powerBefore, probed)) then
+            --
+            -- The wallpaper automation value is read here, before the file is edited, so
+            -- the snapshot records what disable must hand back. Pausing it is best-effort:
+            -- a failure to read or write the settings file must not abort the enable.
+            local wallpaperBefore = M.readWallpaperAutomation()
+            if not M.writeSnapshot(M.buildSnapshot(profile, powerBefore, probed, wallpaperBefore)) then
                 busy = false
                 M.publishGameMode()
                 noctalia.notifyError(
@@ -1286,6 +1385,11 @@ function M.enable(profileOverride)
                     noctalia.tr("notify.session_failed")
                 )
                 return
+            end
+            if wallpaperBefore ~= nil then
+                if not M.setWallpaperAutomation(false) then
+                    noctalia.log("gamermode: could not pause wallpaper automation")
+                end
             end
             -- Boost is applied as soon as the session is committed, not after the async
             -- suspend finishes, so the Hyprland strip lands the moment the toggle fires
@@ -1351,6 +1455,11 @@ function M.disable()
         M.publishGameMode()
         if autoPerformance() and snap.power_profile_before then
             M.setPowerProfile(snap.power_profile_before)
+        end
+        if snap.wallpaper_automation_before ~= nil then
+            if not M.setWallpaperAutomation(snap.wallpaper_automation_before) then
+                noctalia.log("gamermode: could not restore wallpaper automation")
+            end
         end
         if restored > 0 then
             noctalia.notify(noctalia.tr("notify.disabled_title"), noctalia.trp("notify.restored_count", restored))

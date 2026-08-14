@@ -55,6 +55,14 @@ noctalia msg plugin mindset/gamer-mode:service all enable
 noctalia msg plugin mindset/gamer-mode:service all disable
 ```
 
+Enabling also pauses Noctalia's wallpaper automation while it is on, so the
+wallpaper does not keep cycling over your gameplay. The plugin edits
+`enabled` under `[wallpaper.automation]` in `~/.local/state/noctalia/settings.toml`
+directly, records the value it replaced in the session snapshot, and hands it
+back on disable. If that file or section is missing or unwritable, the toggle
+logs the failure and carries on, and disable restores the value it recorded, so
+an enable that set nothing leaves disable restoring nothing.
+
 Toggle the panel:
 
 ```sh
@@ -319,7 +327,8 @@ start=/usr/bin/ollama stop --all
 Enabling writes a session snapshot to the plugin data directory
 (`session.json`). For every target in the active profile it records whether the
 target was `running` or `active` or already down, which `action` applied, the
-power profile in effect, and the kernel boot ID.
+power profile in effect, the wallpaper automation value that enabling pauses,
+and the kernel boot ID.
 
 The snapshot lands on disk before anything is suspended. It is the only record
 of what was running beforehand, so a target suspended without one is
@@ -369,6 +378,10 @@ still be suspended.
 
 - The plugin stores its session snapshot in Noctalia's plugin data directory. It
   makes no network requests.
+- Wallpaper automation is paused by editing the Noctalia settings file directly
+  because the shell exposes no command to pause it. The plugin only flips the
+  `enabled` line under `[wallpaper.automation]`; every other line, key, and
+  section is copied byte for byte, and the original value comes back on disable.
 - `renice` is absent by design. It looks like the safe middle ground and is not.
   With `RLIMIT_NICE=0`, the default, an unprivileged process lowers priority and
   never raises it back, so a renice would degrade every process it touched for

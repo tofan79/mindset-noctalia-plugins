@@ -1,6 +1,6 @@
 id = "mindset/gamer-mode"
 name = "Gamer Mode"
-version = "0.7.0"
+version = "0.8.0"
 plugin_api = 19
 author = "mindset"
 license = "MIT"
