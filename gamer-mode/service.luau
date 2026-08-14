@@ -257,6 +257,19 @@ local function buildDefaults()
         "snapd.refresh.timer", "flatpak-system-update.timer", "e2scrub_all.timer",
     }, "system-timer", LIGHT, out)
 
+    -- ── light: distro maintenance timers (Fedora/Debian-adjacent) ──
+    -- raid-check is the nasty one: an mdraid check on a laptop spins the disks for
+    -- minutes at full I/O. dnf5-automatic, logrotate and unbound-anchor are light but
+    -- pointless to run mid-game.
+    units({
+        "dnf5-automatic.timer", "raid-check.timer", "logrotate.timer",
+        "unbound-anchor.timer",
+    }, "system-timer", LIGHT, out)
+
+    -- ── light: desktop indexers ──
+    -- User-scoped search indexers keep burning CPU and I/O on metadata scans.
+    units({ "localsearch-3.service" }, "user-service", LIGHT, out)
+
     -- ── light: update daemons ──
     units({
         "packagekit.service", "pamac-daemon.service", "snapd.service",
@@ -289,7 +302,7 @@ local function buildDefaults()
     processes({
         "brave", "chrome", "google-chrome", "chromium", "firefox", "librewolf",
         "vivaldi-bin", "opera", "microsoft-edge", "thorium", "zen-browser", "waterfox",
-        "qutebrowser",
+        "qutebrowser", "helium",
     }, HEAVY, out)
 
     -- ── heavy: editors, language servers, builds ──
@@ -314,6 +327,12 @@ local function buildDefaults()
     units({
         "gitlab-runner.service", "buildkite-agent.service", "jenkins.service",
     }, "system-service", HEAVY, out)
+
+    -- ── heavy: container engines ──
+    -- Docker only: stopping the daemon stops every container. Containers running game
+    -- servers would need an explicit target, and a freeze would leave the daemon stuck
+    -- with paused workloads.
+    units({ "docker.service" }, "system-service", HEAVY, out)
 
     -- ── heavy: self-hosted media stack ──
     units({

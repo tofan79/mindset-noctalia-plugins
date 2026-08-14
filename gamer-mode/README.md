@@ -129,7 +129,7 @@ that selection, so it uses the setting.
 ]
 ```
 
-An empty setting uses the built-in list: 173 entries, 94 of them in `light`.
+An empty setting uses the built-in list: 180 entries, 99 of them in `light`.
 Breadth costs almost nothing, because a target that is not running probes as
 `down`, so the plugin never touches it and never restores it. An entry for
 software you do not have costs one `pgrep`.

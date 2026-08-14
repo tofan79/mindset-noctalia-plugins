@@ -88,8 +88,8 @@ tags = ["hyprland", "bar", "panel", "utility"]
 [[plugin]]
 id = "mindset/gamer-mode"
 name = "Gamer Mode"
-version = "0.8.0"
-updated_at = 1786327078
+version = "0.9.0"
+updated_at = 1786688824
 added_at = 1786327078
 author = "mindset"
 license = "MIT"
