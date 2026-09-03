@@ -193,12 +193,12 @@ local function stepTerminal(term, delta)
 end
 
 local function posFor(sel, other, dir)
-  local sw, sh = sel.width, sel.height
-  local ox, oy, ow, oh = other.x, other.y, other.width, other.height
-  if dir == "left" then return (ox - sw) .. "x" .. oy end
-  if dir == "right" then return (ox + ow) .. "x" .. oy end
-  if dir == "above" then return ox .. "x" .. (oy - sh) end
-  if dir == "below" then return ox .. "x" .. (oy + oh) end
+  local sx, sy, sw, sh = sel.x, sel.y, sel.width, sel.height
+  local ow, oh = other.width, other.height
+  if dir == "left" then return (sx - ow) .. "x" .. sy end
+  if dir == "right" then return (sx + sw) .. "x" .. sy end
+  if dir == "above" then return sx .. "x" .. (sy - oh) end
+  if dir == "below" then return sx .. "x" .. (sy + sh) end
   return "auto"
 end
 
