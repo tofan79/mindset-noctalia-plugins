@@ -412,7 +412,7 @@ function renderPanel()
     ui.column({ gap = 6 }, terminalRows),
   }
 
-  panel.render(ui.column({ gap = 10, padding = 12, flexGrow = 1 }, children))
+  panel.render(ui.scroll({ flexGrow = 1, gap = 10, padding = 12 }, children))
 end
 
 function onOpen(_context)
