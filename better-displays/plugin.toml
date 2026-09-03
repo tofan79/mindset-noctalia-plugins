@@ -16,6 +16,13 @@ label_key    = "settings.refreshSeconds.label"
 description_key = "settings.refreshSeconds.description"
 default      = 4
 
+[[setting]]
+key          = "monitorsLua"
+type         = "string"
+label_key    = "settings.monitorsLua.label"
+description_key = "settings.monitorsLua.description"
+default      = "~/.config/hypr/config/monitors.lua"
+
 [[widget]]
 id    = "toggle"
 entry = "widget.luau"

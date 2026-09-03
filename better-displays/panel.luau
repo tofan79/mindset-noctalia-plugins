@@ -190,7 +190,9 @@ local function setMonitor(flag, val)
     return
   end
   local script = scriptDir .. "/omarchy-display-monitor"
+  local ml = noctalia.getConfig("monitorsLua") or ""
   local cmd = shellQuote(script) .. " set " .. shellQuote(m.name) .. " " .. shellQuote(flag) .. " " .. shellQuote(val)
+  if ml ~= "" then cmd = cmd .. " --monitors-lua " .. shellQuote(ml) end
   noctalia.runAsync(cmd, function(result)
     if result.exitCode ~= 0 then
       noctalia.notifyError("Better Displays", tostring(result.stderr or "Failed to apply setting"))
