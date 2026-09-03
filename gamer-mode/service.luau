@@ -1473,11 +1473,19 @@ function M.snapshotDecor(done)
     -- rather than to a stripped desktop.
     local decor = {}
     local pending = #DECOR_SNAPSHOT
+    local settled = false
+    local function finish()
+        if settled then
+            return
+        end
+        settled = true
+        done(decor)
+    end
     local function settle()
         if pending > 0 then
             return
         end
-        done(decor)
+        finish()
     end
     for _, spec in ipairs(DECOR_SNAPSHOT) do
         run(getoptionCmd(spec.option), function(result)
