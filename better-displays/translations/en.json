@@ -11,10 +11,6 @@
     "terminal_font": "TERMINAL FONT"
   },
   "settings": {
-    "refreshSeconds": {
-      "label": "Refresh interval (seconds)",
-      "description": "How often to poll monitor info while the panel is open"
-    },
     "monitorsLua": {
       "label": "Monitors config file",
       "description": "Path to the monitors.lua that better-displays persists display settings to. Leave empty to auto-detect the active Hyprland config."

@@ -1,7 +1,6 @@
 --!nonstrict
 
 local scriptDir = noctalia.pluginDir() .. "/bin"
-local refreshSeconds = 4
 
 local monitors = {}
 local selected = ""

@@ -10,13 +10,6 @@ tags         = ["hyprland", "display", "monitor", "resolution"]
 dependencies = ["hyprctl", "jq"]
 
 [[setting]]
-key          = "refreshSeconds"
-type         = "int"
-label_key    = "settings.refreshSeconds.label"
-description_key = "settings.refreshSeconds.description"
-default      = 4
-
-[[setting]]
 key          = "monitorsLua"
 type         = "string"
 label_key    = "settings.monitorsLua.label"
