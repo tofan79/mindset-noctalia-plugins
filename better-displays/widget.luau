@@ -5,9 +5,9 @@ local monitorCount = 0
 
 local function render()
   if monitorCount > 1 then
-    barWidget.setGlyph("monitor-dot")
+    barWidget.setGlyph("screen-share")
   else
-    barWidget.setGlyph("monitor")
+    barWidget.setGlyph("device-desktop")
   end
   barWidget.setTooltip(noctalia.tr("tooltip"))
 end
