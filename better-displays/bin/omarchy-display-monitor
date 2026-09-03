@@ -156,7 +156,14 @@ cmd_set() {
   cur_pos="$(echo "$m" | jq -r '"\(.x)x\(.y)"')"
   cur_transform="$(echo "$m" | jq -r '.transform')"
 
-  local mode="$cur_mode" scale="$cur_scale" pos="$cur_pos" transform="$cur_transform" vrr=""
+  # Default vrr to the previously persisted value (so position/scale/transform
+  # changes do not wipe out the user's VRR setting).
+  local default_vrr=""
+  if [[ -f $DISPLAYS_JSON ]]; then
+    default_vrr="$(jq -r --arg o "$output" '.["monitors"][$o].vrr // empty' "$DISPLAYS_JSON" 2>/dev/null || true)"
+  fi
+  [[ $default_vrr == "0" || $default_vrr =~ ^[1-3]$ ]] || default_vrr=""
+  local mode="$cur_mode" scale="$cur_scale" pos="$cur_pos" transform="$cur_transform" vrr="$default_vrr"
   shift || true
   while (( $# > 0 )); do
     case "$1" in
