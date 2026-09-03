@@ -36,7 +36,8 @@ local function detectTerminals()
       end
       if isOpen then renderPanel() end
     else
-      noctalia.log("detectTerminals: exit=" .. tostring(result.exitCode) .. " err=" .. tostring(result.stderr))
+      terminals = { "kitty", "alacritty", "ghostty", "foot" }
+      if isOpen then renderPanel() end
     end
   end)
 end
@@ -77,9 +78,9 @@ end
 local function selectedModeIndex(modesList, m)
   local cur = currentModeString(m)
   for i, s in ipairs(modesList) do
-    if s == cur then return i end
+    if s == cur then return i - 1 end
   end
-  return 1
+  return 0
 end
 
 local function getModes(m)
@@ -161,13 +162,15 @@ end
 local function setMonitor(flag, val)
   local m = getSelectedMonitor()
   if m == nil then
-    noctalia.notify("Better Displays", "No monitor selected")
+    noctalia.notifyError("Better Displays", "No monitor detected")
     return
   end
   local script = scriptDir .. "/omarchy-display-monitor"
   local cmd = shellQuote(script) .. " set " .. shellQuote(m.name) .. " " .. shellQuote(flag) .. " " .. shellQuote(val)
   noctalia.runAsync(cmd, function(result)
-    noctalia.notify("Better Displays", "Exit: " .. tostring(result.exitCode) .. "\nOut: " .. tostring(result.stdout) .. "\nErr: " .. tostring(result.stderr))
+    if result.exitCode ~= 0 then
+      noctalia.notifyError("Better Displays", tostring(result.stderr or "Failed to apply setting"))
+    end
     refresh()
   end)
 end
@@ -211,15 +214,15 @@ local function positionButtons()
   if sel == nil then return {} end
   local out = {}
   local dirs = {
-    { dir = "left", glyph = "chevron-left" },
-    { dir = "right", glyph = "chevron-right" },
-    { dir = "above", glyph = "chevron-up" },
-    { dir = "below", glyph = "chevron-down" },
+    { dir = "left", glyph = "arrow-left", label = "Left" },
+    { dir = "right", glyph = "arrow-right", label = "Right" },
+    { dir = "above", glyph = "arrow-up", label = "Above" },
+    { dir = "below", glyph = "arrow-down", label = "Below" },
   }
   for _, o in ipairs(monitors) do
     if o.name ~= sel.name then
       for _, d in ipairs(dirs) do
-        table.insert(out, { label = d.glyph .. " " .. o.name, other = o.name, dir = d.dir })
+        table.insert(out, { label = d.label .. " " .. o.name, other = o.name, dir = d.dir, glyph = d.glyph })
       end
     end
   end
@@ -275,8 +278,10 @@ function renderPanel()
   local posButtons = {}
   table.insert(posButtons, ui.button({
     key = "pos-auto",
-    text = "Auto",
+    glyph = "layout-2",
     controlSize = "sm",
+    variant = "outline",
+    tooltip = "Auto",
     onClick = function()
       setMonitor("--pos", "auto")
     end,
@@ -284,8 +289,10 @@ function renderPanel()
   for _, pb in ipairs(positionButtons()) do
     table.insert(posButtons, ui.button({
       key = "pos-" .. pb.other .. "-" .. pb.dir,
-      text = pb.label,
+      glyph = pb.glyph,
       controlSize = "sm",
+      variant = "outline",
+      tooltip = pb.label .. " " .. pb.other,
       onClick = function()
         local m = getSelectedMonitor()
         local other = monitorByName(pb.other)
@@ -303,8 +310,10 @@ function renderPanel()
       table.insert(terminalRows, ui.row({
         key = "term-" .. term,
         align = "center",
+        justify = "space_between",
         gap = 8,
       }, {
+        ui.label({ text = term, fontSize = 13, flexGrow = 1 }),
         ui.button({
           key = "term-" .. term .. "-minus",
           glyph = "minus",
@@ -313,7 +322,6 @@ function renderPanel()
             stepTerminal(term, -1)
           end,
         }),
-        ui.label({ text = term, fontSize = 13, flexGrow = 1 }),
         ui.label({ text = tostring(size), fontSize = 13, width = 40, textAlign = "center" }),
         ui.button({
           key = "term-" .. term .. "-plus",
@@ -352,9 +360,8 @@ function renderPanel()
       options = modes,
       selectedIndex = selectedModeIndex(modes, sel),
       controlSize = "sm",
-      onChange = function(index, modeString)
-        local chosen = modes[tonumber(index)]
-        if chosen == nil then chosen = modeString end
+      onChange = function(index)
+        local chosen = modes[tonumber(index) + 1]
         if chosen then setMonitor("--mode", chosen) end
       end,
     }),
