@@ -51,6 +51,14 @@ local function currentModeString(m)
   return best
 end
 
+local function selectedModeIndex(modesList, m)
+  local cur = currentModeString(m)
+  for i, s in ipairs(modesList) do
+    if s == cur then return i end
+  end
+  return 1
+end
+
 local function getModes(m)
   if m == nil or m.modes == nil then return {} end
   local seen = {}
@@ -114,7 +122,7 @@ local function refresh()
     if isOpen then renderPanel() end
   end)
 
-  noctalia.runAsync("bash " .. shellQuote(scriptDir .. "/omarchy-display-terminal list --json"), function(result)
+  noctalia.runAsync(shellQuote(scriptDir .. "/omarchy-display-terminal") .. " list --json", function(result)
     if result.exitCode == 0 then
       local data = noctalia.json.decode(result.stdout)
       if type(data) == "table" then
@@ -127,15 +135,21 @@ end
 
 local function setMonitor(flag, val)
   local m = getSelectedMonitor()
-  if m == nil then return end
-  local cmd = "bash " .. shellQuote(scriptDir .. "/omarchy-display-monitor set " .. shellQuote(m.name) .. " " .. shellQuote(flag) .. " " .. shellQuote(val))
-  noctalia.runAsync(cmd, function()
+  if m == nil then
+    noctalia.notify("Better Displays", "No monitor selected")
+    return
+  end
+  local script = scriptDir .. "/omarchy-display-monitor"
+  local cmd = shellQuote(script) .. " set " .. shellQuote(m.name) .. " " .. shellQuote(flag) .. " " .. shellQuote(val)
+  noctalia.runAsync(cmd, function(result)
+    noctalia.notify("Better Displays", "Exit: " .. tostring(result.exitCode) .. "\nOut: " .. tostring(result.stdout) .. "\nErr: " .. tostring(result.stderr))
     refresh()
   end)
 end
 
 local function setTerminal(term, size)
-  local cmd = "bash " .. shellQuote(scriptDir .. "/omarchy-display-terminal set " .. shellQuote(term) .. " " .. shellQuote(size))
+  local script = scriptDir .. "/omarchy-display-terminal"
+  local cmd = shellQuote(script) .. " set " .. shellQuote(term) .. " " .. shellQuote(size)
   noctalia.runAsync(cmd, function()
     refresh()
   end)
@@ -300,16 +314,18 @@ function renderPanel()
     ui.select({
       key = "resolution",
       options = modes,
-      selectedIndex = 1,
+      selectedIndex = selectedModeIndex(modes, sel),
       controlSize = "sm",
-      onChange = function(value)
-        setMonitor("--mode", value)
+      onChange = function(index, modeString)
+        local chosen = modes[tonumber(index)]
+        if chosen == nil then chosen = modeString end
+        if chosen then setMonitor("--mode", chosen) end
       end,
     }),
     ui.label({ text = noctalia.tr("panel.scale"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.row({ gap = 6 }, scaleButtons),
     ui.label({ text = noctalia.tr("panel.position"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-    ui.row({ gap = 6, wrap = true }, posButtons),
+    ui.row({ gap = 6 }, posButtons),
     ui.label({ text = noctalia.tr("panel.orientation"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.row({ gap = 6 }, transformButtons),
     ui.separator({}),
