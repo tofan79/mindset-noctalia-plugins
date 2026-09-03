@@ -69,6 +69,27 @@ Toggle the panel:
 noctalia msg panel-toggle mindset/gamer-mode:main
 ```
 
+Suggested keybinds (Hyprland `binds.lua`):
+
+```lua
+hl.bind(M .. " + SHIFT + B", hl.dsp.exec_cmd("noctalia msg plugin mindset/gamer-mode:service all toggle"), { description = "Toggle gamer mode" })
+hl.bind(M .. " + ALT + B", hl.dsp.exec_cmd("noctalia msg panel-toggle mindset/gamer-mode:main"), { description = "Gamer mode panel" })
+```
+
+### Boost: stripping decorations
+
+When gamer mode is on (and `boost_decorations` is on), the plugin strips
+Hyprland's animations and decorations for maximum FPS and restores them when you
+disable. The restore half is **not** hardcoded to stock values: the first time
+you enable, the current value of every option the boost touches is captured via
+`hyprctl getoption` and stored in the session snapshot, so disabling hands the
+desktop back your own style — whatever it is — instead of resetting it. Only the
+"strip" side is fixed (no compositing while gaming).
+
+The panel also flags problems with the `targets` setting: how many entries were
+configured, and any that were dropped for being invalid, each with the reason —
+so a typo that would otherwise silently fall back to the built-in list is visible.
+
 ### Maintenance
 
 Three one-shot cleanups sit at the foot of the panel. None of them is part of

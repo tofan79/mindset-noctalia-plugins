@@ -463,6 +463,31 @@ function M.parseTargets(raw)
     return copyTargets(M.DEFAULT_TARGETS)
 end
 
+-- summarizeTargets reports how a `targets` setting fared before it is applied, so the
+-- panel can show the user which of their entries were dropped and why -- a typo that
+-- silently vanishes into the default list is precisely the config error worth surfacing.
+-- Pure and free of shell calls, so it can be unit-tested.
+function M.summarizeTargets(raw)
+    local result = { total = 0, dropped = {} }
+    if type(raw) == "string" and raw ~= "" then
+        local decoded, decodeError = noctalia.json.decode(raw)
+        if type(decoded) == "table" then
+            result.total = #decoded
+            result.parseError = nil
+            for _, entry in ipairs(decoded) do
+                local ok, reason = validEntry(entry)
+                if not ok then
+                    local match = type(entry) == "table" and tostring(entry.match) or "?"
+                    result.dropped[#result.dropped + 1] = { match = match, reason = tostring(reason) }
+                end
+            end
+        else
+            result.parseError = tostring(decodeError or "not a JSON array")
+        end
+    end
+    return result
+end
+
 function M.targetsForProfile(targets, profile)
     local out = {}
     for _, target in ipairs(targets) do
@@ -742,7 +767,7 @@ function M.currentBootId()
     return id ~= "" and id or nil
 end
 
-function M.buildSnapshot(profile, powerProfileBefore, probedTargets, wallpaperAutomationBefore)
+function M.buildSnapshot(profile, powerProfileBefore, probedTargets, wallpaperAutomationBefore, decorBefore)
     return {
         version = SNAPSHOT_VERSION,
         profile = profile,
@@ -750,6 +775,7 @@ function M.buildSnapshot(profile, powerProfileBefore, probedTargets, wallpaperAu
         wallpaper_automation_before = wallpaperAutomationBefore,
         boot_id = M.currentBootId(),
         targets = probedTargets,
+        decor_before = decorBefore,
     }
 end
 
@@ -877,6 +903,7 @@ function M.readSnapshot()
         wallpaper_automation_before = type(decoded.wallpaper_automation_before) == "boolean" and decoded.wallpaper_automation_before or nil,
         boot_id = type(decoded.boot_id) == "string" and decoded.boot_id or nil,
         targets = targets,
+        decor_before = type(decoded.decor_before) == "table" and decoded.decor_before or nil,
     }
 end
 
@@ -1145,6 +1172,14 @@ function M.publishGameMode()
         suspended = suspended,
         power_profile_before = snap and snap.power_profile_before or nil,
     })
+    M.publishTargetsStatus()
+end
+
+-- publishTargetsStatus surfaces how the `targets` setting parses, so the panel can flag
+-- entries that were dropped (and why) instead of the user finding out that gamer mode
+-- quietly fell back to the defaults.
+function M.publishTargetsStatus()
+    noctalia.state.set("targets_status", M.summarizeTargets(noctalia.getConfig("targets")))
 end
 
 -- ── wallpaper automation pause ──
@@ -1349,12 +1384,196 @@ end
 -- power profile switch, enabling gamer mode can also strip Hyprland's decorations and
 -- animations for maximum FPS, and disable restores them. These mirror the old
 -- toggle-boost-mode.sh, now folded into the plugin so Super+Shift+B drives everything.
-local BOOST_DECOR_OFF = "hyprctl eval \"hl.config({ animations = { enabled = false }, decoration = { rounding = 0, active_opacity = 1.0, inactive_opacity = 0.9, fullscreen_opacity = 1.0, blur = { enabled = false }, shadow = { enabled = false } }, general = { gaps_in = 0, gaps_out = 0, border_size = 1 } })\""
-local BOOST_DECOR_ON = "hyprctl eval \"hl.config({ animations = { enabled = true }, decoration = { rounding = 12, active_opacity = 0.9, inactive_opacity = 0.7, fullscreen_opacity = 0.9, blur = { enabled = true, size = 3, passes = 2, new_optimizations = true, ignore_opacity = true, xray = true }, shadow = { enabled = true, range = 30, render_power = 3, color = '0x66000000' } }, general = { gaps_in = 5, gaps_out = 10, border_size = 2 } })\""
+--
+-- The restore half is not hardcoded to "default" values. The first time gamer mode is
+-- enabled the current value of every option the boost touches is read and stored in the
+-- session snapshot, so disable hands the desktop back exactly the user's own style --
+-- whatever it is -- instead of resetting it to stock Hyprland.
+local function luaNumber(value)
+    local number = tonumber(value)
+    return number
+end
 
-local function applyBoost(gaming)
+-- gapValue normalises the "top right bottom left" CSS string from `hyprctl getoption` into
+-- an object Hyprland's eval accepts. Equal values collapse to a plain number for
+-- readability; uneven values round-trip as an explicit table.
+local function gapValue(css)
+    local numbers = {}
+    for part in tostring(css or ""):gmatch("%S+") do
+        local n = tonumber(part)
+        if n then
+            numbers[#numbers + 1] = n
+        end
+    end
+    if #numbers == 0 then
+        return nil
+    end
+    if #numbers == 1 or (numbers[1] == numbers[2] and numbers[2] == numbers[3] and numbers[3] == numbers[4]) then
+        return numbers[1]
+    end
+    return { top = numbers[1], right = numbers[2], bottom = numbers[3], left = numbers[4] }
+end
+
+-- The option names the boost reads before it strips the desktop, keyed to the value it
+-- rewrites so the snapshot can restore the exact style. gaps_in/out are stored as CSS and
+-- collapsed by gapValue on restore.
+local DECOR_SNAPSHOT = {
+    { option = "animations:enabled",         to = "animations_enabled" },
+    { option = "decoration:rounding",        to = "rounding" },
+    { option = "general:border_size",        to = "border_size" },
+    { option = "general:gaps_in",            to = "gaps_in",      css = true },
+    { option = "general:gaps_out",           to = "gaps_out",     css = true },
+    { option = "decoration:active_opacity",  to = "active_opacity" },
+    { option = "decoration:inactive_opacity", to = "inactive_opacity" },
+    { option = "decoration:fullscreen_opacity", to = "fullscreen_opacity" },
+    { option = "decoration:blur:enabled",    to = "blur_enabled" },
+    { option = "decoration:blur:size",       to = "blur_size" },
+    { option = "decoration:blur:passes",     to = "blur_passes" },
+    { option = "decoration:shadow:enabled",  to = "shadow_enabled" },
+    { option = "decoration:shadow:range",    to = "shadow_range" },
+}
+
+-- getoptionCmd turns a "ns:name:sub" key into the `hyprctl getoption` argv Hyprland
+-- expects (each segment its own word). Segments come from our fixed list, never the user.
+local function getoptionCmd(option)
+    local parts = {}
+    for part in option:gmatch("[^:]+") do
+        parts[#parts + 1] = part
+    end
+    return "hyprctl getoption " .. table.concat(parts, " ")
+end
+
+-- parseOptionLine reads the value out of one `hyprctl getoption` line -- `int: 12`,
+-- `float: 0.7`, `bool: true` or `css gap data: 5 5 5 5` -- returning the raw value plus
+-- its type. `getoption` prints a second `set: true` line that must not leak into the
+-- value, so only the first line is considered. Kept separate and pure so it can be
+-- unit-tested with a host mock.
+function M.parseOptionLine(line)
+    if type(line) ~= "string" or line == "" then
+        return nil
+    end
+    local first = tostring(line):match("([^\n]+)")
+    if not first then
+        return nil
+    end
+    local stringLine = first
+    local kind, raw = stringLine:match("^%s*([%w _]+):%s*(.*[^%s])%s*$")
+    if not kind then
+        return nil
+    end
+    kind = kind:gsub("^%s+", ""):gsub("%s+$", "")
+    return { kind = kind, value = raw }
+end
+
+-- snapshotDecor reads every option the boost touches and returns an object of their
+-- current values. Only options that could be read are included, so a value Hyprland
+-- cannot report falls back to the stock restore value rather than being dropped.
+function M.snapshotDecor(done)
+    done = done or function() end
+    -- The whole batch is best-effort: it runs close to the start of enable and finishes
+    -- before anything is suspended, so a single read failure degrades to the stock restore
+    -- rather than to a stripped desktop.
+    local decor = {}
+    local pending = #DECOR_SNAPSHOT
+    local function settle()
+        if pending > 0 then
+            return
+        end
+        done(decor)
+    end
+    for _, spec in ipairs(DECOR_SNAPSHOT) do
+        run(getoptionCmd(spec.option), function(result)
+            local parsed = M.parseOptionLine(trim(result and result.stdout or ""))
+            if parsed then
+                local raw = parsed.value
+                if spec.css then
+                    decor[spec.to] = raw
+                elseif parsed.kind == "int" or parsed.kind == "float" then
+                    decor[spec.to] = luaNumber(raw)
+                elseif parsed.kind == "bool" then
+                    decor[spec.to] = raw == "true"
+                elseif type(raw) == "string" and raw ~= "" then
+                    decor[spec.to] = raw
+                end
+            end
+            pending = pending - 1
+            settle()
+        end)
+    end
+end
+
+-- buildBoostOn rebuilds the user's own style from the snapshot. Fields that were read are
+-- restored as captured; anything missing (a value Hyprland could not report) uses a stock
+-- fallback identical to the historical BOOST_DECOR_ON.
+local function luaLiteral(value, fallback)
+    if value == nil then
+        return tostring(fallback)
+    end
+    if type(value) == "boolean" then
+        return value and "true" or "false"
+    end
+    return tostring(value)
+end
+
+-- gapLiteral turns gaps_in/out (a CSS "top right bottom left" string) into the Lua the
+-- eval accepts: a plain number when even, an explicit per-edge table when uneven.
+local function gapLiteral(value, fallback)
+    local gaps = gapValue(value)
+    if gaps == nil then
+        return tostring(fallback)
+    end
+    if type(gaps) == "number" then
+        return tostring(gaps)
+    end
+    return string.format(
+        "{ top = %s, right = %s, bottom = %s, left = %s }",
+        tostring(gaps.top), tostring(gaps.right), tostring(gaps.bottom), tostring(gaps.left)
+    )
+end
+
+local function buildBoostOn(decor)
+    decor = decor or {}
+    local animations = luaLiteral(decor.animations_enabled, true)
+    local rounding = luaLiteral(decor.rounding, 12)
+    local activeOpacity = luaLiteral(decor.active_opacity, 0.9)
+    local inactiveOpacity = luaLiteral(decor.inactive_opacity, 0.7)
+    local fullscreenOpacity = luaLiteral(decor.fullscreen_opacity, 0.9)
+    local blurEnabled = luaLiteral(decor.blur_enabled, true)
+    local blurSize = luaLiteral(decor.blur_size, 3)
+    local blurPasses = luaLiteral(decor.blur_passes, 2)
+    local shadowEnabled = luaLiteral(decor.shadow_enabled, true)
+    local shadowRange = luaLiteral(decor.shadow_range, 30)
+    local gapsIn = gapLiteral(decor.gaps_in, 5)
+    local gapsOut = gapLiteral(decor.gaps_out, 10)
+    local borderSize = luaLiteral(decor.border_size, 2)
+    return "hyprctl eval \"hl.config({" ..
+        "animations = { enabled = " .. animations ..
+        " }, decoration = { rounding = " .. rounding ..
+        ", active_opacity = " .. activeOpacity ..
+        ", inactive_opacity = " .. inactiveOpacity ..
+        ", fullscreen_opacity = " .. fullscreenOpacity ..
+        ", blur = { enabled = " .. blurEnabled ..
+        ", size = " .. blurSize ..
+        ", passes = " .. blurPasses ..
+        " }, shadow = { enabled = " .. shadowEnabled ..
+        ", range = " .. shadowRange ..
+        " } }, general = { gaps_in = " .. gapsIn ..
+        ", gaps_out = " .. gapsOut ..
+        ", border_size = " .. borderSize ..
+        " } })\""
+end
+
+-- buildBoostOff strips the desktop to the maximum-FPS form. This half is intentionally
+-- fixed: while gamer mode runs the compositing is gone, and there is nothing to restore
+-- mid-session because the user opted into stripping it.
+local function buildBoostOff()
+    return "hyprctl eval \"hl.config({ animations = { enabled = false }, decoration = { rounding = 0, active_opacity = 1.0, inactive_opacity = 0.9, fullscreen_opacity = 1.0, blur = { enabled = false }, shadow = { enabled = false } }, general = { gaps_in = 0, gaps_out = 0, border_size = 1 } })\""
+end
+
+local function applyBoost(gaming, decorBefore)
     if noctalia.getConfig("boost_decorations") ~= false then
-        run(gaming and BOOST_DECOR_OFF or BOOST_DECOR_ON, function(result)
+        local command = gaming and buildBoostOff() or buildBoostOn(decorBefore)
+        run(command, function(result)
             if not succeeded(result) then
                 noctalia.log("gamermode: could not apply Hyprland boost: " .. describeFailure(result))
             end
@@ -1379,7 +1598,10 @@ function M.enable(profileOverride)
     local profile = resolveProfile(profileOverride)
     local targets = M.targetsForProfile(M.parseTargets(noctalia.getConfig("targets")), profile)
 
-    local function withPowerBefore(powerBefore)
+    -- Capture the profile to hand back before switching away from it, and the decoration
+    -- values the boost will strip, so disable can restore the user's own style. Both run
+    -- before any process is touched, and neither blocks the other.
+    local function startSuspend(powerBefore, decor)
         probeAll(targets, function(probed)
             -- The session file is the only record of what was running before gamer mode
             -- touched it, so it is written before anything is suspended. A process frozen
@@ -1396,7 +1618,7 @@ function M.enable(profileOverride)
             -- the snapshot records what disable must hand back. Pausing it is best-effort:
             -- a failure to read or write the settings file must not abort the enable.
             local wallpaperBefore = M.readWallpaperAutomation()
-            if not M.writeSnapshot(M.buildSnapshot(profile, powerBefore, probed, wallpaperBefore)) then
+            if not M.writeSnapshot(M.buildSnapshot(profile, powerBefore, probed, wallpaperBefore, decor)) then
                 busy = false
                 M.publishGameMode()
                 noctalia.notifyError(
@@ -1412,7 +1634,8 @@ function M.enable(profileOverride)
             end
             -- Boost is applied as soon as the session is committed, not after the async
             -- suspend finishes, so the Hyprland strip lands the moment the toggle fires
-            -- rather than waiting on any polkit or systemctl round-trips.
+            -- rather than waiting on any polkit or systemctl round-trips. The snapshot
+            -- already holds the pre-boost values, which is all disable needs.
             applyBoost(true)
             suspendAll(probed, function(stopped)
                 busy = false
@@ -1429,11 +1652,26 @@ function M.enable(profileOverride)
         end)
     end
 
-    -- Capture the profile to hand back before switching away from it.
+    local ready = 0
+    local powerBefore = nil
+    local decorBefore = nil
+    local function maybeGo()
+        ready = ready + 1
+        if ready >= 2 then
+            startSuspend(powerBefore, decorBefore)
+        end
+    end
+    M.snapshotDecor(function(decor)
+        decorBefore = decor
+        maybeGo()
+    end)
     if autoPerformance() then
-        M.refreshPower(withPowerBefore)
+        M.refreshPower(function(before)
+            powerBefore = before
+            maybeGo()
+        end)
     else
-        withPowerBefore(nil)
+        maybeGo()
     end
 end
 
@@ -1452,9 +1690,10 @@ function M.disable()
     busy = true
     M.publishGameMode()
 
-    -- Restore Hyprland's decorations immediately; the thaw/restart batch is async and
-    -- may wait on polkit, but the desktop should look normal the moment the toggle lands.
-    applyBoost(false)
+    -- Restore Hyprland's decorations immediately, from the values captured at enable; the
+    -- thaw/restart batch is async and may wait on polkit, but the desktop should look
+    -- normal the moment the toggle lands.
+    applyBoost(false, snap.decor_before)
 
     local thawTargets = M.thawPlan(snap)
     -- Filter to stop targets recorded as up; the "still down" half of the check is a live

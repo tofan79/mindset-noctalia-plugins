@@ -20,6 +20,7 @@ local metrics = noctalia.state.get("metrics") or { available = false }
 local gameMode = noctalia.state.get("game_mode") or { enabled = false, busy = false, suspended = {} }
 local power = noctalia.state.get("power") or { available = false, profiles = {} }
 local cleanup = noctalia.state.get("cleanup") or {}
+local targetsStatus = noctalia.state.get("targets_status") or {}
 local nonceCounter = 0
 
 -- The logo is embedded rather than read from the plugin directory because there is no API
@@ -488,6 +489,44 @@ local function suspendedSection(children)
     end
 end
 
+-- targetsSummarySection surfaces the state of the `targets` setting: how many entries it
+-- configured, and any that were dropped for being invalid, each with the reason. A config
+-- typo that silently fell back to the defaults is exactly the thing a user wants to spot.
+local function targetsSummarySection(children)
+    local status = type(targetsStatus) == "table" and targetsStatus or {}
+    local isDefault = type(status.parseError) == "string"
+        or (type(status.total) == "number" and status.total == 0)
+    if isDefault and status.total == 0 and status.parseError == nil then
+        return
+    end
+    children[#children + 1] = ui.separator({})
+    local title = status.parseError
+        and tr("panel.targets_parse_error", { detail = status.parseError })
+        or tr("panel.targets_count", { count = tostring(status.total or 0) })
+    children[#children + 1] = ui.label({
+        text = title,
+        color = "on_surface_variant",
+        fontSize = 12,
+        fontWeight = "bold",
+    })
+    local dropped = type(status.dropped) == "table" and status.dropped or {}
+    if #dropped == 0 then
+        return
+    end
+    children[#children + 1] = ui.label({
+        text = tr("panel.targets_dropped_title", { count = tostring(#dropped) }),
+        color = "error",
+        fontSize = 11,
+    })
+    for _, entry in ipairs(dropped) do
+        children[#children + 1] = ui.label({
+            text = string.format("%s — %s", tostring(entry.match or "?"), tostring(entry.reason or "?")),
+            fontSize = 11,
+            color = "on_surface_variant",
+        })
+    end
+end
+
 local function body()
     local showTemps = noctalia.getConfig("show_temps") ~= false
     local children = {}
@@ -520,6 +559,7 @@ local function body()
     children[#children + 1] = powerRow()
     children[#children + 1] = modeProfileRow()
     suspendedSection(children)
+    targetsSummarySection(children)
     maintenanceSection(children)
 
     return ui.column({ gap = 12, flexGrow = 1 }, children)
@@ -630,6 +670,11 @@ end)
 
 noctalia.state.watch("cleanup", function(value)
     cleanup = type(value) == "table" and value or {}
+    render()
+end)
+
+noctalia.state.watch("targets_status", function(value)
+    targetsStatus = type(value) == "table" and value or {}
     render()
 end)
 

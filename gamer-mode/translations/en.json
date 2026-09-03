@@ -59,6 +59,9 @@
     "state_on": "Running",
     "stopped": "stopped",
     "suspended": "Suspended",
+    "targets_count": "Suspend targets: {count} configured",
+    "targets_dropped_title": "{count} entries ignored",
+    "targets_parse_error": "Suspend targets: {detail}",
     "title": "gamer-mode",
     "working": "Working..."
   },
@@ -105,7 +108,7 @@
       "label": "Boost: strip decorations"
     },
     "targets": {
-      "description": "Advanced: JSON array of {match, kind, profiles}. Kind: process, user-service, system-service, container.",
+      "description": "Advanced: JSON array of {match, kind, profiles, action}. Kind: process, user-service, system-service, user-timer, system-timer, container. Matches that fail validation are dropped and reported in the panel.",
       "label": "Suspend targets (JSON)"
     }
   },
