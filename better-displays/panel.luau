@@ -13,7 +13,7 @@ local scalePresets = { "1", "1.25", "1.6", "2", "3", "4" }
 local transformPresets = { "0", "1", "2", "3" }
 local transformLabels = { ["0"] = "0°", ["1"] = "90°", ["2"] = "180°", ["3"] = "270°" }
 local vrrPresets = { "0", "1", "2", "3" }
-local vrrLabels = { ["0"] = "Off", ["1"] = "On", ["2"] = "Fullscreen", ["3"] = "Fullscreen+video" }
+local vrrLabels = { "Off", "On", "Fullscreen", "Fullscreen+video" }
 local terminalCandidates = { "alacritty", "kitty", "ghostty", "foot", "konsole", "gnome-terminal", "xfce4-terminal", "terminator", "tilix", "wezterm", "rio", "contour", "hyper", "xterm", "rxvt" }
 local backendTerminals = { alacritty = true, kitty = true, ghostty = true, foot = true }
 local terminals = {}
