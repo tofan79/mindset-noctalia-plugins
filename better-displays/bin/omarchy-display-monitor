@@ -15,7 +15,7 @@ set -euo pipefail
 
 CONFIG_DIR="$HOME/.config/omarchy"
 DISPLAYS_JSON="$CONFIG_DIR/displays.json"
-MONITORS_LUA="$HOME/.config/hypr/monitors.lua"
+MONITORS_LUA="${HYPR_CONFIG_DIR:-$HOME/.config/hypr/config}/monitors.lua"
 
 # ---- input validation ----
 
