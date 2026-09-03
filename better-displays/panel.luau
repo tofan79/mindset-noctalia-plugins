@@ -192,13 +192,13 @@ local function stepTerminal(term, delta)
   setTerminal(term, tostring(next))
 end
 
-local function posFor(sel, other, dir)
-  local sx, sy, sw, sh = sel.x, sel.y, sel.width, sel.height
-  local ow, oh = other.width, other.height
-  if dir == "left" then return (sx - ow) .. "x" .. sy end
-  if dir == "right" then return (sx + sw) .. "x" .. sy end
-  if dir == "above" then return sx .. "x" .. (sy - oh) end
-  if dir == "below" then return sx .. "x" .. (sy + sh) end
+local function posFor(sel, anchor, dir)
+  local sw, sh = sel.width, sel.height
+  local ax, ay, aw, ah = anchor.x, anchor.y, anchor.width, anchor.height
+  if dir == "left" then return (ax - sw) .. "x" .. ay end
+  if dir == "right" then return (ax + aw) .. "x" .. ay end
+  if dir == "above" then return ax .. "x" .. (ay - sh) end
+  if dir == "below" then return ax .. "x" .. (ay + ah) end
   return "auto"
 end
 
@@ -222,7 +222,7 @@ local function positionButtons()
   for _, o in ipairs(monitors) do
     if o.name ~= sel.name then
       for _, d in ipairs(dirs) do
-        table.insert(out, { label = d.label .. " " .. o.name, other = o.name, dir = d.dir, glyph = d.glyph })
+        table.insert(out, { label = d.label .. " of " .. o.name, anchor = o.name, dir = d.dir, glyph = d.glyph })
       end
     end
   end
@@ -288,16 +288,16 @@ function renderPanel()
   }))
   for _, pb in ipairs(positionButtons()) do
     table.insert(posButtons, ui.button({
-      key = "pos-" .. pb.other .. "-" .. pb.dir,
+      key = "pos-" .. pb.anchor .. "-" .. pb.dir,
       glyph = pb.glyph,
       controlSize = "sm",
       variant = "outline",
-      tooltip = pb.label .. " " .. pb.other,
+      tooltip = pb.label,
       onClick = function()
-        local m = getSelectedMonitor()
-        local other = monitorByName(pb.other)
-        if m and other then
-          setMonitor("--pos", posFor(m, other, pb.dir))
+        local sel = getSelectedMonitor()
+        local anchor = monitorByName(pb.anchor)
+        if sel and anchor and sel.name ~= anchor.name then
+          setMonitor("--pos", posFor(sel, anchor, pb.dir))
         end
       end,
     }))
