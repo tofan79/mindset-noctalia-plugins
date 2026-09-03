@@ -17,7 +17,7 @@
     },
     "monitorsLua": {
       "label": "Monitors config file",
-      "description": "Path to the monitors.lua file that better-displays persists display settings to"
+      "description": "Path to the monitors.lua that better-displays persists display settings to. Leave empty to auto-detect the active Hyprland config."
     }
   },
   "notification": {

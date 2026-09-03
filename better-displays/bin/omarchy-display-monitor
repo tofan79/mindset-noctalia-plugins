@@ -15,7 +15,29 @@ set -euo pipefail
 
 CONFIG_DIR="$HOME/.config/omarchy"
 DISPLAYS_JSON="$CONFIG_DIR/displays.json"
-MONITORS_LUA="${HYPR_CONFIG_DIR:-$HOME/.config/hypr/config}/monitors.lua"
+
+# Resolve the active monitors.lua location. Priority:
+#   1. HYPRLAND_CONFIG_FILE (dir of the main active config)
+#   2. HYPR_CONFIG_DIR
+#   3. first existing candidate among common Hyprland locations
+#   4. ~/.config/hypr/config/monitors.lua (Noctalia default)
+resolve_monitors_lua() {
+  if [[ ${HYPRLAND_CONFIG_FILE:-} == *.lua ]]; then
+    printf '%s\n' "$(dirname "$HYPRLAND_CONFIG_FILE")/monitors.lua"
+    return
+  fi
+  if [[ -n ${HYPR_CONFIG_DIR:-} ]]; then
+    printf '%s\n' "$HYPR_CONFIG_DIR/monitors.lua"
+    return
+  fi
+  local xdg="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local candidate
+  for candidate in "$xdg/hypr/config/monitors.lua" "$xdg/hypr/monitors.lua" "$xdg/hyprland/config/monitors.lua" "$xdg/hyprland/monitors.lua"; do
+    [[ -f $candidate ]] && { printf '%s\n' "$candidate"; return; }
+  done
+  printf '%s\n' "$xdg/hypr/config/monitors.lua"
+}
+MONITORS_LUA="$(resolve_monitors_lua)"
 
 # ---- input validation ----
 

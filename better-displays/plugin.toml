@@ -21,7 +21,7 @@ key          = "monitorsLua"
 type         = "string"
 label_key    = "settings.monitorsLua.label"
 description_key = "settings.monitorsLua.description"
-default      = "~/.config/hypr/config/monitors.lua"
+default      = ""
 
 [[widget]]
 id    = "toggle"
