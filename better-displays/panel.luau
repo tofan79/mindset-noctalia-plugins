@@ -11,11 +11,32 @@ local isOpen = false
 local scalePresets = { "1", "1.25", "1.6", "2", "3", "4" }
 local transformPresets = { "0", "1", "2", "3" }
 local transformLabels = { ["0"] = "0°", ["1"] = "90°", ["2"] = "180°", ["3"] = "270°" }
-local terminals = { "alacritty", "kitty", "ghostty", "foot" }
+local terminalCandidates = { "alacritty", "kitty", "ghostty", "foot", "konsole", "gnome-terminal", "xfce4-terminal", "terminator", "tilix", "wezterm", "rio", "contour", "hyper", "xterm", "rxvt" }
+local backendTerminals = { alacritty = true, kitty = true, ghostty = true, foot = true }
+local terminals = {}
 
 local function shellQuote(s)
   if s == nil then return "''" end
   return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
+end
+
+local function detectTerminals()
+  local queried = {}
+  for _, term in ipairs(terminalCandidates) do
+    table.insert(queried, shellQuote(term))
+  end
+  local cmd = "for t in " .. table.concat(queried, " ") .. "; do command -v $t >/dev/null 2>&1 && echo $t; done"
+  noctalia.runAsync("bash -c " .. shellQuote(cmd), function(result)
+    if result.exitCode == 0 then
+      local found = {}
+      for line in (result.stdout or ""):gmatch("[^\n]+") do
+        local name = line:match("^(%S+)$")
+        if name then table.insert(found, name) end
+      end
+      terminals = found
+      if isOpen then renderPanel() end
+    end
+  end)
 end
 
 local function getSelectedMonitor()
@@ -131,6 +152,8 @@ local function refresh()
     end
     if isOpen then renderPanel() end
   end)
+
+  detectTerminals()
 end
 
 local function setMonitor(flag, val)
@@ -274,30 +297,34 @@ function renderPanel()
   local terminalRows = {}
   for _, term in ipairs(terminals) do
     local size = terminalSizes[term] or "—"
-    table.insert(terminalRows, ui.row({
-      key = "term-" .. term,
-      align = "center",
-      gap = 8,
-    }, {
-      ui.label({ text = term, fontSize = 13, width = 90 }),
-      ui.button({
+    local supported = backendTerminals[term]
+    local row = {
+      ui.label({ text = term, fontSize = 13, flexGrow = 1 }),
+      ui.label({ text = tostring(size), fontSize = 13, width = 40, textAlign = "center" }),
+    }
+    if supported then
+      table.insert(row, 1, ui.button({
         key = "term-" .. term .. "-minus",
         text = "−",
         controlSize = "sm",
         onClick = function()
           stepTerminal(term, -1)
         end,
-      }),
-      ui.label({ text = tostring(size), fontSize = 13, width = 40, textAlign = "center" }),
-      ui.button({
+      }))
+      table.insert(row, ui.button({
         key = "term-" .. term .. "-plus",
         text = "+",
         controlSize = "sm",
         onClick = function()
           stepTerminal(term, 1)
         end,
-      }),
-    }))
+      }))
+    end
+    table.insert(terminalRows, ui.row({
+      key = "term-" .. term,
+      align = "center",
+      gap = 8,
+    }, row))
   end
 
   local children = {
