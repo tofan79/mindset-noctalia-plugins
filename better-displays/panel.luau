@@ -370,7 +370,7 @@ function renderPanel()
   end
 
   local children = {
-    ui.row({ align = "center", justify = "space_between" }, {
+    ui.row({ align = "center", justify = "space_between", gap = 8 }, {
       ui.glyph({ name = "device-desktop", size = 20 }),
       ui.label({ text = noctalia.tr("title"), fontSize = 16, fontWeight = "bold", flexGrow = 1 }),
       ui.button({ glyph = "x", variant = "ghost", onClick = function() panel.close() end }),
