@@ -2,34 +2,6 @@
 # Index of every plugin this source ships. plugin.toml stays authoritative.
 
 [[plugin]]
-id = "mindset/keybind-cheatsheet"
-name = "Keybind Cheatsheet"
-version = "0.3.0"
-updated_at = 1786324698
-added_at = 1786324698
-author = "mindset"
-license = "MIT"
-icon = "keyboard"
-description = "Searchable keybindings for Hyprland, Mango, and Niri. Groups bindings into categories from Lua config section headings."
-deprecated = false
-plugin_api = 9
-tags = ["bar", "panel", "utility", "system", "hyprland", "mangowc", "niri"]
-
-[[plugin]]
-id = "mindset/hotspot"
-name = "Wi-Fi Hotspot"
-version = "1.0.0"
-updated_at = 1786257372
-added_at = 1786257372
-author = "mindset"
-license = "MIT"
-icon = "router"
-description = "Toggle a Wi-Fi hotspot concurrently with the main Wi-Fi connection (Windows-like) using a virtual AP interface, with connected device list."
-deprecated = false
-plugin_api = 13
-tags = ["network", "bar", "panel", "service", "utility", "system", "indicator"]
-
-[[plugin]]
 id = "mindset/hypr-layouts"
 name = "Hypr Layouts"
 version = "1.0.0"
@@ -58,43 +30,29 @@ plugin_api = 13
 tags = ["hyprland", "bar", "panel", "utility"]
 
 [[plugin]]
-id = "mindset/hypr-decorations"
-name = "Hypr Decorations"
+id = "mindset/better-displays"
+name = "Better Displays"
 version = "1.0.0"
 updated_at = 1786340000
 added_at = 1786340000
 author = "mindset"
 license = "MIT"
-icon = "wand"
-description = "Pick a decoration preset from ~/.config/hypr/decorations. Replaces the rofi decoration picker."
+icon = "device-desktop"
+description = "Per-monitor resolution, scale, position, transform and per-terminal font sizes from the bar"
 deprecated = false
 plugin_api = 13
-tags = ["hyprland", "bar", "panel", "utility"]
-
-[[plugin]]
-id = "mindset/hypr-windows"
-name = "Hypr Windows"
-version = "1.0.0"
-updated_at = 1786340000
-added_at = 1786340000
-author = "mindset"
-license = "MIT"
-icon = "square-dashed"
-description = "Pick a window/gaps preset from ~/.config/hypr/windows. Replaces the rofi window picker."
-deprecated = false
-plugin_api = 13
-tags = ["hyprland", "bar", "panel", "utility"]
+tags = ["hyprland", "display", "monitor", "resolution"]
 
 [[plugin]]
 id = "mindset/gamer-mode"
 name = "Gamer Mode"
 version = "0.9.0"
-updated_at = 1786688824
-added_at = 1786327078
+updated_at = 1786340000
+added_at = 1786340000
 author = "mindset"
 license = "MIT"
 icon = "device-gamepad-2"
-description = "Live CPU/RAM/GPU metrics and a one-click gamer mode that suspends background resource hogs, switches to the performance profile, and strips Hyprland decorations for maximum FPS."
+description = "Live CPU/RAM/GPU metrics and a one-click gamer mode that suspends background resource hogs and strips Hyprland decorations for maximum FPS."
 deprecated = false
 plugin_api = 19
 tags = ["bar", "panel", "service", "gaming", "system", "hardware"]
