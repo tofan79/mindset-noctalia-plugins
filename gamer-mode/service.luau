@@ -1433,14 +1433,12 @@ local DECOR_SNAPSHOT = {
     { option = "decoration:shadow:range",    to = "shadow_range" },
 }
 
--- getoptionCmd turns a "ns:name:sub" key into the `hyprctl getoption` argv Hyprland
--- expects (each segment its own word). Segments come from our fixed list, never the user.
+-- getoptionCmd builds the `hyprctl getoption` command. Hyprland expects the option as a
+-- single colon-joined token (`animations:enabled`), not space-separated segments. The
+-- option comes from the fixed DECOR_SNAPSHOT list, never the user, so it is safe to
+-- embed verbatim.
 local function getoptionCmd(option)
-    local parts = {}
-    for part in option:gmatch("[^:]+") do
-        parts[#parts + 1] = part
-    end
-    return "hyprctl getoption " .. table.concat(parts, " ")
+    return "hyprctl getoption " .. option
 end
 
 -- parseOptionLine reads the value out of one `hyprctl getoption` line -- `int: 12`,
