@@ -9,6 +9,13 @@ description = "Pick the tiling layout of the active workspace from a centered pa
 tags = ["hyprland", "bar", "panel", "service", "indicator"]
 dependencies = ["hyprland"]
 
+[[setting]]
+key = "layouts_dir"
+type = "string"
+label_key = "settings.layouts_dir.label"
+description_key = "settings.layouts_dir.description"
+default = "~/.config/hypr/layouts"
+
 [[service]]
 id = "poller"
 entry = "service.luau"

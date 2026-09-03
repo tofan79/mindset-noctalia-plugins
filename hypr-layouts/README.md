@@ -25,16 +25,29 @@ and applying a layout goes through `hyprctl eval`.
 ## Usage
 
 Click the layout glyph in the bar to open the panel for the **currently focused
-workspace**. The panel shows the six supported layouts:
+workspace**.
+
+The **four built-in Hyprland layouts** are always listed:
+
+| Layout | Value |
+| --- | --- |
+| Dwindle | `dwindle` |
+| Master | `master` |
+| Monocle | `monocle` |
+| Scrolling | `scrolling` |
+
+On top of those, the panel **auto-detects** any custom layout registered from
+files in the layouts folder — including your own `hl.layout.register` layout
+modules such as Deck and Fair:
 
 | Layout | Value |
 | --- | --- |
 | Deck Stack | `lua:deck` |
-| Dwindle | `dwindle` |
 | Fair Grid | `lua:fair` |
-| Master | `master` |
-| Monocle | `monocle` |
-| Scrolling | `scrolling` |
+
+Add a new `*.lua` file that calls `hl.layout.register("name", …)` in the
+layouts folder and it appears automatically on the next open; no code change
+needed. Built-ins always stay on top, duplicates are skipped.
 
 Type to filter, use Up/Down to move the selection, and press Enter or click a
 row to apply. The chosen layout is scoped to the current workspace id, so a
@@ -56,7 +69,7 @@ current layout. Clicking it re-opens the panel for the focused workspace.
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| No settings | — | The plugin has no user-facing settings. |
+| `layouts_dir` | `~/.config/hypr/layouts` | Folder scanned for custom `*.lua` layout modules. Set it where your `hl.layout.register` files live. |
 
 ## IPC
 

@@ -7,7 +7,7 @@
 -- Keyboard: type to filter, Up/Down to move, Enter to apply (capture_keys).
 
 local PLUGIN_ID = "mindset/hypr-animations"
-local DEFAULT_DIR = "~/.config/hypr/animations"
+local DEFAULT_DIR = "~/.config/hypr/config/animations_presets"
 local DIR = DEFAULT_DIR
 local GLYPH = "palette"
 local NAME_PATTERN = 'name%s+"([^"]*)"'
@@ -20,25 +20,6 @@ local searchRevision = 0
 local activeFile = ""
 local status = ""
 local isOpen = false
-local VIEW = 6
-local TAIL = 4
-
-local function visibleRange(total)
-  if total <= VIEW then
-    return 1, total
-  end
-  local sel = selectedIndex + 1
-  if sel + VIEW - 1 >= total then
-    local first = math.max(1, total - VIEW + 1)
-    return first, total
-  end
-  local first = math.max(1, sel - 2)
-  local last = math.min(total, first + VIEW + TAIL - 1)
-  if last - first + 1 < VIEW then
-    first = math.max(1, last - VIEW + 1)
-  end
-  return first, last
-end
 
 local function cachePath()
   local directory = noctalia.pluginDataDir()
@@ -73,6 +54,11 @@ local function extractName(text, fallback)
   local name = string.match(text or "", NAME_PATTERN)
   if name == nil or name == "" then
     name = fallback
+    if name ~= nil then
+      name = noctalia.string.trim(name)
+      name = name:gsub("[_%s]+", " ")
+      name = name:gsub("^(%l)", string.upper)
+    end
   end
   return name
 end
@@ -158,9 +144,8 @@ local function render()
   elseif #filtered == 0 then
     table.insert(rows, ui.label({ text = noctalia.tr("error.no_presets"), maxLines = 2 }))
   else
-    local first, last = visibleRange(#filtered)
-    for index = first, last do
-      table.insert(rows, renderRow(filtered[index], index))
+    for index, preset in ipairs(filtered) do
+      table.insert(rows, renderRow(preset, index))
     end
   end
 
@@ -181,7 +166,7 @@ local function render()
         onChange = "onSearch",
       }),
     }),
-    ui.scroll({ key = "rows-" .. searchRevision .. "-" .. selectedIndex, flexGrow = 1, gap = 4 }, rows),
+    ui.scroll({ flexGrow = 1, gap = 4 }, rows),
   }))
 end
 

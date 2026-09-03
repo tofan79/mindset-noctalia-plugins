@@ -9,15 +9,24 @@
 -- so the mark follows what the panel last applied instead of hyprctl.
 -- Keyboard: type to filter, Up/Down to move, Enter to apply (capture_keys).
 
-local layouts = {
-  { name = "Deck Stack", value = "lua:deck",  glyph = "layers-difference" },
+local DEFAULT_DIR = "~/.config/hypr/layouts"
+
+-- Glyphs for lua layouts we recognize; unknown ones fall back to layout-grid.
+local GLYPH_BY_NAME = {
+  deck = "layers-difference",
+  fair = "layout-board-split",
+}
+
+-- The four built-in Hyprland layouts are always available. Additional layouts
+-- come from hl.layout.register("name") calls in files under the layouts folder.
+local BUILTIN_LAYOUTS = {
   { name = "Dwindle",    value = "dwindle",   glyph = "layout-2" },
-  { name = "Fair Grid",  value = "lua:fair",  glyph = "layout-board-split" },
   { name = "Master",     value = "master",    glyph = "layout-sidebar" },
   { name = "Monocle",    value = "monocle",   glyph = "square" },
   { name = "Scrolling",  value = "scrolling", glyph = "arrows-horizontal" },
 }
 
+local layouts = {}
 local isOpen = false
 local currentLayout = ""
 local workspaceId = nil
@@ -25,6 +34,52 @@ local filtered = {}
 local selectedIndex = 0
 local searchText = ""
 local searchRevision = 0
+
+local function capitalizeName(name)
+  local s = noctalia.string.trim(tostring(name or "")):gsub("[_%s]+", " ")
+  return s:gsub("(%a)([%w_-]*)", function(a, rest)
+    return string.upper(a) .. string.lower(rest)
+  end)
+end
+
+-- Scan <layouts_dir>/*.lua, find each hl.layout.register("<name>", ...) call,
+-- and expose it as the "lua:<name>" layout. Built-ins stay on top.
+local function loadLayouts()
+  layouts = {}
+  for _, layout in ipairs(BUILTIN_LAYOUTS) do
+    table.insert(layouts, layout)
+  end
+  local dir = noctalia.getConfig("layouts_dir") or DEFAULT_DIR
+  local entries = noctalia.listDir(dir)
+  if entries == nil then
+    return
+  end
+  for _, file in ipairs(entries) do
+    if string.sub(file, -4) == ".lua" then
+      local text = noctalia.readFile(dir .. "/" .. file)
+      local name = string.match(text or "", 'hl.layout.register%s*%(%s*"([%w_]+)')
+      if name ~= nil and name ~= "" then
+        local value = "lua:" .. name
+        local dup = false
+        for _, layout in ipairs(layouts) do
+          if layout.value == value then
+            dup = true
+            break
+          end
+        end
+        if not dup then
+          table.insert(layouts, {
+            name = (name == "deck" and "Deck Stack")
+              or (name == "fair" and "Fair Grid")
+              or capitalizeName(name),
+            value = value,
+            glyph = GLYPH_BY_NAME[name] or "layout-grid",
+          })
+        end
+      end
+    end
+  end
+end
 
 local function layoutCachePath()
   local directory = noctalia.pluginDataDir()
@@ -176,6 +231,7 @@ function onOpen(_context)
   isOpen = true
   searchText = ""
   searchRevision += 1
+  loadLayouts()
   noctalia.runAsync("hyprctl activeworkspace -j", function(result)
     if result.exitCode == 0 then
       local data = noctalia.json.decode(result.stdout)

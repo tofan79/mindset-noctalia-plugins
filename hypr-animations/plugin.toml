@@ -14,7 +14,7 @@ key = "presets_dir"
 type = "string"
 label_key = "settings.presets_dir.label"
 description_key = "settings.presets_dir.description"
-default = "~/.config/hypr/animations"
+default = "~/.config/hypr/config/animations_presets"
 
 [[widget]]
 id = "toggle"

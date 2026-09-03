@@ -14,5 +14,11 @@
   "error": {
     "no_workspace": "Tidak bisa membaca workspace aktif.",
     "apply_failed": "Gagal menerapkan layout."
+  },
+  "settings": {
+    "layouts_dir": {
+      "label": "Direktori layout",
+      "description": "Folder yang dipindai untuk *.lua layout. Setiap file yang memanggil hl.layout.register jadi layout yang bisa dipilih, di atas empat layout bawaan."
+    }
   }
 }

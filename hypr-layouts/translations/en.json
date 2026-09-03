@@ -14,5 +14,11 @@
   "error": {
     "no_workspace": "Could not read the active workspace.",
     "apply_failed": "Could not apply the layout."
+  },
+  "settings": {
+    "layouts_dir": {
+      "label": "Layouts directory",
+      "description": "Folder scanned for *.lua layouts. Each file that calls hl.layout.register becomes a selectable layout, on top of the four built-ins."
+    }
   }
 }

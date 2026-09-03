@@ -26,12 +26,13 @@ same command the shell's switch-animations script uses.
 ## Usage
 
 Click the palette glyph in the bar to open the panel. It scans the animation
-directory, lists every `.lua` file with its display name, and highlights the
-currently active one. Type to filter, use Up/Down to move, and press Enter or
+directory, lists **every** `.lua` file with its display name, and highlights the
+currently active one. All presets are rendered up front, so nothing waits on an
+arrow key to appear. Type to filter, use Up/Down to move, and press Enter or
 click a row to apply.
 
 A preset's display name comes from the `name = "..."` line at the top of its
-file; if the file has none, the file name is used.
+file; if the file has none, the file name (capitalised) is used.
 
 Open the panel from a shell or a keybind:
 
@@ -47,7 +48,7 @@ into your static config.
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `presets_dir` | `~/.config/hypr/animations` | Directory scanned for `*.lua` animation presets. |
+| `presets_dir` | `~/.config/hypr/config/animations_presets` | Directory scanned for `*.lua` animation presets. |
 
 ## Notes
 
