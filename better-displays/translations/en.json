@@ -1,0 +1,25 @@
+{
+  "title": "Better Displays",
+  "tooltip": "Display settings · click to configure",
+  "panel": {
+    "monitor": "MONITOR",
+    "resolution": "RESOLUTION",
+    "scale": "SCALE",
+    "position": "POSITION",
+    "orientation": "ORIENTATION",
+    "terminal_font": "TERMINAL FONT"
+  },
+  "settings": {
+    "refreshSeconds": {
+      "label": "Refresh interval (seconds)",
+      "description": "How often to poll monitor info while the panel is open"
+    }
+  },
+  "notification": {
+    "applied": "Applied: {output}"
+  },
+  "error": {
+    "no_monitors": "No monitors found.",
+    "apply_failed": "Could not apply display setting."
+  }
+}

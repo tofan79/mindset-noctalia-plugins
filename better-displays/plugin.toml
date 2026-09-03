@@ -1,0 +1,30 @@
+id           = "mindset/better-displays"
+name         = "Better Displays"
+version      = "1.0.0"
+plugin_api   = 13
+author       = "mindset"
+license      = "MIT"
+icon         = "device-desktop"
+description  = "Per-monitor resolution, scale, position, transform and per-terminal font sizes from the bar"
+tags         = ["hyprland", "display", "monitor", "resolution"]
+dependencies = ["hyprctl", "jq"]
+
+[[setting]]
+key          = "refreshSeconds"
+type         = "int"
+label_key    = "settings.refreshSeconds.label"
+description_key = "settings.refreshSeconds.description"
+default      = 4
+
+[[widget]]
+id    = "toggle"
+entry = "widget.luau"
+
+[[panel]]
+id              = "panel"
+entry           = "panel.luau"
+width           = 420
+height          = 580
+placement       = "floating"
+position        = "center"
+keyboard_focus  = "exclusive"
