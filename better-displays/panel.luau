@@ -21,12 +21,9 @@ local function shellQuote(s)
 end
 
 local function detectTerminals()
-  local queried = {}
-  for _, term in ipairs(terminalCandidates) do
-    table.insert(queried, shellQuote(term))
-  end
-  local cmd = "for t in " .. table.concat(queried, " ") .. "; do command -v $t >/dev/null 2>&1 && echo $t; done"
-  noctalia.runAsync("bash -c " .. shellQuote(cmd), function(result)
+  local list = table.concat(terminalCandidates, " ")
+  local cmd = "for t in " .. list .. "; do command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; done || true"
+  noctalia.runAsync(cmd, function(result)
     if result.exitCode == 0 then
       local found = {}
       for line in (result.stdout or ""):gmatch("[^\n]+") do
@@ -34,7 +31,12 @@ local function detectTerminals()
         if name then table.insert(found, name) end
       end
       terminals = found
+      if #terminals == 0 then
+        terminals = { "kitty", "alacritty", "ghostty", "foot" }
+      end
       if isOpen then renderPanel() end
+    else
+      noctalia.log("detectTerminals: exit=" .. tostring(result.exitCode) .. " err=" .. tostring(result.stderr))
     end
   end)
 end
@@ -297,34 +299,41 @@ function renderPanel()
   local terminalRows = {}
   for _, term in ipairs(terminals) do
     local size = terminalSizes[term] or "—"
-    local supported = backendTerminals[term]
-    local row = {
-      ui.label({ text = term, fontSize = 13, flexGrow = 1 }),
-      ui.label({ text = tostring(size), fontSize = 13, width = 40, textAlign = "center" }),
-    }
-    if supported then
-      table.insert(row, 1, ui.button({
-        key = "term-" .. term .. "-minus",
-        text = "−",
-        controlSize = "sm",
-        onClick = function()
-          stepTerminal(term, -1)
-        end,
+    if backendTerminals[term] then
+      table.insert(terminalRows, ui.row({
+        key = "term-" .. term,
+        align = "center",
+        gap = 8,
+      }, {
+        ui.button({
+          key = "term-" .. term .. "-minus",
+          glyph = "minus",
+          controlSize = "sm",
+          onClick = function()
+            stepTerminal(term, -1)
+          end,
+        }),
+        ui.label({ text = term, fontSize = 13, flexGrow = 1 }),
+        ui.label({ text = tostring(size), fontSize = 13, width = 40, textAlign = "center" }),
+        ui.button({
+          key = "term-" .. term .. "-plus",
+          glyph = "plus",
+          controlSize = "sm",
+          onClick = function()
+            stepTerminal(term, 1)
+          end,
+        }),
       }))
-      table.insert(row, ui.button({
-        key = "term-" .. term .. "-plus",
-        text = "+",
-        controlSize = "sm",
-        onClick = function()
-          stepTerminal(term, 1)
-        end,
+    else
+      table.insert(terminalRows, ui.row({
+        key = "term-" .. term,
+        align = "center",
+        gap = 8,
+      }, {
+        ui.label({ text = term, fontSize = 13, flexGrow = 1 }),
+        ui.label({ text = tostring(size), fontSize = 13, width = 40, textAlign = "center" }),
       }))
     end
-    table.insert(terminalRows, ui.row({
-      key = "term-" .. term,
-      align = "center",
-      gap = 8,
-    }, row))
   end
 
   local children = {
