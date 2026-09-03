@@ -14,8 +14,8 @@ system.
 
 | Plugin | API | Description |
 | --- | --- | --- |
-| `mindset/hypr-layouts` | 13 | Tiling layout picker for the active workspace, per-workspace. |
-| `mindset/hypr-animations` | 13 | Animation preset picker from `~/.config/hypr/animations`. |
+| `mindset/hypr-layouts` | 13 | Per-workspace tiling layout picker; auto-detects custom `lua:` layouts from `~/.config/hypr/layouts` on top of the four built-ins. |
+| `mindset/hypr-animations` | 13 | Animation preset picker from `~/.config/hypr/config/animations_presets`. |
 | `mindset/better-displays` | 13 | Per-monitor resolution, scale, position, transform, VRR and per-terminal font sizes. |
 | `mindset/gamer-mode` | 19 | Live CPU/RAM/GPU metrics and one-click gamer mode. |
 
