@@ -44,6 +44,11 @@ validate_transform() {
   [[ $1 =~ ^[0-3]$ ]] || { echo "Invalid transform value: $1 (must be 0-3)" >&2; exit 1; }
 }
 
+validate_vrr() {
+  # VRR: integer 0-3 (0=off, 1=on, 2=fullscreen, 3=fullscreen+video/game)
+  [[ $1 =~ ^[0-3]$ ]] || { echo "Invalid vrr value: $1 (must be 0-3)" >&2; exit 1; }
+}
+
 # Escape a string for safe embedding in Lua double-quoted strings.
 lua_escape() {
   printf '%s' "$1" | sed 's/[\\"]/\\&/g'
@@ -101,14 +106,16 @@ clean_scale() {
 # ---- monitors.lua persistence ----
 
 persist_to_lua() {
-  local output="$1" mode="$2" pos="$3" scale="$4" transform="$5"
+  local output="$1" mode="$2" pos="$3" scale="$4" transform="$5" vrr="${6:-}"
   [[ -f $MONITORS_LUA ]] || return 0
 
   local safe_output safe_mode safe_pos
   safe_output="$(lua_escape "$output")"
   safe_mode="$(lua_escape "$mode")"
   safe_pos="$(lua_escape "$pos")"
-  local line="hl.monitor({ output = \"$safe_output\", mode = \"$safe_mode\", position = \"$safe_pos\", scale = $scale, transform = $transform })"
+  local vrr_field=""
+  [[ -n $vrr ]] && vrr_field=", vrr = $vrr"
+  local line="hl.monitor({ output = \"$safe_output\", mode = \"$safe_mode\", position = \"$safe_pos\", scale = $scale, transform = $transform$vrr_field })"
   # Replace an existing hl.monitor line for this exact output, else append.
   if grep -Eq "^hl\.monitor\(\{ output = \"$safe_output\"" "$MONITORS_LUA"; then
     local tmp
@@ -136,7 +143,7 @@ cmd_list() {
 
 cmd_set() {
   local output="${1:-}"
-  [[ -n $output ]] || { echo "Usage: omarchy display monitor set <output> [--mode WxH@Hz] [--scale N] [--pos X,Y] [--transform N]" >&2; exit 1; }
+  [[ -n $output ]] || { echo "Usage: omarchy display monitor set <output> [--mode WxH@Hz] [--scale N] [--pos X,Y] [--transform N] [--vrr 0-3]" >&2; exit 1; }
   validate_output "$output"
 
   local m
@@ -149,7 +156,7 @@ cmd_set() {
   cur_pos="$(echo "$m" | jq -r '"\(.x)x\(.y)"')"
   cur_transform="$(echo "$m" | jq -r '.transform')"
 
-  local mode="$cur_mode" scale="$cur_scale" pos="$cur_pos" transform="$cur_transform"
+  local mode="$cur_mode" scale="$cur_scale" pos="$cur_pos" transform="$cur_transform" vrr=""
   shift || true
   while (( $# > 0 )); do
     case "$1" in
@@ -157,6 +164,7 @@ cmd_set() {
       --scale) scale="$2"; shift 2 ;;
       --pos|--position) pos="$2"; shift 2 ;;
       --transform) transform="$2"; shift 2 ;;
+      --vrr) vrr="$2"; shift 2 ;;
       *) echo "Unknown arg: $1" >&2; exit 1 ;;
     esac
   done
@@ -166,6 +174,7 @@ cmd_set() {
   validate_pos "$pos"
   validate_scale "$scale"
   validate_transform "$transform"
+  [[ -z $vrr ]] || validate_vrr "$vrr"
 
   # Validate / clean scale against this monitor's current pixel size.
   local w h
@@ -178,25 +187,37 @@ cmd_set() {
   safe_output="$(lua_escape "$output")"
   safe_mode="$(lua_escape "$mode")"
   safe_pos="$(lua_escape "$pos")"
-  if ! out="$(hyprctl eval "hl.monitor({ output = \"$safe_output\", mode = \"$safe_mode\", position = \"$safe_pos\", scale = $scale, transform = $transform })" 2>&1)"; then
+  local vrr_field=""
+  [[ -n $vrr ]] && vrr_field=", vrr = $vrr"
+  if ! out="$(hyprctl eval "hl.monitor({ output = \"$safe_output\", mode = \"$safe_mode\", position = \"$safe_pos\", scale = $scale, transform = $transform$vrr_field })" 2>&1)"; then
     echo "Live apply failed: $out" >&2
     exit 1
   fi
 
   # Persist runtime state.
-  write_outputs_json --arg out "$output" --arg mode "$mode" --arg pos "$pos" --argjson scale "$scale" --argjson transform "$transform" '
+  local j_vrr="$vrr"
+  [[ -n $j_vrr ]] || j_vrr="null"
+  write_outputs_json --arg out "$output" --arg mode "$mode" --arg pos "$pos" --argjson scale "$scale" --argjson transform "$transform" --argjson vrr "$j_vrr" '
     .monitors = (.monitors // {})
-    | .monitors[$out] = { mode: $mode, position: $pos, scale: $scale, transform: $transform }'
+    | .monitors[$out] = { mode: $mode, position: $pos, scale: $scale, transform: $transform, vrr: $vrr }'
 
   # Persist to monitors.lua when the user still keeps Omarchy monitor lines.
-  persist_to_lua "$output" "$mode" "$pos" "$scale" "$transform"
+  persist_to_lua "$output" "$mode" "$pos" "$scale" "$transform" "$vrr"
 
-  echo "Applied $output: mode=$mode scale=$scale pos=$pos transform=$transform"
+  echo "Applied $output: mode=$mode scale=$scale pos=$pos transform=$transform vrr=${vrr:-unchanged}"
+}
+
+cmd_vrr() {
+  # Print monitor => configured vrr (0-3) one per line, from displays.json.
+  if [[ -f $DISPLAYS_JSON ]]; then
+    jq -r '.monitors // {} | to_entries[]? | "\(.key)=\(.value.vrr // "0")"' "$DISPLAYS_JSON" 2>/dev/null
+  fi
 }
 
 case "${1:-}" in
-  ""|-h|--help) echo "Usage: omarchy display monitor [list|set <output> ...]" >&2 ;;
+  ""|-h|--help) echo "Usage: omarchy display monitor [list|set <output> ...|vrr]" >&2 ;;
   list) cmd_list ;;
   set) shift; cmd_set "$@" ;;
+  vrr) cmd_vrr ;;
   *) echo "Unknown subcommand: $1" >&2; exit 1 ;;
 esac

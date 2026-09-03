@@ -7,10 +7,13 @@ local monitors = {}
 local selected = ""
 local terminalSizes = {}
 local isOpen = false
+local vrrConfig = {}
 
 local scalePresets = { "1", "1.25", "1.6", "2", "3", "4" }
 local transformPresets = { "0", "1", "2", "3" }
 local transformLabels = { ["0"] = "0°", ["1"] = "90°", ["2"] = "180°", ["3"] = "270°" }
+local vrrPresets = { "0", "1", "2", "3" }
+local vrrLabels = { ["0"] = "Off", ["1"] = "On", ["2"] = "Fullscreen", ["3"] = "Fullscreen+video" }
 local terminalCandidates = { "alacritty", "kitty", "ghostty", "foot", "konsole", "gnome-terminal", "xfce4-terminal", "terminator", "tilix", "wezterm", "rio", "contour", "hyper", "xterm", "rxvt" }
 local backendTerminals = { alacritty = true, kitty = true, ghostty = true, foot = true }
 local terminals = {}
@@ -83,6 +86,15 @@ local function selectedModeIndex(modesList, m)
   return 0
 end
 
+local function currentVrrIndex(m)
+  local cfg = m and vrrConfig[m.name]
+  local val = cfg or (m and m.vrr)
+  for i, p in ipairs(vrrPresets) do
+    if p == val then return i - 1 end
+  end
+  return 0
+end
+
 local function getModes(m)
   if m == nil or m.modes == nil then return {} end
   local seen = {}
@@ -124,6 +136,7 @@ local function refresh()
             y = d.y,
             scale = d.scale,
             transform = d.transform,
+            vrr = d.vrr == true and "1" or "0",
             focused = d.focused == true,
             modes = modeStrings,
             refreshRate = d.refreshRate or 0,
@@ -144,6 +157,17 @@ local function refresh()
       end
     end
     if isOpen then renderPanel() end
+  end)
+
+  noctalia.runAsync(shellQuote(scriptDir .. "/omarchy-display-monitor") .. " vrr", function(result)
+    if result.exitCode == 0 then
+      local v = {}
+      for line in (result.stdout or ""):gmatch("[^\n]+") do
+        local name, val = line:match("^([^=]+)=([0-9]+)$")
+        if name and val then v[name] = val end
+      end
+      vrrConfig = v
+    end
   end)
 
   noctalia.runAsync(shellQuote(scriptDir .. "/omarchy-display-terminal") .. " list --json", function(result)
@@ -371,6 +395,17 @@ function renderPanel()
     ui.row({ gap = 6 }, posButtons),
     ui.label({ text = noctalia.tr("panel.orientation"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.row({ gap = 6 }, transformButtons),
+    ui.label({ text = noctalia.tr("panel.vrr"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+    ui.select({
+      key = "vrr",
+      options = vrrLabels,
+      selectedIndex = currentVrrIndex(sel),
+      controlSize = "sm",
+      onChange = function(index)
+        local chosen = vrrPresets[tonumber(index) + 1]
+        if chosen then setMonitor("--vrr", chosen) end
+      end,
+    }),
     ui.separator({}),
     ui.label({ text = noctalia.tr("panel.terminal_font"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.column({ gap = 6 }, terminalRows),
