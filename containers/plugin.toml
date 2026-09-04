@@ -1,0 +1,67 @@
+id = "mindset/containers"
+name = "Containers"
+version = "1.0.0"
+plugin_api = 19
+author = "mindset"
+license = "MIT"
+dependencies = ["docker", "podman"]
+tags = ["bar", "panel", "service", "system", "docker", "podman"]
+icon = "container"
+description = "Docker and Podman status in the bar: containers, images, volumes, networks, and live stats, with start/stop/restart and removal controls."
+
+[[setting]]
+key = "engine"
+type = "select"
+label_key = "settings.engine.label"
+description_key = "settings.engine.description"
+default = "auto"
+options = [
+  { value = "auto", label_key = "settings.engine.options.auto" },
+  { value = "docker", label_key = "settings.engine.options.docker" },
+  { value = "podman", label_key = "settings.engine.options.podman" },
+]
+
+[[setting]]
+key = "refresh_interval"
+type = "select"
+label_key = "settings.refresh_interval.label"
+description_key = "settings.refresh_interval.description"
+default = "5"
+options = [
+  { value = "3", label_key = "settings.refresh_interval.options.3" },
+  { value = "5", label_key = "settings.refresh_interval.options.5" },
+  { value = "10", label_key = "settings.refresh_interval.options.10" },
+  { value = "15", label_key = "settings.refresh_interval.options.15" },
+  { value = "30", label_key = "settings.refresh_interval.options.30" },
+]
+
+[[setting]]
+key = "glyph"
+type = "glyph"
+label_key = "settings.glyph.label"
+description_key = "settings.glyph.description"
+default = "container"
+
+[[setting]]
+key = "show_running_count"
+type = "bool"
+label_key = "settings.show_running_count.label"
+description_key = "settings.show_running_count.description"
+default = true
+
+[[service]]
+id = "service"
+entry = "service.luau"
+
+[[panel]]
+id = "main"
+entry = "panel.luau"
+width = 640
+height = 720
+placement = "attached"
+position = "auto"
+keyboard_focus = "on_demand"
+
+[[widget]]
+id = "containers"
+entry = "widget.luau"

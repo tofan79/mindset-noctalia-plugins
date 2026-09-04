@@ -1,0 +1,69 @@
+{
+  "panel": {
+    "containers": "Containers",
+    "engine_both": "Docker + Podman",
+    "engine_docker": "Docker",
+    "engine_none": "No engine available",
+    "engine_podman": "Podman",
+    "images": "Images",
+    "loading": "Loading…",
+    "networks": "Networks",
+    "no_containers": "No containers found.",
+    "none": "None",
+    "remove": "Remove",
+    "resources": "Resources",
+    "restart": "Restart",
+    "settings": "Settings",
+    "start": "Start",
+    "state_unknown": "unknown",
+    "stop": "Stop",
+    "summary": "{running} running · {total} total · {unhealthy} unhealthy",
+    "title": "Containers",
+    "volumes": "Volumes"
+  },
+  "settings": {
+    "engine": {
+      "description": "Which engine to show. Auto picks whichever is installed.",
+      "label": "Engine",
+      "options": {
+        "auto": "Auto (installed engine)",
+        "docker": "Docker only",
+        "podman": "Podman only"
+      }
+    },
+    "glyph": {
+      "description": "Icon shown in the bar for this plugin.",
+      "label": "Icon"
+    },
+    "refresh_interval": {
+      "description": "How often to refresh the container lists.",
+      "label": "Refresh interval",
+      "options": {
+        "10": "10 s",
+        "15": "15 s",
+        "3": "3 s",
+        "30": "30 s",
+        "5": "5 s"
+      }
+    },
+    "show_running_count": {
+      "description": "Show the running container count next to the bar icon.",
+      "label": "Show running count"
+    }
+  },
+  "widget": {
+    "loading": "Containers…",
+    "running": {
+      "one": "1 running",
+      "other": "{count} running"
+    },
+    "total": {
+      "one": "1 total",
+      "other": "{count} total"
+    },
+    "unhealthy": {
+      "one": "1 unhealthy",
+      "other": "{count} unhealthy"
+    }
+  }
+}
