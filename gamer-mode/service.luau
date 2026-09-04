@@ -1741,9 +1741,13 @@ function M.disable()
             -- Resolve the live profile list first: powerState.available can be stale (e.g.
             -- power-profiles-daemon restarted), which would make setPowerProfile bail to a
             -- no-op and leave power stuck on performance after a disable.
-            M.refreshPower(function()
+            noctalia.log("gamermode DEBUG disable: restoring profile=" .. tostring(snap.power_profile_before))
+            M.refreshPower(function(active)
+                noctalia.log("gamermode DEBUG disable: powerState available=" .. tostring(powerState.available) .. " active=" .. tostring(active))
                 M.setPowerProfile(snap.power_profile_before)
             end)
+        else
+            noctalia.log("gamermode DEBUG disable: SKIP restore autoPerf=" .. tostring(autoPerformance()) .. " pwrBefore=" .. tostring(snap.power_profile_before))
         end
         if snap.wallpaper_automation_before ~= nil then
             if not M.setWallpaperAutomation(snap.wallpaper_automation_before) then
