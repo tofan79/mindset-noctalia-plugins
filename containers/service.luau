@@ -16,6 +16,11 @@ end
 
 local M = {}
 
+-- Forward-declared because parseRows/parseList (defined above) close over it, while the
+-- implementation is declared further down. Luau resolves upvalues at definition scope, so
+-- without this the early parsers would see a nil global and fail every list fetch.
+local sortContainers
+
 -- ── string helpers ──
 
 local function trim(s)
@@ -534,7 +539,7 @@ end
 
 -- ── sorting / merge / summary ──
 
-local function sortContainers(list)
+sortContainers = function(list)
     local out = {}
     for _, v in ipairs(list) do
         out[#out + 1] = v
