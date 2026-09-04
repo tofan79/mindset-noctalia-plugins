@@ -1177,6 +1177,9 @@ local function publishState()
     state.containers = attached
     local stats = M.summary(state.containers)
     local hw = M.composeHardware(statRows, host, diskUsed)
+    print(string.format("CONTAINERS_DEBUG available=%s total=%d running=%d n=%d dockerOk=%s podmanOk=%s engine=%s",
+        tostring(true), stats.total or 0, stats.running or 0, #(state.containers or {}),
+        tostring(dockerOk), tostring(podmanOk), M.enginePref or "?"))
     noctalia.state.set("containers", {
         available = true,
         engine = M.barEngine(stats, dockerOk, podmanOk),
