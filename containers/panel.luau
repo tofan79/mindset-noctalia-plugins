@@ -429,36 +429,85 @@ local function metaLine(item)
     if not item then
         return ""
     end
-    if item.kind == "volume" and item.driver and item.driver ~= "" then
-        return item.driver
-    end
-    if item.kind == "network" and item.driver and item.driver ~= "" then
-        return item.driver
-    end
-    if item.kind == "image" then
+    local kind = item.kind or "container"
+    if kind == "image" then
         local size = (item.sizeText ~= "" and item.sizeText) or formatBytes(item.size)
-        local used = item.used or 0
         local parts = { size }
-        if used > 0 then
-            parts[#parts + 1] = tostring(used) .. " " .. tr("panel.used")
+        if item.used and item.used > 0 then
+            parts[#parts + 1] = tostring(item.used) .. "x"
         end
-        if item.tag and item.tag ~= "" then
-            parts[#parts + 1] = item.tag
+        if item.dangling then
+            parts[#parts + 1] = tr("panel.dangling")
         end
-        return table.concat(parts, " | ")
+        if item.created and item.created ~= "" then
+            parts[#parts + 1] = item.created
+        end
+        if item.shortId and item.shortId ~= "" then
+            parts[#parts + 1] = item.shortId
+        end
+        return table.concat(parts, "  ·  ")
+    end
+    if kind == "volume" then
+        local parts = {}
+        if item.driver and item.driver ~= "" then
+            parts[#parts + 1] = item.driver
+        end
+        if item.anonymous then
+            parts[#parts + 1] = tr("panel.anonymous")
+        end
+        if item.scope and item.scope ~= "" then
+            parts[#parts + 1] = item.scope
+        end
+        return table.concat(parts, "  ·  ")
+    end
+    if kind == "network" then
+        local parts = {}
+        if item.driver and item.driver ~= "" then
+            parts[#parts + 1] = item.driver
+        end
+        if item.builtin then
+            parts[#parts + 1] = tr("panel.builtin")
+        end
+        if item.internal then
+            parts[#parts + 1] = tr("panel.internal")
+        end
+        if item.scope and item.scope ~= "" then
+            parts[#parts + 1] = item.scope
+        end
+        return table.concat(parts, "  ·  ")
     end
     -- containers
     local parts = {}
-    if item.image and item.image ~= "" then
-        parts[#parts + 1] = item.image
+    if item.running and item.cpu ~= nil then
+        local cpu = tonumber(item.cpu) or 0
+        if cpu > 0 then
+            parts[#parts + 1] = string.format("%.1f", cpu) .. "% CPU"
+        end
     end
-    if item.name ~= item.service and item.service and item.service ~= "" then
-        parts[#parts + 1] = item.service
+    if item.running and item.memPerc ~= nil then
+        local memText = (item.memText and item.memText ~= "") and (item.memText .. " ") or ""
+        local memPerc = tonumber(item.memPerc) or 0
+        parts[#parts + 1] = memText .. string.format("%.1f", memPerc) .. "%"
     end
     if item.status and item.status ~= "" then
         parts[#parts + 1] = item.status
+    elseif item.state and item.state ~= "" then
+        parts[#parts + 1] = item.state
     end
-    return table.concat(parts, " | ")
+    if item.image and item.image ~= "" then
+        parts[#parts + 1] = item.image
+    end
+    if item.ports and item.ports ~= "" then
+        parts[#parts + 1] = item.ports
+    end
+    -- drop empty tokens caused by a 0% cpu stamp
+    local kept = {}
+    for _, p in ipairs(parts) do
+        if p ~= "" then
+            kept[#kept + 1] = p
+        end
+    end
+    return table.concat(kept, "  ·  ")
 end
 
 local function rowTitle(item)
@@ -470,16 +519,29 @@ end
 
 -- ── hardware gauges ──
 
-local function gauge(label, glyph, fraction, percentText, usedText, totalText)
+local function gauge(label, glyph, fraction, percentText, usedText, totalText, hot)
+    local percentColor = hot and "error" or "primary"
+    local fill = hot and "error" or "primary"
     return ui.column({ gap = 6, flexGrow = 1 }, {
         ui.row({ align = "center", gap = 6 }, {
-            ui.glyph({ name = glyph, size = 13, color = "on_surface_variant" }),
-            ui.label({ text = label, color = "on_surface_variant", fontSize = 11, flexGrow = 1 }),
-            ui.label({ text = percentText, color = "on_surface", fontSize = 11, fontWeight = "bold" }),
+            ui.glyph({ name = glyph, size = 13, color = hot and "error" or "on_surface_variant" }),
+            ui.label({ text = label, color = "on_surface_variant", fontSize = 11, flexGrow = 1, fontWeight = "bold" }),
+            ui.label({ text = percentText, color = percentColor, fontSize = 11, fontWeight = "bold" }),
         }),
-        ui.progress({ height = 5, progress = percentOf(fraction), fill = "primary", track = "surface_variant", radius = 3 }),
+        ui.progress({ height = 5, progress = percentOf(fraction), fill = fill, track = "surface_variant", radius = 3 }),
         ui.label({ text = usedText .. " / " .. totalText, color = "on_surface_variant", fontSize = 10 }),
     })
+end
+
+local function percentText(v)
+    local n = tonumber(v) or 0
+    if n > 0 and n < 0.1 then
+        return "<0.1%"
+    end
+    if math.abs(n - math.floor(n + 0.5)) < 0.05 then
+        return tostring(math.floor(n + 0.5)) .. "%"
+    end
+    return string.format("%.1f", n) .. "%"
 end
 
 local function hardwareSection()
@@ -490,14 +552,20 @@ local function hardwareSection()
     local function frac(v)
         return (tonumber(v) or 0) / 100
     end
+    local cpuPerc = tonumber(hw.cpuPerc) or 0
+    local memPerc = tonumber(hw.memPerc) or 0
+    local diskPerc = tonumber(hw.diskPerc) or 0
     return {
-        ui.row({ gap = 10, align = "center" }, {
-            gauge("CPU", "cpu", frac(hw.cpuPerc), math.floor(hw.cpuPerc or 0) .. "%",
-                formatCores(hw.cpuUsed), formatCores(hw.cpuTotal)),
-            gauge("RAM", "chart-donut", frac(hw.memPerc), math.floor(hw.memPerc or 0) .. "%",
-                formatBytes(hw.memUsed), formatBytes(hw.memTotal)),
-            gauge("Disk", "database", frac(hw.diskPerc), math.floor(hw.diskPerc or 0) .. "%",
-                formatBytes(hw.diskUsed), formatBytes(hw.diskTotal)),
+        ui.column({ gap = 8, padding = 8 }, {
+            ui.label({ text = tr("panel.hardware"):upper(), color = "on_surface", fontSize = 11, fontWeight = "bold" }),
+            ui.row({ gap = 10, align = "center" }, {
+                gauge("CPU", "cpu", frac(cpuPerc), percentText(cpuPerc),
+                    formatCores(hw.cpuUsed), formatCores(hw.cpuTotal), cpuPerc >= 80),
+                gauge("RAM", "chart-donut", frac(memPerc), percentText(memPerc),
+                    formatBytes(hw.memUsed), formatBytes(hw.memTotal), memPerc >= 90),
+                gauge("HD", "database", frac(diskPerc), percentText(diskPerc),
+                    formatBytes(hw.diskUsed), formatBytes(hw.diskTotal), diskPerc >= 90),
+            }),
         }),
     }
 end

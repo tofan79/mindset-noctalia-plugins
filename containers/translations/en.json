@@ -1,6 +1,9 @@
 {
   "panel": {
     "containers": "Containers",
+    "anonymous": "anonymous",
+    "builtin": "builtin",
+    "dangling": "dangling",
     "empty": "No containers found.",
     "empty_images": "No images found.",
     "empty_networks": "No networks found.",
@@ -12,11 +15,13 @@
     "filter_all": "All",
     "filter_running": "Running",
     "filter_stopped": "Stopped",
+    "hardware": "Hardware",
     "images": "Images",
     "images_count": {
       "one": "1 image",
       "other": "{count} images"
     },
+    "internal": "internal",
     "kind_containers": "Containers",
     "kind_images": "Images",
     "kind_networks": "Networks",
