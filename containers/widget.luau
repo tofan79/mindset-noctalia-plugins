@@ -55,14 +55,13 @@ end
 
 local function render()
     barWidget.setGlyph(noctalia.getConfig("glyph") or "container")
-    barWidget.setTooltip(M.formatTooltip(state))
+    local tooltip = M.formatTooltip(state)
+    if noctalia.getConfig("show_running_count") ~= false and state and state.stats then
+        tooltip = tostring(state.stats.running .. " | " .. tooltip)
+    end
+    barWidget.setTooltip(tooltip)
     local problem = (state and state.stats and state.stats.unhealthy and state.stats.unhealthy > 0)
     barWidget.setGlyphColor(problem and "error" or "on_surface")
-    if noctalia.getConfig("show_running_count") ~= false then
-        barWidget.setLabel(state and state.stats and tostring(state.stats.running) or "")
-    else
-        barWidget.setLabel("")
-    end
 end
 
 function M.onClick()
