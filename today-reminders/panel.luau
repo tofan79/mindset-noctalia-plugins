@@ -24,7 +24,7 @@ function addReminder()
         minutes = mins,
         text = text,
     })
-    addMinutesVal = "5"
+    addMinutesVal = ""
     addTextVal = ""
 end
 
