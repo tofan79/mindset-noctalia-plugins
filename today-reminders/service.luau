@@ -26,6 +26,7 @@ end
 
 -- ── State ────────────────────────────────────────────────────────────────────
 
+local function countReminders()
     local n = 0
     for _ in pairs(M.reminders) do n = n + 1 end
     return n
@@ -89,7 +90,7 @@ local function tick()
             changed = true
             local body = r.text or "Reminder!"
             noctalia.runAsync(
-                { "sh", "-c", "notify-send -u normal 'Reminder' " .. string.format("%q", body) },
+                { "notify-send", "-u", "normal", "Reminder", body },
                 function() end
             )
         end

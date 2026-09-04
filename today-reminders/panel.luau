@@ -2,6 +2,7 @@
 --
 -- Today Reminders panel — minutes-from-now input.
 -- Uses global callbacks per skill doc: closures are not resolved by the ui bridge.
+-- Actually closures work fine for api ≥ 9.
 --
 
 local M = {}
@@ -9,7 +10,6 @@ local M = {}
 local state = { reminders = {}, count = 0 }
 local addMinutesVal = "5"
 local addTextVal = ""
-local pendingDismissId = nil
 
 local function tr(key)
     return noctalia.tr(key) or key
@@ -32,10 +32,9 @@ function addReminder()
 end
 
 function dismissReminder(_)
-    local id = pendingDismissId
+    if not pendingDismissId then return end
+    noctalia.state.set("reminders_cmd", { action = "dismiss", id = pendingDismissId })
     pendingDismissId = nil
-    if not id then return end
-    noctalia.state.set("reminders_cmd", { action = "dismiss", id = id })
     render()
 end
 
@@ -53,13 +52,18 @@ local function reminderRow(r)
     local minsLeft = math.max(0, math.floor((r.fireAt - os.time()) / 60))
     local label = minsLeft > 0 and ("in " .. minsLeft .. " min") or "now"
     local text = r.text and r.text ~= "" and r.text or "(no text)"
-    return ui.row({ gap = 6, align = "center", key = "row-" .. tostring(r.id) }, {
+    local rid = tostring(r.id)
+    local dismissFn = function()
+        pendingDismissId = r.id
+        dismissReminder(nil)
+    end
+    return ui.row({ gap = 6, align = "center", key = "row-" .. rid }, {
         ui.label({ text = label, fontSize = 12 }),
         ui.label({ text = text, flexGrow = 1, color = "on_surface_variant" }),
         ui.button({
             glyph = "x", variant = "ghost", controlSize = "sm",
             tooltip = tr("panel.remove"),
-            onClick = "dismissReminder",
+            onClick = dismissFn,
         }),
     })
 end
@@ -79,7 +83,6 @@ function render()
     local listChildren = {}
     local reminders = state.reminders or {}
     for _, r in pairs(reminders) do
-        pendingDismissId = r.id
         listChildren[#listChildren + 1] = reminderRow(r)
     end
     if #listChildren == 0 then
