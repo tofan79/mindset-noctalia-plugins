@@ -2244,6 +2244,7 @@ end
 -- ── shell entry points (must be globals) ──
 
 function update()
+    noctalia.log("gamermode DEBUG update tick: armed=" .. tostring(snapshotWatchdog.armed or disableWatchdog.armed))
     M.publishMetrics()
     -- A queue can only stall if every start was refused while nothing of ours was running,
     -- which needs the rest of the shell to hold the whole process cap. The poll tick is the
