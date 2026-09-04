@@ -2,13 +2,17 @@
 --
 -- Today Reminders service: loads reminders, fires notifications when due,
 -- and auto-deletes them at end of day.
+--
+-- IPC: panel sets commands via noctalia.state.set("reminders_cmd", {...})
+-- Service watches reminders_cmd and processes actions.
+-- Timer via global update() + noctalia.setUpdateInterval().
 
 local DATA_FILE = noctalia.appdir() .. "/reminders.json"
 
 local M = {}
 
 local reminders = {}
-local tick_timer = nil
+local REFRESH_MS = 30000  -- poll every 30s
 
 -- ── Persistence ──────────────────────────────────────────────────────────────
 
@@ -17,9 +21,9 @@ local function load()
     if not f then return {} end
     local data = f:read("*a")
     f:close()
-    local ok, parsed = pcall(noctalia.jsonDecode, data)
+    if data == "" then return {} end
+    local ok, parsed = pcall(noctalia.json.decode, data)
     if not ok or type(parsed) ~= "table" then return {} end
-    -- prune reminders past today's date
     local today = os.date("%Y-%m-%d")
     local filtered = {}
     for _, r in ipairs(parsed) do
@@ -29,7 +33,7 @@ local function load()
 end
 
 local function save(list)
-    local ok, data = pcall(noctalia.jsonEncode, list)
+    local ok, data = pcall(noctalia.json.encode, list)
     if not ok then return end
     local f = io.open(DATA_FILE, "w")
     if not f then return end
@@ -37,15 +41,28 @@ local function save(list)
     f:close()
 end
 
--- ── Reminder ops ─────────────────────────────────────────────────────────────
+-- ── State broadcast ───────────────────────────────────────────────────────────
+
+local function broadcast()
+    local pending = 0
+    for _, r in ipairs(reminders) do
+        if not r.done then pending = pending + 1 end
+    end
+    noctalia.state.set("reminders", {
+        reminders = reminders,
+        count = pending,
+    })
+end
+
+-- ── Actions ───────────────────────────────────────────────────────────────────
 
 function M.add(time_str, text)
     local today = os.date("%Y-%m-%d")
     table.insert(reminders, {
         id = os.time(),
         date = today,
-        time = time_str,
-        text = text,
+        time = time_str or "00:00",
+        text = text or "",
         done = false,
     })
     table.sort(reminders, function(a, b) return a.time < b.time end)
@@ -53,20 +70,10 @@ function M.add(time_str, text)
     broadcast()
 end
 
-function M.remove(id)
-    for i, r in ipairs(reminders) do
-        if r.id == id then
-            table.remove(reminders, i)
-            save(reminders)
-            broadcast()
-            return
-        end
-    end
-end
-
 function M.dismiss(id)
+    local num = tonumber(id)
     for i, r in ipairs(reminders) do
-        if r.id == id then
+        if r.id == num then
             table.remove(reminders, i)
             save(reminders)
             broadcast()
@@ -89,85 +96,58 @@ function M.clearDone()
     end
 end
 
--- ── State broadcast ───────────────────────────────────────────────────────────
+-- ── IPC handler: watches state changes from the panel ─────────────────────────
 
-local function broadcast()
-    noctalia.state.set("reminders", {
-        reminders = reminders,
-        count = #reminders,
-    })
-end
-
--- ── Timer check ─────────────────────────────────────────────────────────────
-
-local function secondsUntil(time_str)
-    -- time_str is "HH:MM" in 24h
-    local h = tonumber(time_str:sub(1, 2)) or 0
-    local m = tonumber(time_str:sub(4, 5)) or 0
-    local now = os.date("*t")
-    local target = {
-        year = now.year, month = now.month, day = now.day,
-        hour = h, min = m, sec = 0,
-    }
-    local t = os.time(target)
-    local diff = t - os.time(now)
-    -- if past today, check tomorrow
-    if diff <= 0 then diff = diff + 86400 end
-    return diff
-end
-
-local function fire(r)
-    if r.done then return end
-    local sound = noctalia.getConfig("sound") ~= false
-    local body = r.text or ""
-    if sound then
-        os.execute("notify-send -u normal \"Reminder\" " .. noctalia.shellQuote(body) .. " 2>/dev/null")
-        os.execute("canberra-gtk-play -i notification 2>/dev/null")
-    else
-        os.execute("notify-send -u normal \"Reminder\" " .. noctalia.shellQuote(body) .. " 2>/dev/null")
+function M.handleCommand(cmd)
+    if not cmd or type(cmd) ~= "table" then return end
+    local action = cmd.action
+    if action == "add" then
+        M.add(cmd.time, cmd.text)
+    elseif action == "dismiss" then
+        M.dismiss(cmd.id)
+    elseif action == "clearDone" then
+        M.clearDone()
     end
-    r.done = true
-    save(reminders)
-    broadcast()
 end
+
+-- ── Timer ─────────────────────────────────────────────────────────────────────
 
 local function tick()
     local now = os.date("%H:%M")
     for _, r in ipairs(reminders) do
         if not r.done and r.time == now then
-            fire(r)
+            r.done = true
+            local body = r.text or ""
+            noctalia.runAsync({ "sh", "-c", "notify-send -u normal 'Reminder' " .. string.format("%q", body) }, function() end)
         end
     end
+    save(reminders)
+    broadcast()
 end
 
--- ── Lifecycle ────────────────────────────────────────────────────────────────
+-- ── Noctalia entry points ─────────────────────────────────────────────────────
 
-noctalia.onInit(function()
+function init()
     reminders = load()
     broadcast()
-    -- check every 30s
-    noctalia.interval(30, tick)
-end)
+    noctalia.setUpdateInterval(REFRESH_MS)
+end
 
-noctalia.onExit(function()
-    save(reminders)
-end)
+function update()
+    tick()
+end
 
--- IPC handlers
-noctalia.handle("add", function(args)
-    M.add(args[1], args[2] or "")
-end)
+function onConfigChanged()
+    -- no runtime config changes
+end
 
-noctalia.handle("remove", function(args)
-    M.remove(tonumber(args[1]))
-end)
+function onIpc(event)
+    -- handles CLI: noctalia msg plugin mindset/today-reminders:service all <event>
+end
 
-noctalia.handle("dismiss", function(args)
-    M.dismiss(tonumber(args[1]))
-end)
+-- Watch for panel commands
+noctalia.state.watch("reminders_cmd", M.handleCommand)
 
-noctalia.handle("clearDone", function()
-    M.clearDone()
-end)
+M.init()
 
 return M

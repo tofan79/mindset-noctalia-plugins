@@ -1,12 +1,14 @@
 --!nonstrict
 --
 -- Today Reminders panel: add, view, dismiss reminders for today.
+-- Commands sent via noctalia.state.set("reminders_cmd", {...})
 
 local M = {}
 
 local state = { reminders = {}, count = 0 }
 local addTime = "09:00"
 local addText = ""
+
 local render
 
 -- ── i18n helpers ─────────────────────────────────────────────────────────────
@@ -35,12 +37,18 @@ local function sortByTime(list)
     return sorted
 end
 
+-- ── send command to service ───────────────────────────────────────────────────
+
+local function sendCommand(cmd)
+    noctalia.state.set("reminders_cmd", cmd)
+end
+
 -- ── add reminder ──────────────────────────────────────────────────────────────
 
 local function addReminder()
     local text = addText or ""
     if text == "" then return end
-    noctalia.msg("plugin mindset/today-reminders:service all add " .. noctalia.shellQuote(addTime) .. " " .. noctalia.shellQuote(text))
+    sendCommand({ action = "add", time = addTime, text = text })
     addText = ""
     addTime = "09:00"
     render()
@@ -51,7 +59,7 @@ end
 local function reminderRow(r)
     local timeLabel = formatTime(r.time)
     local doneColor = r.done and "on_surface_variant" or "on_surface"
-    local doneTextDeco = r.done and "line_through" or "none"
+    local doneDeco = r.done and "line_through" or "none"
     return ui.row({
         key = "r" .. tostring(r.id),
         align = "center",
@@ -65,13 +73,9 @@ local function reminderRow(r)
                 color = doneColor,
                 fontSize = 13,
                 fontWeight = "medium",
-                textDecoration = doneTextDeco,
+                textDecoration = doneDeco,
             }),
-            ui.label({
-                text = timeLabel,
-                color = "on_surface_variant",
-                fontSize = 11,
-            }),
+            ui.label({ text = timeLabel, color = "on_surface_variant", fontSize = 11 }),
         }),
         ui.button({
             glyph = "x",
@@ -79,7 +83,7 @@ local function reminderRow(r)
             controlSize = "sm",
             tooltip = tr("panel.remove"),
             onClick = function()
-                noctalia.msg("plugin mindset/today-reminders:service all dismiss " .. tostring(r.id))
+                sendCommand({ action = "dismiss", id = r.id })
             end,
         }),
     })
@@ -101,14 +105,14 @@ local function addSection()
                 placeholder = "HH:MM",
                 value = addTime,
                 flexGrow = 0,
-                onChange = function(v) addTime = v end,
+                onChange = function(v) addTime = v or "09:00" end,
             }),
             ui.input({
                 key = "reminder-text",
                 placeholder = tr("panel.placeholder"),
                 value = addText,
                 flexGrow = 1,
-                onChange = function(v) addText = v end,
+                onChange = function(v) addText = v or "" end,
                 onSubmit = addReminder,
             }),
             ui.button({
@@ -161,7 +165,7 @@ local function footer()
             controlSize = "sm",
             tooltip = tr("panel.clear_done"),
             onClick = function()
-                noctalia.msg("plugin mindset/today-reminders:service all clearDone")
+                sendCommand({ action = "clearDone" })
             end,
         }),
     })
@@ -183,7 +187,7 @@ render = function()
         ui.separator({}),
         -- List
         ui.scroll({ flexGrow = 1, gap = 2 }, (function()
-            if (state.count or 0) == 0 then
+            if (state.count or 0) == 0 and #(state.reminders or {}) == 0 then
                 return { emptyState() }
             end
             return listSection()
