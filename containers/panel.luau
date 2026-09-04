@@ -844,8 +844,8 @@ local function footer()
     return ui.row({ align = "center", gap = 6 }, {
         ui.label({ text = footerText, color = "on_surface_variant", fontSize = 10, flexGrow = 1 }),
         ui.label({ text = text, color = "on_surface_variant", fontSize = 10 }),
-        ui.button({ glyph = "refresh", variant = "ghost", controlSize = "sm", tooltip = tr("panel.refresh"), onClick = refreshNow }),
-        ui.button({ glyph = "settings", variant = "ghost", controlSize = "sm", tooltip = tr("panel.settings"), onClick = "onOpenSettings" }),
+        ui.button({ glyph = "refresh", text = tr("panel.refresh"), variant = "ghost", controlSize = "sm", tooltip = tr("panel.refresh"), onClick = refreshNow }),
+        ui.button({ glyph = "settings", text = tr("panel.settings"), variant = "ghost", controlSize = "sm", tooltip = tr("panel.settings"), onClick = "onOpenSettings" }),
     })
 end
 
