@@ -16,8 +16,10 @@ system.
 | --- | --- | --- |
 | `mindset/hypr-layouts` | 13 | Per-workspace tiling layout picker; auto-detects custom `lua:` layouts from `~/.config/hypr/layouts` on top of the four built-ins. |
 | `mindset/hypr-animations` | 13 | Animation preset picker from `~/.config/hypr/config/animations_presets`. |
-| `mindset/better-displays` | 13 | Per-monitor resolution, scale, position, transform, VRR and per-terminal font sizes. |
+| `mindset/better-displays` | 19 | Per-monitor resolution, scale, position, transform, VRR and per-terminal font sizes. |
 | `mindset/gamer-mode` | 19 | Live CPU/RAM/GPU metrics and one-click gamer mode. |
+| `mindset/today-reminders` | 19 | Set a reminder for later today. Gets dismissed after it fires and never carries into tomorrow. |
+| `mindset/containers` | 19 | Docker and Podman status in the bar: containers, images, volumes, networks, and live stats, with start/stop/restart and removal controls. |
 
 ## Structure
 
@@ -38,6 +40,10 @@ mindset-noctalia-plugins/
     ...
   hypr-layouts/
     ...
+  today-reminders/
+    ...
+  containers/
+    ...
 ```
 
 `plugin.toml` is authoritative for each plugin's id, entries, and settings;
@@ -56,6 +62,8 @@ noctalia msg plugins enable mindset/hypr-layouts
 noctalia msg plugins enable mindset/hypr-animations
 noctalia msg plugins enable mindset/better-displays
 noctalia msg plugins enable mindset/gamer-mode
+noctalia msg plugins enable mindset/today-reminders
+noctalia msg plugins enable mindset/containers
 ```
 
 ### From GitHub
