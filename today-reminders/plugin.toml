@@ -6,7 +6,7 @@ author = "mindset"
 license = "MIT"
 dependencies = ["notify-send"]
 tags = ["bar", "panel", "service", "productivity", "notification"]
-icon = "bell"
+icon = "bell-ringing"
 description = "Set a reminder for later today. Gets dismissed after it fires and never carries into tomorrow."
 
 [[setting]]
