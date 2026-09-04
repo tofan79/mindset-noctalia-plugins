@@ -1,6 +1,6 @@
 --!nonstrict
--- Better Workspaces bar widget — styled like the built-in workspaces widget
--- Shows pill indicators per workspace, with active highlighted.
+-- Better Workspaces bar widget — styled like Omarchy/built-in workspaces.
+-- Shows pill buttons per workspace with aesthetic number formats.
 
 local PANEL_ID = "mindset/better-workspaces:panel"
 
@@ -56,7 +56,7 @@ converters["thai"] = function(n)
 end
 
 converters["greek"] = function(n)
-  if n < 1 or n > 24 then return toostring(n) end
+  if n < 1 or n > 24 then return tostring(n) end
   local g = {"α","β","γ","δ","ε","ζ","η","θ","ι","κ","λ","μ","ν","ξ","ο","π","ρ","σ","τ","υ","φ","χ","ψ","ω"}
   return g[n] or tostring(n)
 end
@@ -99,6 +99,7 @@ local function switchWorkspace(id)
 end
 
 local function refreshWorkspaces()
+  -- Get active workspace
   noctalia.runAsync("hyprctl activeworkspace -j", function(result)
     if result.exitCode == 0 then
       local data = noctalia.json.decode(result.stdout)
@@ -126,11 +127,7 @@ local function refreshWorkspaces()
   end)
 end
 
-local function render()
-  -- Build workspace pills like the built-in workspaces widget
-  local pills = {}
-
-  -- Get all workspace ids to show
+local function getWorkspaceIds()
   local ids = {}
   for n = 1, workspaceCount do
     ids[n] = n
@@ -147,8 +144,22 @@ local function render()
     end
     table.sort(ids)
   end
+  return ids
+end
 
-  -- Build pill for each workspace
+-- Build tooltip showing apps in workspace
+local function buildTooltip(id)
+  local ws = workspaces[id]
+  if not ws or not ws.occupied then
+    return "Workspace " .. convert(id) .. " · Empty"
+  end
+  return "Workspace " .. convert(id) .. " · Click to focus"
+end
+
+local function render()
+  local pills = {}
+  local ids = getWorkspaceIds()
+
   for _, id in ipairs(ids) do
     local ws = workspaces[id] or {}
     local isOccupied = ws.occupied or false
@@ -157,34 +168,44 @@ local function render()
 
     local label = convert(id)
 
-    -- Pill style: small rounded box with number
-    table.insert(pills, ui.box({
-      key = "pill-" .. id,
-      width = 20,
-      height = 20,
+    -- WidgetButton style: pill button with centered text
+    local bgFill = isFocused and "primary" or "surface_variant"
+    local textColor = isFocused and "on_primary" or "on_surface"
+
+    -- Create pill button
+    local pill = ui.box({
+      key = "ws-pill-" .. id,
+      width = 28,
+      height = 24,
       radius = 4,
-      fill = isFocused and "primary" or "surface_variant",
+      fill = bgFill,
       opacity = opacity,
+      onClick = function()
+        switchWorkspace(id)
+      end,
     }, {
       ui.label({
         text = label,
-        fontSize = 9,
+        fontSize = 11,
         fontWeight = isFocused and "bold" or "normal",
-        color = isFocused and "on_primary" or "on_surface_variant",
+        color = textColor,
         textAlign = "center",
       }),
-    }))
+    })
+
+    table.insert(pills, pill)
   end
 
-  -- Render as a row of pills (like built-in workspaces)
+  -- Render as row of pill buttons
   barWidget.render(ui.row({
     key = "workspaces-row",
-    gap = 3,
+    gap = 4,
     align = "center",
   }, pills))
 end
 
 function onClick()
+  -- Left click on bar widget opens panel
   noctalia.togglePanel(PANEL_ID)
 end
 
