@@ -1,9 +1,8 @@
 --!nonstrict
 --
--- Today Reminders panel — minutes-from-now input, no time picker.
+-- Today Reminders panel — minutes-from-now input.
+-- Pattern matches working plugins: gamer-mode + containers (global onOpen/render).
 --
-
-local PANEL_ID = "mindset/today-reminders:main"
 
 local M = {}
 
@@ -14,9 +13,6 @@ local addTextVal = ""
 local function tr(key)
     return noctalia.tr(key) or key
 end
-
--- forward-declare render so onClick can re-invoke it
-local render
 
 -- ── UI helpers ────────────────────────────────────────────────────────────────
 
@@ -44,21 +40,21 @@ local function emptyState()
     })
 end
 
--- ── Render ────────────────────────────────────────────────────────────────────
+-- ── Render (must be global) ───────────────────────────────────────────────────
 
-render = function()
+local function buildTree()
     state = noctalia.state.get("reminders") or { reminders = {}, count = 0 }
 
     local listChildren = {}
     local reminders = state.reminders or {}
     for _, r in pairs(reminders) do
-        table.insert(listChildren, reminderRow(r))
+        listChildren[#listChildren + 1] = reminderRow(r)
     end
     if #listChildren == 0 then
-        table.insert(listChildren, emptyState())
+        listChildren[#listChildren + 1] = emptyState()
     end
 
-    local tree = ui.scroll({ fill = true, stickToBottom = true }, {
+    return ui.scroll({ fill = true, stickToBottom = true }, {
         ui.column({ gap = 8, padding = 12 }, {
             ui.column({ gap = 6 }, {
                 ui.label({
@@ -67,13 +63,17 @@ render = function()
                 }),
                 ui.row({ gap = 6 }, {
                     ui.input({
-                        key = "add-minutes", placeholder = tr("panel.minutes_placeholder"),
-                        value = addMinutesVal, flexGrow = 0,
+                        key = "add-minutes",
+                        placeholder = tr("panel.minutes_placeholder"),
+                        value = addMinutesVal,
+                        flexGrow = 0,
                         onChange = function(v) addMinutesVal = v end,
                     }),
                     ui.input({
-                        key = "add-text", placeholder = tr("panel.text_placeholder"),
-                        value = addTextVal, flexGrow = 1,
+                        key = "add-text",
+                        placeholder = tr("panel.text_placeholder"),
+                        value = addTextVal,
+                        flexGrow = 1,
                         onChange = function(v) addTextVal = v end,
                     }),
                     ui.button({
@@ -102,20 +102,20 @@ render = function()
             ui.column({ gap = 4 }, listChildren),
         }),
     })
-
-    panel.render(tree)
 end
 
--- ── Panel entry points ────────────────────────────────────────────────────────
+function render()
+    panel.render(buildTree())
+end
 
-function M.onOpen(context)
+-- ── shell entry points (must be globals) ──────────────────────────────────────
+
+function onOpen()
     noctalia.state.watch("reminders", function(val)
         if val then state = val else state = { reminders = {}, count = 0 } end
         render()
     end)
     render()
 end
-
-M.onClose = function() end
 
 return M
