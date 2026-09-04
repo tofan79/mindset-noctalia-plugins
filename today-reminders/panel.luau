@@ -1,13 +1,11 @@
 --!nonstrict
 --
 -- Today Reminders panel — minutes-from-now input.
--- Uses global callbacks per skill doc: closures are not resolved by the ui bridge.
--- Actually closures work fine for api ≥ 9.
+-- Uses closures for onClick (api ≥ 9).
 --
 
 local M = {}
 
-local state = { reminders = {}, count = 0 }
 local addMinutesVal = "5"
 local addTextVal = ""
 
@@ -28,7 +26,6 @@ function addReminder()
     })
     addMinutesVal = "5"
     addTextVal = ""
-    render()
 end
 
 function dismissReminder(_)
@@ -78,8 +75,8 @@ end
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function render()
-    state = noctalia.state.get("reminders") or { reminders = {}, count = 0 }
-
+    -- Always read fresh from state — never trust a cached variable
+    local s = noctalia.state.get("reminders") or { reminders = {}, count = 0 }
     local listChildren = {}
     local reminders = state.reminders or {}
     for _, r in pairs(reminders) do
@@ -132,10 +129,7 @@ end
 
 function onOpen()
     -- force fresh read on every open
-    state = noctalia.state.get("reminders") or { reminders = {}, count = 0 }
-    noctalia.state.watch("reminders", function(val)
-        if not val then return end
-        state = val
+    noctalia.state.watch("reminders", function()
         render()
     end)
     render()
