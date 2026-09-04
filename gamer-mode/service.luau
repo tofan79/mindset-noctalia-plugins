@@ -1481,6 +1481,7 @@ function M.snapshotDecor(done)
         settled = true
         snapshotWatchdog.armed = false
         snapshotWatchdog.finish = nil
+        noctalia.log("gamermode DEBUG snapDecor resolved keys=" .. tostring(#decor) .. " pending=" .. tostring(pending))
         done(decor)
     end
     local function settle()
@@ -2259,6 +2260,7 @@ function update()
             local finalize = snapshotWatchdog.finish
             snapshotWatchdog.armed = false
             snapshotWatchdog.finish = nil
+            noctalia.log("gamermode DEBUG snapDecor watchdog fired")
             if finalize then
                 finalize()
             end
