@@ -1596,6 +1596,7 @@ local function applyBoost(gaming, decorBefore)
 end
 
 function M.enable(profileOverride)
+    noctalia.log("gamermode DEBUG enable called busy=" .. tostring(busy))
     if busy then
         return
     end
@@ -1688,6 +1689,7 @@ function M.enable(profileOverride)
     -- snapshotWatchdog guarantees even if a read never calls back. No second gate: the
     -- power family is kicked above and applies itself, and waiting on it would re-expose
     -- the wedge this guard exists to remove.
+    noctalia.log("gamermode DEBUG enable -> snapshotDecor start")
     M.snapshotDecor(function(decor)
         startSuspend(powerBefore, decor)
     end)
