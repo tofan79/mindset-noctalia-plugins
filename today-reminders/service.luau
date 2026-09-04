@@ -4,7 +4,7 @@
 
 local DATA_FILE = (noctalia.pluginDataDir() or "") .. "/reminders.json"
 
-local M = { reminders = {} }
+local M = { reminders = {}, nextId = 1 }
 
 -- ── Persistence ──────────────────────────────────────────────────────────────
 
@@ -45,16 +45,20 @@ end
 
 function M.add(minutes, text)
     local fireAt = os.time() + (tonumber(minutes) or 1) * 60
-    local id = os.time()
+    local id = M.nextId
+    M.nextId = M.nextId + 1
     M.reminders[id] = { id = id, fireAt = fireAt, text = text or "", done = false }
     save()
     broadcast()
 end
 
 function M.dismiss(id)
-    M.reminders[tonumber(id)] = nil
-    save()
-    broadcast()
+    local nid = tonumber(id)
+    if nid and M.reminders[nid] then
+        M.reminders[nid] = nil
+        save()
+        broadcast()
+    end
 end
 
 function M.clearDone()

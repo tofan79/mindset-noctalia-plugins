@@ -32,10 +32,10 @@ function addReminder()
 end
 
 function dismissReminder(_)
-    if not pendingDismissId then return end
-    noctalia.state.set("reminders_cmd", { action = "dismiss", id = pendingDismissId })
+    local rid = pendingDismissId
     pendingDismissId = nil
-    render()
+    if not rid then return end
+    noctalia.state.set("reminders_cmd", { action = "dismiss", id = rid })
 end
 
 function onAddMinutesChanged(v)
@@ -131,8 +131,11 @@ end
 -- ── shell entry points ────────────────────────────────────────────────────────
 
 function onOpen()
+    -- force fresh read on every open
+    state = noctalia.state.get("reminders") or { reminders = {}, count = 0 }
     noctalia.state.watch("reminders", function(val)
-        if val then state = val else state = { reminders = {}, count = 0 } end
+        if not val then return end
+        state = val
         render()
     end)
     render()
