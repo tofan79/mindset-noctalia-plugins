@@ -1481,7 +1481,6 @@ function M.snapshotDecor(done)
         settled = true
         snapshotWatchdog.armed = false
         snapshotWatchdog.finish = nil
-        noctalia.log("gamermode DEBUG snapDecor resolved keys=" .. tostring(#decor) .. " pending=" .. tostring(pending))
         done(decor)
     end
     local function settle()
@@ -1490,6 +1489,13 @@ function M.snapshotDecor(done)
         end
         finish()
     end
+    -- Arm the tick deadline *before* the reads are issued. Issuing a batch of async runs
+    -- from this loop can push the script over its CPU budget and abort the iteration, so the
+    -- arm has to already be in place for update() to resolve it; it cannot sit after a loop
+    -- that might not reach the end.
+    snapshotWatchdog.armed = true
+    snapshotWatchdog.ticks = 0
+    snapshotWatchdog.finish = finish
     for _, spec in ipairs(DECOR_SNAPSHOT) do
         run(getoptionCmd(spec.option), function(result)
             local parsed = M.parseOptionLine(trim(result and result.stdout or ""))
@@ -1509,11 +1515,6 @@ function M.snapshotDecor(done)
             settle()
         end)
     end
-    -- Arm a tick deadline so a dropped read cannot stall enable: update() resolves the
-    -- snapshot with whatever came back if the reads have not all completed in time.
-    snapshotWatchdog.armed = true
-    snapshotWatchdog.ticks = 0
-    snapshotWatchdog.finish = finish
 end
 
 -- buildBoostOn rebuilds the user's own style from the snapshot. Fields that were read are
@@ -1596,7 +1597,6 @@ local function applyBoost(gaming, decorBefore)
 end
 
 function M.enable(profileOverride)
-    noctalia.log("gamermode DEBUG enable called busy=" .. tostring(busy))
     if busy then
         return
     end
@@ -1689,7 +1689,6 @@ function M.enable(profileOverride)
     -- snapshotWatchdog guarantees even if a read never calls back. No second gate: the
     -- power family is kicked above and applies itself, and waiting on it would re-expose
     -- the wedge this guard exists to remove.
-    noctalia.log("gamermode DEBUG enable -> snapshotDecor start")
     M.snapshotDecor(function(decor)
         startSuspend(powerBefore, decor)
     end)
@@ -2247,7 +2246,6 @@ end
 -- ── shell entry points (must be globals) ──
 
 function update()
-    noctalia.log("gamermode DEBUG update tick: armed=" .. tostring(snapshotWatchdog.armed or disableWatchdog.armed))
     M.publishMetrics()
     -- A queue can only stall if every start was refused while nothing of ours was running,
     -- which needs the rest of the shell to hold the whole process cap. The poll tick is the
@@ -2262,7 +2260,6 @@ function update()
             local finalize = snapshotWatchdog.finish
             snapshotWatchdog.armed = false
             snapshotWatchdog.finish = nil
-            noctalia.log("gamermode DEBUG snapDecor watchdog fired")
             if finalize then
                 finalize()
             end
