@@ -72,6 +72,20 @@ plugin_api = 19
 tags = ["bar", "panel", "service", "productivity", "notification"]
 
 [[plugin]]
+id = "mindset/better-workspaces"
+name = "Better Workspaces"
+version = "1.0.0"
+updated_at = 1788493822
+added_at = 1788493822
+author = "mindset"
+license = "MIT"
+icon = "layout-grid"
+description = "Aesthetic workspace indicator with 12 display modes: Roman, Kanji, Arabic, Korean, Thai, Greek, Hindi, Emoji, Russian, App Icon, and more."
+deprecated = false
+plugin_api = 19
+tags = ["hyprland", "workspace", "indicator", "bar"]
+
+[[plugin]]
 id = "mindset/containers"
 name = "Containers"
 version = "1.0.0"

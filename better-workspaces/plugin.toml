@@ -1,0 +1,67 @@
+id           = "mindset/better-workspaces"
+name         = "Better Workspaces"
+version      = "1.0.0"
+plugin_api   = 19
+author       = "mindset"
+license      = "MIT"
+icon         = "layout-grid"
+description  = "Workspace indicator with aesthetic display modes: Roman, Kanji, Greek, Emoji, and more."
+tags         = ["hyprland", "workspace", "indicator", "bar"]
+
+dependencies = ["hyprctl"]
+
+[[setting]]
+key          = "displayMode"
+type         = "select"
+label_key    = "settings.displayMode.label"
+options      = [
+  { value = "default",     label_key = "settings.displayMode.default" },
+  { value = "roman",        label_key = "settings.displayMode.roman" },
+  { value = "kanji",        label_key = "settings.displayMode.kanji" },
+  { value = "arabic",       label_key = "settings.displayMode.arabic" },
+  { value = "korean",       label_key = "settings.displayMode.korean" },
+  { value = "thai",         label_key = "settings.displayMode.thai" },
+  { value = "greek",        label_key = "settings.displayMode.greek" },
+  { value = "hindi",        label_key = "settings.displayMode.hindi" },
+  { value = "emoji",        label_key = "settings.displayMode.emoji" },
+  { value = "russian",      label_key = "settings.displayMode.russian" },
+  { value = "appIcon",      label_key = "settings.displayMode.appIcon" },
+  { value = "appName",      label_key = "settings.displayMode.appName" }
+]
+default      = "default"
+
+[[setting]]
+key          = "workspaceCount"
+type         = "int"
+label_key    = "settings.workspaceCount.label"
+description_key = "settings.workspaceCount.description"
+default      = 9
+min          = 1
+max          = 20
+
+[[setting]]
+key          = "revealOccupied"
+type         = "bool"
+label_key    = "settings.revealOccupied.label"
+description_key = "settings.revealOccupied.description"
+default      = true
+
+[[setting]]
+key          = "dimEmpty"
+type         = "bool"
+label_key    = "settings.dimEmpty.label"
+description_key = "settings.dimEmpty.description"
+default      = true
+
+[[widget]]
+id    = "widget"
+entry = "widget.luau"
+
+[[panel]]
+id              = "panel"
+entry           = "panel.luau"
+width           = 360
+height          = 480
+placement       = "floating"
+position        = "center"
+keyboard_focus  = "exclusive"

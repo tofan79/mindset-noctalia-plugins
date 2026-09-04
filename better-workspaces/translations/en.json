@@ -1,0 +1,45 @@
+{
+  "title": "Better Workspaces",
+  "tooltip": "Better Workspaces · click to open",
+  "panel": {
+    "display_mode": "DISPLAY MODE",
+    "workspaces": "WORKSPACES",
+    "current": "Current"
+  },
+  "settings": {
+    "displayMode": {
+      "label": "Display Mode",
+      "description": "How workspace numbers are displayed in the bar",
+      "default": "Default (1, 2, 3...)",
+      "roman": "Roman (I, II, III...)",
+      "kanji": "Kanji (一, 二, 三...)",
+      "arabic": "Arabic (١, ٢, ٣...)",
+      "korean": "Korean (ㄱ, ㄴ, ㄷ...)",
+      "thai": "Thai (๑, ๒, ๓...)",
+      "greek": "Greek (α, β, γ...)",
+      "hindi": "Hindi (१, २, ३...)",
+      "emoji": "Emoji (①, ②, ③...)",
+      "russian": "Russian (а, б, в...)",
+      "appIcon": "App Icon",
+      "appName": "App Name"
+    },
+    "workspaceCount": {
+      "label": "Workspace Count",
+      "description": "Number of workspaces to show in the bar (1-20)"
+    },
+    "revealOccupied": {
+      "label": "Reveal Occupied",
+      "description": "Show workspaces beyond the count while they exist"
+    },
+    "dimEmpty": {
+      "label": "Dim Empty",
+      "description": "Fade workspaces that have no windows"
+    }
+  },
+  "notification": {
+    "switched": "Switched to workspace {name}"
+  },
+  "error": {
+    "switch_failed": "Could not switch workspace"
+  }
+}

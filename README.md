@@ -23,6 +23,7 @@ and container management.
 | `mindset/better-displays` | 19 | Per-monitor resolution, scale, position, transform, VRR and per-terminal font sizes. |
 | `mindset/gamer-mode` | 19 | Live CPU/RAM/GPU metrics and one-click gamer mode. |
 | `mindset/today-reminders` | 19 | Set a reminder for later today. Gets dismissed after it fires and never carries into tomorrow. |
+| `mindset/better-workspaces` | 19 | Aesthetic workspace indicator with 12 display modes: Roman, Kanji, Arabic, Korean, Thai, Greek, Emoji, Russian, App Icon, and more. |
 | `mindset/containers` | 19 | Docker and Podman status in the bar: containers, images, volumes, networks, and live stats, with start/stop/restart and removal controls. |
 
 ## Structure
