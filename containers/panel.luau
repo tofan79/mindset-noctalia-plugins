@@ -36,6 +36,9 @@ local state = noctalia.state.get("containers") or { available = false }
 -- Forward-declared so the selection/action helpers (defined higher up) can capture it
 -- as an upvalue; it is assigned just before the shell entry points at the bottom.
 local render
+local ifOrNil
+local trpKind
+local actionButton
 
 local function tr(key, subst)
     return noctalia.tr(key, subst)
@@ -392,7 +395,7 @@ local function heroMeta()
     return text
 end
 
-local function trpKind(kind, count)
+trpKind = function(kind, count)
     local key = "panel." .. kind .. "_count"
     return noctalia.trp(key, count)
 end
@@ -602,7 +605,7 @@ local function commandBar()
     return ui.row({ align = "center", gap = 6 }, children)
 end
 
-local function actionButton(glyphName, tooltipKey, action, enabled)
+actionButton = function(glyphName, tooltipKey, action, enabled)
     return ui.button({
         glyph = glyphName,
         variant = "ghost",
@@ -738,7 +741,7 @@ local function hero()
     })
 end
 
-local function ifOrNil(cond, node)
+ifOrNil = function(cond, node)
     if cond then
         return node
     end
