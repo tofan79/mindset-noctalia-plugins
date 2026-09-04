@@ -1,0 +1,48 @@
+id = "mindset/today-reminders"
+name = "Today Reminders"
+version = "1.0.0"
+plugin_api = 19
+author = "mindset"
+license = "MIT"
+dependencies = ["notify-send"]
+tags = ["bar", "panel", "service", "productivity", "notification"]
+icon = "bell"
+description = "Set a reminder for later today. Gets dismissed after it fires and never carries into tomorrow."
+
+[[setting]]
+key = "glyph"
+type = "glyph"
+label_key = "settings.glyph.label"
+description_key = "settings.glyph.description"
+default = "bell"
+
+[[setting]]
+key = "show_count"
+type = "bool"
+label_key = "settings.show_count.label"
+description_key = "settings.show_count.description"
+default = true
+
+[[setting]]
+key = "sound"
+type = "bool"
+label_key = "settings.sound.label"
+description_key = "settings.sound.description"
+default = true
+
+[[service]]
+id = "service"
+entry = "service.luau"
+
+[[panel]]
+id = "main"
+entry = "panel.luau"
+width = 420
+height = 560
+placement = "attached"
+position = "auto"
+keyboard_focus = "on_demand"
+
+[[widget]]
+id = "reminders"
+entry = "widget.luau"

@@ -1,0 +1,19 @@
+{
+  "widget.loading": "Loading…",
+  "settings.glyph.label": "Bar icon",
+  "settings.glyph.description": "Glyph shown in the bar.",
+  "settings.show_count.label": "Show count",
+  "settings.show_count.description": "Show the number of active reminders in the bar.",
+  "settings.sound.label": "Sound",
+  "settings.sound.description": "Play a sound when a reminder fires.",
+  "panel.title": "Today Reminders",
+  "panel.empty": "No reminders set for today.",
+  "panel.pending": "Pending",
+  "panel.done": "Done",
+  "panel.add_header": "New reminder",
+  "panel.placeholder": "What to remind you of…",
+  "panel.add": "Add",
+  "panel.remove": "Remove",
+  "panel.clear_done": "Clear done",
+  "panel.footer": "reminder(s) today"
+}
