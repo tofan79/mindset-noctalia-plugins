@@ -36,7 +36,6 @@ local state = noctalia.state.get("containers") or { available = false }
 -- Forward-declared so the selection/action helpers (defined higher up) can capture it
 -- as an upvalue; it is assigned just before the shell entry points at the bottom.
 local render
-local ifOrNil
 local trpKind
 local actionButton
 
@@ -402,18 +401,6 @@ end
 trpKind = function(kind, count)
     local key = "panel." .. kind .. "_count"
     return noctalia.trp(key, count)
-end
-
-local function heroDetail()
-    if uiState.kind == "containers" then
-        local stats = (state and state.stats) or {}
-        if stats.total and stats.total > 0 then
-            return tostring(stats.running or 0) .. "/" .. tostring(stats.total or 0)
-        end
-        return ""
-    end
-    local n = #catalog()
-    return n > 0 and tostring(n) or ""
 end
 
 local function statusColor(item)
@@ -791,6 +778,25 @@ end
 
 -- ── chrome (hero / header) ──
 
+local function heroBadge()
+    local stats = (state and state.stats) or { running = 0, total = 0 }
+    local running = stats.running or 0
+    local total = stats.total or 0
+    local color = "on_surface"
+    if running > 0 and running == total and (stats.unhealthy or 0) == 0 then
+        color = "success"
+    elseif (stats.unhealthy or 0) > 0 then
+        color = "error"
+    end
+    return ui.button({
+        text = tostring(running) .. "/" .. tostring(total),
+        variant = "ghost",
+        controlSize = "sm",
+        tooltip = tr("panel.refresh"),
+        onClick = refreshNow,
+    })
+end
+
 local function hero()
     local hasEngine = state.available and state.stats and (state.stats.running or 0) > 0
     local iconColor = state.available and state.stats and state.stats.unhealthy and state.stats.unhealthy > 0 and "error" or (hasEngine and "primary" or "on_surface_variant")
@@ -798,26 +804,10 @@ local function hero()
         ui.glyph({ name = "container", size = 24, color = iconColor }),
         ui.column({ gap = 1, flexGrow = 1 }, {
             ui.label({ text = engineTitle(), fontSize = 17, fontWeight = "bold", color = "on_surface" }),
-            ui.row({ gap = 8 }, {
-                ui.label({ text = heroMeta(), fontSize = 11, color = "on_surface_variant", flexGrow = 1 }),
-                ifOrNil(heroDetail() ~= "", ui.label({ text = heroDetail(), fontSize = 11, color = "on_surface_variant" })),
-            }),
+            ui.label({ text = heroMeta(), fontSize = 11, color = "on_surface_variant", flexGrow = 1 }),
         }),
-        ui.button({
-            glyph = "refresh",
-            variant = "ghost",
-            controlSize = "sm",
-            tooltip = tr("panel.refresh"),
-            onClick = refreshNow,
-        }),
+        heroBadge(),
     })
-end
-
-ifOrNil = function(cond, node)
-    if cond then
-        return node
-    end
-    return nil
 end
 
 -- ── render ──
@@ -855,6 +845,7 @@ local function footer()
         ui.label({ text = footerText, color = "on_surface_variant", fontSize = 10, flexGrow = 1 }),
         ui.label({ text = text, color = "on_surface_variant", fontSize = 10 }),
         ui.button({ glyph = "refresh", variant = "ghost", controlSize = "sm", tooltip = tr("panel.refresh"), onClick = refreshNow }),
+        ui.button({ glyph = "settings", variant = "ghost", controlSize = "sm", tooltip = tr("panel.settings"), onClick = "onOpenSettings" }),
     })
 end
 
@@ -880,6 +871,10 @@ end
 
 function onCloseClicked()
     panel.close()
+end
+
+function onOpenSettings()
+    noctalia.openSettings()
 end
 
 noctalia.state.watch("containers", function(value)
