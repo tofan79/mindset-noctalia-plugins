@@ -1,25 +1,56 @@
 {
   "panel": {
     "containers": "Containers",
+    "empty": "No containers found.",
+    "empty_images": "No images found.",
+    "empty_networks": "No networks found.",
+    "empty_volumes": "No volumes found.",
     "engine_both": "Docker + Podman",
     "engine_docker": "Docker",
     "engine_none": "No engine available",
     "engine_podman": "Podman",
+    "filter_all": "All",
+    "filter_running": "Running",
+    "filter_stopped": "Stopped",
     "images": "Images",
+    "images_count": {
+      "one": "1 image",
+      "other": "{count} images"
+    },
+    "kind_containers": "Containers",
+    "kind_images": "Images",
+    "kind_networks": "Networks",
+    "kind_volumes": "Volumes",
     "loading": "Loading…",
     "networks": "Networks",
+    "networks_count": {
+      "one": "1 network",
+      "other": "{count} networks"
+    },
     "no_containers": "No containers found.",
+    "no_match": "No matches.",
     "none": "None",
+    "project_default": "default",
+    "refresh": "Refresh",
     "remove": "Remove",
     "resources": "Resources",
     "restart": "Restart",
+    "search": "Search…",
+    "select_all": "Select all",
+    "selected": "selected",
     "settings": "Settings",
     "start": "Start",
     "state_unknown": "unknown",
     "stop": "Stop",
+    "subtitle": "Manage Docker and Podman",
     "summary": "{running} running · {total} total · {unhealthy} unhealthy",
     "title": "Containers",
-    "volumes": "Volumes"
+    "used": "used",
+    "volumes": "Volumes",
+    "volumes_count": {
+      "one": "1 volume",
+      "other": "{count} volumes"
+    }
   },
   "settings": {
     "engine": {

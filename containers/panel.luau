@@ -1,15 +1,41 @@
 --!nonstrict
 --
--- Containers panel: live status of docker/podman containers, images, volumes and
--- networks with start/stop/restart and removal controls. It owns no state -- it renders
--- what the service publishes and sends commands back through `noctalia.state`.
+-- Containers panel: a faithful Luau port of the dockmarchy tidy panel.
 --
--- Interactive props (onClick/onChange) must be the *names* of global functions -- the
--- ui bridge resolves handlers by name and cannot call a Lua closure.
+--   1. Hero header (engine title + live meta, click to refresh)
+--   2. Hardware gauges (CPU / RAM / Disk) rendered with progress bars
+--   3. Kind tab row: Containers | Images | Volumes | Networks
+--   4. Filter row (containers only): All | Running | Stopped
+--   5. Search field
+--   6. Bulk command bar (select-all + start/stop/restart/remove) acting on
+--      whatever rows are checked
+--   7. The active kind's list, grouped by compose project
+--
+-- The panel owns no data -- it renders whatever the service publishes under the
+-- "containers" state key. Interactive props (onClick/onChange) are closures that
+-- mutate the module-level uiState and call render(); the ui bridge keeps the
+-- panel module alive between renders.
 
 local M = {}
 
+local KIND_IDS = { "containers", "images", "volumes", "networks" }
+local FILTER_IDS = { "all", "running", "stopped" }
+
+local uiState = {
+    kind = "containers",
+    kindIndex = 0,
+    filter = "all",
+    filterIndex = 0,
+    query = "",
+    selectedKeys = {},
+    revision = 0,
+}
+
 local state = noctalia.state.get("containers") or { available = false }
+
+-- Forward-declared so the selection/action helpers (defined higher up) can capture it
+-- as an upvalue; it is assigned just before the shell entry points at the bottom.
+local render
 
 local function tr(key, subst)
     return noctalia.tr(key, subst)
@@ -30,23 +56,304 @@ local function formatBytes(n)
     return string.format("%." .. digits .. "f", value) .. units[i]
 end
 
-local function percent(frac)
-    local v = tonumber(frac) or 0
-    return string.format("%.0f%%", math.max(0, math.min(100, v * 100)))
+local function percentOf(fraction)
+    local v = tonumber(fraction) or 0
+    return math.max(0, math.min(1, v))
 end
 
--- ── summary / engine ──
-
-local function statsSummary()
-    if not state.available then
-        return nil
+local function formatCores(n)
+    local value = tonumber(n) or 0
+    if not (value > 0) then
+        return "0"
     end
-    return state.stats or { total = 0, running = 0, stopped = 0, unhealthy = 0, engine = "" }
+    if value > 0 and value < 0.1 then
+        return "<0.1"
+    end
+    if value >= 10 or math.abs(value - math.floor(value + 0.5)) < 0.05 then
+        return tostring(math.floor(value + 0.5))
+    end
+    return string.format("%.1f", value)
 end
 
-local function engineLabel()
+function M.resourceKey(item)
+    if not item then
+        return ""
+    end
+    local kind = tostring(item.kind or "container")
+    if kind == "container" then
+        local cid = tostring(item.containerId or item.shortId or "")
+        if cid == "" then
+            return ""
+        end
+        return tostring(item.engine or "docker") .. ":" .. cid
+    end
+    local rid = tostring(item.resourceId or item.shortId or item.name or "")
+    if rid == "" then
+        return ""
+    end
+    return kind .. ":" .. tostring(item.engine or "docker") .. ":" .. rid
+end
+
+-- ── derived data (mirrors dockmarchy Panel.qml catalog/filter/group) ──
+
+local function catalog()
+    if uiState.kind == "images" then
+        return state.images or {}
+    elseif uiState.kind == "volumes" then
+        return state.volumes or {}
+    elseif uiState.kind == "networks" then
+        return state.networks or {}
+    end
+    return state.containers or {}
+end
+
+local function filterBy(list, filter)
+    list = list or {}
+    if filter == "running" then
+        local out = {}
+        for _, item in ipairs(list) do
+            if item.running then
+                out[#out + 1] = item
+            end
+        end
+        return out
+    elseif filter == "stopped" then
+        local out = {}
+        for _, item in ipairs(list) do
+            if not item.running then
+                out[#out + 1] = item
+            end
+        end
+        return out
+    end
+    return list
+end
+
+local function searchHaystack(item)
+    if not item then
+        return ""
+    end
+    return table.concat({
+        item.name or "",
+        item.service or "",
+        item.project or "",
+        item.image or "",
+        item.repository or "",
+        item.tag or "",
+        item.driver or "",
+        item.status or "",
+        item.state or "",
+        item.containerId or "",
+        item.resourceId or "",
+    }, " "):lower()
+end
+
+local function searchBy(list, query)
+    list = list or {}
+    local needle = tostring(query or ""):trim():lower()
+    if needle == "" then
+        return list
+    end
+    local out = {}
+    for _, item in ipairs(list) do
+        if searchHaystack(item):find(needle, 1, true) then
+            out[#out + 1] = item
+        end
+    end
+    return out
+end
+
+local function visibleItems()
+    local filtered = filterBy(catalog(), uiState.kind == "containers" and uiState.filter or "all")
+    return searchBy(filtered, uiState.query)
+end
+
+local function groupByProject(list)
+    local order = {}
+    local map = {}
+    for _, item in ipairs(list) do
+        local key = item.project or ""
+        if not map[key] then
+            map[key] = { name = key, running = 0, total = 0, problem = 0, containers = {} }
+            order[#order + 1] = key
+        end
+        local group = map[key]
+        group.containers[#group.containers + 1] = item
+        group.total = group.total + 1
+        if item.running then
+            group.running = group.running + 1
+        end
+        if item.problem then
+            group.problem = group.problem + 1
+        end
+    end
+    local out = {}
+    for _, key in ipairs(order) do
+        out[#out + 1] = map[key]
+    end
+    return out
+end
+
+-- ── selection helpers ──
+
+local function selectedMap()
+    local map = {}
+    for _, key in ipairs(uiState.selectedKeys) do
+        map[key] = true
+    end
+    return map
+end
+
+local function isSelected(item)
+    local key = M.resourceKey(item)
+    return key ~= "" and selectedMap()[key] == true
+end
+
+local function selectedItems(list)
+    local map = selectedMap()
+    local out = {}
+    for _, item in ipairs(list) do
+        local key = M.resourceKey(item)
+        if key ~= "" and map[key] then
+            out[#out + 1] = item
+        end
+    end
+    return out
+end
+
+local function selectedIn(items)
+    local map = selectedMap()
+    local n = 0
+    for _, item in ipairs(items) do
+        local key = M.resourceKey(item)
+        if key ~= "" and map[key] then
+            n = n + 1
+        end
+    end
+    return n
+end
+
+local function allVisibleSelected()
+    local list = visibleItems()
+    return #list > 0 and selectedIn(list) == #list
+end
+
+local function toggleSelected(item)
+    local key = M.resourceKey(item)
+    if key == "" then
+        return
+    end
+    local map = selectedMap()
+    map[key] = not map[key]
+    local next = {}
+    for k in pairs(map) do
+        if map[k] then
+            next[#next + 1] = k
+        end
+    end
+    uiState.selectedKeys = next
+    uiState.revision = uiState.revision + 1
+    render()
+end
+
+local function toggleSelectAllVisible()
+    local list = visibleItems()
+    local map = selectedMap()
+    local allOn = #list > 0 and selectedIn(list) == #list
+    for _, item in ipairs(list) do
+        local key = M.resourceKey(item)
+        if key ~= "" then
+            map[key] = allOn and false or true
+        end
+    end
+    local next = {}
+    for k in pairs(map) do
+        if map[k] then
+            next[#next + 1] = k
+        end
+    end
+    uiState.selectedKeys = next
+    uiState.revision = uiState.revision + 1
+    render()
+end
+
+local function toggleGroup(group)
+    if not group or not group.containers then
+        return
+    end
+    local map = selectedMap()
+    local checked = selectedIn(group.containers) < #group.containers
+    for _, item in ipairs(group.containers) do
+        local key = M.resourceKey(item)
+        if key ~= "" then
+            map[key] = checked
+        end
+    end
+    local next = {}
+    for k in pairs(map) do
+        if map[k] then
+            next[#next + 1] = k
+        end
+    end
+    uiState.selectedKeys = next
+    uiState.revision = uiState.revision + 1
+    render()
+end
+
+-- ── actions (bulk, faithful to dockmarchy runSelected/runBulkAction) ──
+
+local function engineBinOf(item)
+    return (item.engine == "podman") and "podman" or "docker"
+end
+
+local function commandFor(action, item)
+    local bin = engineBinOf(item)
+    if uiState.kind == "containers" then
+        return { bin, action, item.containerId or item.shortId }
+    end
+    -- resources: remove only (images/volumes/networks)
+    local verb = "rmi"
+    if item.kind == "volume" then
+        verb = "volume rm"
+    elseif item.kind == "network" then
+        verb = "network rm"
+    end
+    local parts = { bin }
+    for part in tostring(verb):gmatch("%S+") do
+        parts[#parts + 1] = part
+    end
+    parts[#parts + 1] = item.resourceId or item.shortId or item.name
+    return parts
+end
+
+local function runBulkAction(action)
+    local targets = selectedItems(catalog())
+    if #targets == 0 then
+        return
+    end
+    local left = #targets
+    for _, item in ipairs(targets) do
+        noctalia.runAsync(commandFor(action, item), function()
+            left = left - 1
+            if left <= 0 then
+                uiState.selectedKeys = {}
+                uiState.revision = uiState.revision + 1
+                render()
+            end
+        end)
+    end
+end
+
+local function refreshNow()
+    uiState.revision = uiState.revision + 1
+    render()
+end
+
+-- ── engine / status helpers ──
+
+local function engineTitle()
     if not state.available then
-        return tr("panel.loading")
+        return tr("panel.title")
     end
     local engine = (state.stats and state.stats.engine) or state.engine or ""
     if engine == "both" then
@@ -56,228 +363,432 @@ local function engineLabel()
     elseif engine == "docker" then
         return tr("panel.engine_docker")
     end
-    return tr("panel.engine_none")
+    return tr("panel.title")
 end
 
--- ── container rows ──
-
-local function stateLabel(container)
-    if container.health and container.health ~= "" then
-        return container.health
+local function heroMeta()
+    if not state.available then
+        return tr("panel.loading")
     end
-    return container.state ~= "" and container.state or tr("panel.state_unknown")
+    if uiState.kind == "images" then
+        local n = #(state.images or {})
+        return n == 0 and tr("panel.empty_images") or trpKind("images", n)
+    elseif uiState.kind == "volumes" then
+        local n = #(state.volumes or {})
+        return n == 0 and tr("panel.empty_volumes") or trpKind("volumes", n)
+    elseif uiState.kind == "networks" then
+        local n = #(state.networks or {})
+        return n == 0 and tr("panel.empty_networks") or trpKind("networks", n)
+    end
+    local stats = state.stats or { running = 0, total = 0 }
+    if stats.total == 0 then
+        return tr("panel.empty")
+    end
+    local text = tr("panel.summary", {
+        running = tostring(stats.running or 0),
+        total = tostring(stats.total or 0),
+        unhealthy = tostring(stats.unhealthy or 0),
+    })
+    return text
 end
 
-local function stateColor(container)
-    if container.problem then
+local function trpKind(kind, count)
+    local key = "panel." .. kind .. "_count"
+    return noctalia.trp(key, count)
+end
+
+local function heroDetail()
+    if uiState.kind == "containers" then
+        local stats = (state and state.stats) or {}
+        if stats.total and stats.total > 0 then
+            return tostring(stats.running or 0) .. "/" .. tostring(stats.total or 0)
+        end
+        return ""
+    end
+    local n = #catalog()
+    return n > 0 and tostring(n) or ""
+end
+
+local function statusColor(item)
+    if item and item.problem then
         return "error"
-    end
-    if container.running then
+    elseif item and item.running then
         return "success"
     end
     return "on_surface_variant"
 end
 
-local function runAction(command)
-    noctalia.runAsync(command, function(result)
-        -- force the panel to re-read after the engine settles; the service poll updates it
-        state = noctalia.state.get("containers") or { available = false }
-        render()
-    end)
+local function metaLine(item)
+    if not item then
+        return ""
+    end
+    if item.kind == "volume" and item.driver and item.driver ~= "" then
+        return item.driver
+    end
+    if item.kind == "network" and item.driver and item.driver ~= "" then
+        return item.driver
+    end
+    if item.kind == "image" then
+        local size = (item.sizeText ~= "" and item.sizeText) or formatBytes(item.size)
+        local used = item.used or 0
+        local parts = { size }
+        if used > 0 then
+            parts[#parts + 1] = tostring(used) .. " " .. tr("panel.used")
+        end
+        if item.tag and item.tag ~= "" then
+            parts[#parts + 1] = item.tag
+        end
+        return table.concat(parts, " | ")
+    end
+    -- containers
+    local parts = {}
+    if item.image and item.image ~= "" then
+        parts[#parts + 1] = item.image
+    end
+    if item.name ~= item.service and item.service and item.service ~= "" then
+        parts[#parts + 1] = item.service
+    end
+    if item.status and item.status ~= "" then
+        parts[#parts + 1] = item.status
+    end
+    return table.concat(parts, " | ")
 end
 
-local function engineBin(engine)
-    return (engine == "podman") and "podman" or "docker"
+local function rowTitle(item)
+    if not item then
+        return ""
+    end
+    return (item.service ~= "" and item.service) or item.name or ""
 end
 
-M.containerRows = function(containers)
-    containers = containers or {}
-    local rows = {}
-    for _, c in ipairs(containers) do
-        local bin = engineBin(c.engine)
-        local id = c.containerId
-        rows[#rows + 1] = ui.row({ align = "center", gap = 8 }, {
-            ui.glyph({ name = c.running and "circle-check" or "circle", size = 12, color = stateColor(c) }),
-            ui.column({ gap = 1, flexGrow = 1 }, {
-                ui.row({ gap = 6 }, {
-                    ui.label({ text = c.name, fontWeight = "bold", flexGrow = 1 }),
-                    ui.label({ text = stateLabel(c), fontSize = 10, color = stateColor(c) }),
-                }),
-                ui.label({ text = c.image, fontSize = 10, color = "on_surface_variant" }),
-            }),
-            ui.button({ glyph = "player-play", variant = "ghost", tooltip = tr("panel.start"),
-                enabled = not c.running, onClick = function()
-                    runAction({ bin, "start", id })
-                end }),
-            ui.button({ glyph = "player-stop", variant = "ghost", tooltip = tr("panel.stop"),
-                enabled = c.running, onClick = function()
-                    runAction({ bin, "stop", id })
-                end }),
-            ui.button({ glyph = "rotate-clockwise", variant = "ghost", tooltip = tr("panel.restart"),
-                onClick = function()
-                    runAction({ bin, "restart", id })
-                end }),
+-- ── hardware gauges ──
+
+local function gauge(label, glyph, fraction, percentText, usedText, totalText)
+    return ui.column({ gap = 6, flexGrow = 1 }, {
+        ui.row({ align = "center", gap = 6 }, {
+            ui.glyph({ name = glyph, size = 13, color = "on_surface_variant" }),
+            ui.label({ text = label, color = "on_surface_variant", fontSize = 11, flexGrow = 1 }),
+            ui.label({ text = percentText, color = "on_surface", fontSize = 11, fontWeight = "bold" }),
+        }),
+        ui.progress({ height = 5, progress = percentOf(fraction), fill = "primary", track = "surface_variant", radius = 3 }),
+        ui.label({ text = usedText .. " / " .. totalText, color = "on_surface_variant", fontSize = 10 }),
+    })
+end
+
+local function hardwareSection()
+    local hw = state.hardware
+    if not hw then
+        return {}
+    end
+    local function frac(v)
+        return (tonumber(v) or 0) / 100
+    end
+    return {
+        ui.row({ gap = 10, align = "center" }, {
+            gauge("CPU", "cpu", frac(hw.cpuPerc), math.floor(hw.cpuPerc or 0) .. "%",
+                formatCores(hw.cpuUsed), formatCores(hw.cpuTotal)),
+            gauge("RAM", "chart-donut", frac(hw.memPerc), math.floor(hw.memPerc or 0) .. "%",
+                formatBytes(hw.memUsed), formatBytes(hw.memTotal)),
+            gauge("Disk", "database", frac(hw.diskPerc), math.floor(hw.diskPerc or 0) .. "%",
+                formatBytes(hw.diskUsed), formatBytes(hw.diskTotal)),
+        }),
+    }
+end
+
+-- ── tab / filter button rows ──
+
+local function kindRow()
+    local children = {}
+    for index, id in ipairs(KIND_IDS) do
+        children[#children + 1] = ui.button({
+            text = tr("panel.kind_" .. id),
+            variant = (uiState.kind == id) and "primary" or "ghost",
+            controlSize = "sm",
+            flexGrow = 1,
+            onClick = function()
+                uiState.kind = id
+                uiState.kindIndex = index - 1
+                uiState.query = ""
+                uiState.selectedKeys = {}
+                uiState.revision = uiState.revision + 1
+                render()
+            end,
         })
     end
-    return rows
+    return ui.row({ gap = 6 }, children)
 end
 
--- ── image / volume / network rows ──
-
-local function resourceRow(item)
-    local size = (item.kind == "image") and (item.sizeText or formatBytes(item.size)) or item.driver
-    local bin = engineBin(item.engine)
-    local removeArgs = { "rmi" }
-    if item.kind == "volume" then
-        removeArgs = { "volume", "rm" }
-    elseif item.kind == "network" then
-        removeArgs = { "network", "rm" }
+local function filterRow()
+    if uiState.kind ~= "containers" then
+        return nil
     end
-    return ui.row({ align = "center", gap = 8 }, {
-        ui.glyph({ name = item.kind == "image" and "photo" or item.kind == "volume" and "database"
-            or "network", size = 12, color = "on_surface_variant" }),
-        ui.column({ gap = 1, flexGrow = 1 }, {
-            ui.label({ text = item.name, fontWeight = "bold" }),
-            ui.label({ text = size, fontSize = 10, color = "on_surface_variant" }),
+    local children = {}
+    for index, id in ipairs(FILTER_IDS) do
+        children[#children + 1] = ui.button({
+            text = tr("panel.filter_" .. id),
+            variant = (uiState.filter == id) and "primary" or "ghost",
+            controlSize = "sm",
+            flexGrow = 1,
+            onClick = function()
+                uiState.filter = id
+                uiState.filterIndex = index - 1
+                uiState.revision = uiState.revision + 1
+                render()
+            end,
+        })
+    end
+    return ui.row({ gap = 6 }, children)
+end
+
+local function searchRow()
+    return ui.row({ align = "center", gap = 6 }, {
+        ui.glyph({ name = "search", size = 14, color = "on_surface_variant" }),
+        ui.input({
+            key = "container-search-" .. uiState.revision,
+            placeholder = tr("panel.search"),
+            value = uiState.query,
+            flexGrow = 1,
+            onChange = function(value)
+                uiState.query = value or ""
+                uiState.revision = uiState.revision + 1
+                render()
+            end,
         }),
-        ui.button({ glyph = "trash", variant = "ghost", tooltip = tr("panel.remove"),
-            enabled = item.removable, onClick = function()
-                local cmd = { bin }
-                for _, arg in ipairs(removeArgs) do
-                    cmd[#cmd + 1] = arg
-                end
-                cmd[#cmd + 1] = item.resourceId
-                runAction(cmd)
-            end }),
     })
 end
 
-M.resourceRows = function(kind, items)
-    items = items or {}
-    local rows = {}
-    for _, item in ipairs(items) do
-        if item.kind == kind then
-            rows[#rows + 1] = resourceRow(item)
-        end
+-- ── command bar ──
+
+local function selectionGlyph(allOn, partial)
+    if allOn then
+        return "circle-check-filled"
+    elseif partial then
+        return "circle-minus"
     end
-    return rows
+    return "circle"
 end
 
--- ── hardware summary section ──
-
-local function hardwareRow(label, glyph, text)
-    return ui.row({ align = "center", gap = 8 }, {
-        ui.glyph({ name = glyph, size = 14, color = "on_surface_variant" }),
-        ui.label({ text = label, color = "on_surface_variant", width = 48 }),
-        ui.spacer({ flexGrow = 1 }),
-        ui.label({ text = text, color = "on_surface_variant", fontSize = 11 }),
-    })
-end
-
-local function summarySection(children)
-    local hw = state.hardware
-    if not state.available or not hw then
-        return
+local function commandBar()
+    local list = visibleItems()
+    if #list == 0 then
+        return nil
     end
-    children[#children + 1] = ui.separator({})
-    children[#children + 1] = ui.label({
-        text = tr("panel.resources"),
-        color = "on_surface_variant", fontSize = 12, fontWeight = "bold",
-    })
-    if hw.cpuText then
-        children[#children + 1] = hardwareRow("CPU", "cpu", hw.cpuText)
-    end
-    if hw.memText then
-        children[#children + 1] = hardwareRow("RAM", "chart-donut", hw.memText)
-    end
-    if hw.diskText then
-        children[#children + 1] = hardwareRow("Disk", "database", hw.diskText)
-    end
-    if (hw.pids or 0) > 0 then
-        children[#children + 1] = hardwareRow("PIDs", "activity", tostring(hw.pids))
-    end
-end
-
--- ── main sections ──
-
-local function sectionTitle(key, count)
-    local text = tr(key)
-    if type(count) == "number" then
-        text = text .. "  (" .. tostring(count) .. ")"
-    end
-    return ui.label({ text = text, color = "on_surface_variant", fontSize = 12, fontWeight = "bold" })
-end
-
-local function containerSection(children)
-    local containers = (type(state) == "table" and state.containers) or {}
-    children[#children + 1] = sectionTitle("panel.containers", #containers)
-    if #containers == 0 then
-        children[#children + 1] = ui.label({ text = tr("panel.no_containers"), fontSize = 11 })
-        return
-    end
-    for _, row in ipairs(M.containerRows(containers)) do
-        children[#children + 1] = row
-    end
-end
-
-local function resourceSection(children, key, kind)
-    local items = (type(state) == "table" and state[kind]) or {}
-    children[#children + 1] = ui.separator({})
-    children[#children + 1] = sectionTitle(key, #items)
-    if #items == 0 then
-        children[#children + 1] = ui.label({ text = tr("panel.none"), fontSize = 11 })
-        return
-    end
-    for _, row in ipairs(M.resourceRows(kind, items)) do
-        children[#children + 1] = row
-    end
-end
-
-local function body()
-    local stats = statsSummary()
+    local allOn = allVisibleSelected()
+    local partial = selectedIn(list) > 0 and not allOn
+    local selectedCount = selectedIn(catalog())
     local children = {}
 
-    children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
-        ui.glyph({ name = "container", size = 22, color = "primary" }),
-        ui.column({ gap = 0, flexGrow = 1 }, {
-            ui.label({ text = tr("panel.title"), fontSize = 17, fontWeight = "bold" }),
-            ui.label({ text = engineLabel(), fontSize = 11, color = "on_surface_variant" }),
-        }),
+    children[#children + 1] = ui.button({
+        glyph = selectionGlyph(allOn, partial),
+        variant = "ghost",
+        controlSize = "sm",
+        tooltip = tr("panel.select_all"),
+        onClick = toggleSelectAllVisible,
     })
 
-    if not state.available then
-        children[#children + 1] = ui.label({ text = tr("panel.loading"), color = "on_surface_variant", fontSize = 11 })
-        return children
+    local label = selectedCount > 0
+        and (selectedCount .. " " .. tr("panel.selected"))
+        or tr("panel.select_all")
+    children[#children + 1] = ui.label({ text = label, color = "on_surface_variant", fontSize = 11, flexGrow = 1 })
+
+    if uiState.kind == "containers" then
+        children[#children + 1] = actionButton("player-play", "panel.start", "start", selectedCount > 0)
+        children[#children + 1] = actionButton("player-stop", "panel.stop", "stop", selectedCount > 0)
+        children[#children + 1] = actionButton("rotate-clockwise", "panel.restart", "restart", selectedCount > 0)
+    else
+        children[#children + 1] = actionButton("trash", "panel.remove", "remove", selectedCount > 0)
     end
 
-    summarySection(children)
-    containerSection(children)
-    resourceSection(children, "panel.images", "images")
-    resourceSection(children, "panel.volumes", "volumes")
-    resourceSection(children, "panel.networks", "networks")
+    return ui.row({ align = "center", gap = 6 }, children)
+end
 
+local function actionButton(glyphName, tooltipKey, action, enabled)
+    return ui.button({
+        glyph = glyphName,
+        variant = "ghost",
+        controlSize = "sm",
+        tooltip = tr(tooltipKey),
+        enabled = enabled,
+        onClick = function()
+            runBulkAction(action)
+        end,
+    })
+end
+
+-- ── list rendering ──
+
+local function selectionBox(item)
+    local checked = isSelected(item)
+    return ui.button({
+        glyph = checked and "circle-check" or "circle",
+        variant = "ghost",
+        controlSize = "sm",
+        onClick = function()
+            toggleSelected(item)
+        end,
+    })
+end
+
+local function statusDot(item)
+    return ui.glyph({ name = "circle-filled", size = 7, color = statusColor(item) })
+end
+
+local function containerRowChild(item)
+    local children = {
+        selectionBox(item),
+        statusDot(item),
+        ui.column({ gap = 1, flexGrow = 1 }, {
+            ui.label({
+                text = rowTitle(item),
+                color = item.problem and "error" or "on_surface",
+                fontSize = 13,
+                fontWeight = "bold",
+            }),
+            ui.label({ text = metaLine(item), color = "on_surface_variant", fontSize = 10 }),
+        }),
+    }
+    return ui.row({
+        key = M.resourceKey(item),
+        align = "center",
+        gap = 8,
+        padding = 6,
+        onClick = function()
+            toggleSelected(item)
+        end,
+    }, children)
+end
+
+local function groupSection(group)
+    local allOn = selectedIn(group.containers) == #group.containers
+    local partial = selectedIn(group.containers) > 0 and not allOn
+    local children = {
+        ui.row({ align = "center", gap = 6, padding = 4 }, {
+            ui.button({
+                glyph = selectionGlyph(allOn, partial),
+                variant = "ghost",
+                controlSize = "sm",
+                onClick = function()
+                    toggleGroup(group)
+                end,
+            }),
+            ui.label({
+                text = (group.name == "" and tr("panel.project_default") or group.name):upper()
+                    .. "  " .. tostring(group.running) .. "/" .. tostring(group.total),
+                color = group.problem > 0 and "error" or "primary",
+                fontSize = 11,
+                fontWeight = "bold",
+                flexGrow = 1,
+            }),
+        }),
+    }
+    for _, item in ipairs(group.containers) do
+        children[#children + 1] = containerRowChild(item)
+    end
+    return ui.column({ gap = 2 }, children)
+end
+
+local function emptyText()
+    local needle = tostring(uiState.query or ""):trim()
+    local kind = uiState.kind
+    if needle ~= "" then
+        return tr("panel.no_match")
+    elseif kind == "images" then
+        return tr("panel.empty_images")
+    elseif kind == "volumes" then
+        return tr("panel.empty_volumes")
+    elseif kind == "networks" then
+        return tr("panel.empty_networks")
+    end
+    return tr("panel.empty")
+end
+
+local function listSection()
+    local list = visibleItems()
+    if #list == 0 then
+        return { ui.label({ text = emptyText(), color = "on_surface_variant", fontSize = 12, flexGrow = 1 }) }
+    end
+    local children = {}
+    for _, group in ipairs(groupByProject(list)) do
+        children[#children + 1] = groupSection(group)
+    end
+    return children
+end
+
+-- ── chrome (hero / header) ──
+
+local function hero()
+    local hasEngine = state.available and state.stats and (state.stats.running or 0) > 0
+    local iconColor = state.available and state.stats and state.stats.unhealthy and state.stats.unhealthy > 0 and "error" or (hasEngine and "primary" or "on_surface_variant")
+    return ui.row({ align = "center", gap = 10 }, {
+        ui.glyph({ name = "container", size = 24, color = iconColor }),
+        ui.column({ gap = 1, flexGrow = 1 }, {
+            ui.label({ text = engineTitle(), fontSize = 17, fontWeight = "bold", color = "on_surface" }),
+            ui.row({ gap = 8 }, {
+                ui.label({ text = heroMeta(), fontSize = 11, color = "on_surface_variant", flexGrow = 1 }),
+                ifOrNil(heroDetail() ~= "", ui.label({ text = heroDetail(), fontSize = 11, color = "on_surface_variant" })),
+            }),
+        }),
+        ui.button({
+            glyph = "refresh",
+            variant = "ghost",
+            controlSize = "sm",
+            tooltip = tr("panel.refresh"),
+            onClick = refreshNow,
+        }),
+    })
+end
+
+local function ifOrNil(cond, node)
+    if cond then
+        return node
+    end
+    return nil
+end
+
+-- ── render ──
+
+local function body()
+    local children = {}
+    if state.available then
+        local hw = hardwareSection()
+        for _, node in ipairs(hw) do
+            children[#children + 1] = node
+        end
+    end
+    children[#children + 1] = kindRow()
+    local filters = filterRow()
+    if filters then
+        children[#children + 1] = filters
+    end
+    children[#children + 1] = searchRow()
+    local cmdBar = commandBar()
+    if cmdBar then
+        children[#children + 1] = cmdBar
+    end
+    local list = listSection()
+    for _, node in ipairs(list) do
+        children[#children + 1] = node
+    end
     return children
 end
 
 local function footer()
-    local stats = statsSummary()
-    local text = "—"
-    if stats then
-        text = tr("panel.summary", {
-            running = tostring(stats.running),
-            total = tostring(stats.total),
-            unhealthy = tostring(stats.unhealthy or 0),
-        })
-    end
-    return ui.row({ align = "center", gap = 8 }, {
-        ui.label({ text = text, color = "on_surface_variant", fontSize = 11, flexGrow = 1 }),
-        ui.button({ text = tr("panel.settings"), glyph = "settings", variant = "ghost", onClick = "onOpenSettings" }),
+    local text = state.available and state.stats and (state.stats.engine ~= "" and state.stats.engine or "?") or tr("panel.loading")
+    local enginePref = tostring(noctalia.getConfig("engine") or "auto")
+    local footerText = (enginePref == "auto") and tr("panel.subtitle") or engineTitle()
+    return ui.row({ align = "center", gap = 6 }, {
+        ui.label({ text = footerText, color = "on_surface_variant", fontSize = 10, flexGrow = 1 }),
+        ui.label({ text = text, color = "on_surface_variant", fontSize = 10 }),
+        ui.button({ glyph = "refresh", variant = "ghost", controlSize = "sm", tooltip = tr("panel.refresh"), onClick = refreshNow }),
     })
 end
 
-local function render()
-    panel.render(ui.column({ padding = 20, gap = 14, flexGrow = 1 }, {
+render = function()
+    panel.render(ui.column({ padding = 18, gap = 12, flexGrow = 1 }, {
+        hero(),
+        ui.separator({}),
         ui.scroll({ flexGrow = 1, gap = 12 }, body()),
+        ui.separator({}),
         footer(),
     }))
 end
@@ -286,11 +797,10 @@ end
 
 function onOpen()
     state = noctalia.state.get("containers") or { available = false }
+    uiState.query = ""
+    uiState.selectedKeys = {}
+    uiState.revision = uiState.revision + 1
     render()
-end
-
-function onOpenSettings()
-    noctalia.openSettings()
 end
 
 function onCloseClicked()
