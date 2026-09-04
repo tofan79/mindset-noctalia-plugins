@@ -197,6 +197,14 @@ function onOpen(_context)
     end
   end
   selectedIndex = 0
+  if activeFile ~= "" then
+    for i, p in ipairs(presets) do
+      if p.file == activeFile then
+        selectedIndex = i - 1
+        break
+      end
+    end
+  end
   applyFilter()
   render()
 end
