@@ -1686,11 +1686,13 @@ end
 -- Watchdog arm, filled in by disable and checked by update() on every poll tick.
 -- A restore must never wedge the shell: enable recorded the power profile to hand back,
 -- and disable has to hand it back even if a privileged restore hangs on a polkit dialog
--- that nobody answers. The watchdog forces finish() once a deadline has passed, logging
--- anything that was still pending, then swallows the dropped callbacks with the settled
--- guard.
-local DISABLE_RESOLVE_MS = 15000
-local disableWatchdog = { armed = false, deadline = 0, pendingRef = nil, finish = nil }
+-- that nobody answers. The watchdog forces finish() once enough update ticks have passed
+-- (each tick is the poll interval), logging anything that was still pending, and the
+-- settled guard swallows whatever callbacks arrive afterwards.
+--
+-- It counts ticks rather than reading a wall or monotonic clock, because the only thing
+-- guaranteed to fire is update() itself; a timing API may not be exposed on every host.
+local disableWatchdog = { armed = false, ticks = 0, maxTicks = 6, pendingRef = nil, finish = nil }
 
 function M.disable()
     if busy then
@@ -1850,10 +1852,10 @@ function M.disable()
     end
     -- Arm the watchdog once every restore job is queued. From here, if anything fails to
     -- call back (a pkexec sitting on an unanswered polkit dialog being the target case),
-    -- update() forces finish() after the deadline so the power profile is handed back and
+    -- update() forces finish() after a few poll ticks so the power profile is handed back and
     -- the session file is cleared rather than leaving gamer mode permanently wedged.
     disableWatchdog.armed = true
-    disableWatchdog.deadline = noctalia.nowMs() + DISABLE_RESOLVE_MS
+    disableWatchdog.ticks = 0
     disableWatchdog.pendingRef = function()
         return pending
     end
@@ -2232,21 +2234,24 @@ function update()
     -- one thing guaranteed to keep firing, so it is what gets the queue moving again.
     pump()
     -- Resolve a stuck disable: if a restore job never called back (a pkexec wedged on an
-    -- unanswered polkit dialog is the case that hangs), force finish() past the deadline so
-    -- the power profile is handed back and the session file cleared.
-    if disableWatchdog.armed and noctalia.nowMs() > disableWatchdog.deadline then
-        local pending = disableWatchdog.pendingRef and disableWatchdog.pendingRef() or 0
-        local finalize = disableWatchdog.finish
-        disableWatchdog.armed = false
-        disableWatchdog.finish = nil
-        disableWatchdog.pendingRef = nil
-        if finalize then
-            finalize()
-        else
-            noctalia.log("gamermode: disable watchdog fired with no finalize hook")
-        end
-        if pending > 0 then
-            noctalia.log("gamermode: disabled with " .. tostring(pending) .. " restore job(s) unresolved; session cleared anyway")
+    -- unanswered polkit dialog is the case that hangs), force finish() once enough update
+    -- ticks have passed so the power profile is handed back and the session file cleared.
+    if disableWatchdog.armed then
+        disableWatchdog.ticks = disableWatchdog.ticks + 1
+        if disableWatchdog.ticks >= disableWatchdog.maxTicks then
+            local pending = disableWatchdog.pendingRef and disableWatchdog.pendingRef() or 0
+            local finalize = disableWatchdog.finish
+            disableWatchdog.armed = false
+            disableWatchdog.finish = nil
+            disableWatchdog.pendingRef = nil
+            if finalize then
+                finalize()
+            else
+                noctalia.log("gamermode: disable watchdog fired with no finalize hook")
+            end
+            if pending > 0 then
+                noctalia.log("gamermode: disabled with " .. tostring(pending) .. " restore job(s) unresolved; session cleared anyway")
+            end
         end
     end
 end
