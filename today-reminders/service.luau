@@ -100,7 +100,7 @@ end
 
 -- ── Entry points ──────────────────────────────────────────────────────────────
 
-function init()
+function M.init()
     M.reminders = load()
     broadcast()
     noctalia.setUpdateInterval(10000)

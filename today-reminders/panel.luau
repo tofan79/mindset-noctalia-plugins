@@ -7,14 +7,18 @@ local PANEL_ID = "mindset/today-reminders:main"
 
 local M = {}
 
-local state = noctalia.state.get("reminders") or { count = 0 }
+local state = { reminders = {}, count = 0 }
+
+local addMinutesVal = "5"
+local addTextVal = ""
 
 -- Translations
 local function tr(key)
     return noctalia.tr(key) or key
 end
 
--- Reminder row
+-- ── UI helpers ────────────────────────────────────────────────────────────────
+
 local function reminderRow(r, i)
     local minsLeft = math.max(0, math.floor((r.fireAt - os.time()) / 60))
     local label = minsLeft > 0
@@ -22,7 +26,7 @@ local function reminderRow(r, i)
         or "now"
     local text = r.text and r.text ~= "" and r.text or "(no text)"
 
-    return ui.row({ gap = 6, align = "center" }, {
+    return ui.row({ gap = 6, align = "center", key = "row-" .. r.id }, {
         ui.label({ text = label, fontSize = 12 }),
         ui.label({ text = text, flexGrow = 1, color = "on_surface_variant" }),
         ui.button({
@@ -31,7 +35,7 @@ local function reminderRow(r, i)
             controlSize = "sm",
             tooltip = tr("panel.remove"),
             onClick = function()
-                noctalia.state.set("reminders_cmd", { action = "dismiss", id = i })
+                noctalia.state.set("reminders_cmd", { action = "dismiss", id = r.id })
             end,
         }),
     })
@@ -44,72 +48,88 @@ local function emptyState()
     })
 end
 
-local function addSection()
-    local minutesVal = ""
-    local textVal = ""
+-- ── Render ────────────────────────────────────────────────────────────────────
 
-    return ui.column({ gap = 8 }, {
-        ui.label({ text = tr("panel.add_header"), color = "on_surface", fontSize = 11, fontWeight = "bold" }),
-        ui.row({ gap = 6 }, {
-            ui.input({
-                key = "reminder-minutes",
-                placeholder = tr("panel.minutes_placeholder"),
-                value = minutesVal,
-                flexGrow = 0,
-                onChange = function(v) minutesVal = v end,
+local function render()
+    state = noctalia.state.get("reminders") or { reminders = {}, count = 0 }
+
+    local listChildren = {}
+    local reminders = state.reminders or {}
+    for _, r in pairs(reminders) do
+        table.insert(listChildren, reminderRow(r))
+    end
+
+    if #listChildren == 0 then
+        table.insert(listChildren, emptyState())
+    end
+
+    return ui.scroll({ fill = true, stickToBottom = true }, {
+        ui.column({ gap = 8, padding = 12 }, {
+            -- Add section
+            ui.column({ gap = 6 }, {
+                ui.label({
+                    text = tr("panel.add_header"),
+                    color = "on_surface",
+                    fontSize = 11,
+                    fontWeight = "bold",
+                }),
+                ui.row({ gap = 6 }, {
+                    ui.input({
+                        key = "add-minutes",
+                        placeholder = tr("panel.minutes_placeholder"),
+                        value = addMinutesVal,
+                        flexGrow = 0,
+                        onChange = function(v) addMinutesVal = v end,
+                    }),
+                    ui.input({
+                        key = "add-text",
+                        placeholder = tr("panel.text_placeholder"),
+                        value = addTextVal,
+                        flexGrow = 1,
+                        onChange = function(v) addTextVal = v end,
+                    }),
+                    ui.button({
+                        glyph = "plus",
+                        variant = "primary",
+                        tooltip = tr("panel.add"),
+                        onClick = function()
+                            if addMinutesVal ~= "" and tonumber(addMinutesVal) then
+                                noctalia.state.set("reminders_cmd", {
+                                    action = "add",
+                                    minutes = addMinutesVal,
+                                    text = addTextVal,
+                                })
+                                addMinutesVal = "5"
+                                addTextVal = ""
+                                render()
+                            end
+                        end,
+                    }),
+                }),
             }),
-            ui.input({
-                key = "reminder-text",
-                placeholder = tr("panel.text_placeholder"),
-                value = textVal,
-                flexGrow = 1,
-                onChange = function(v) textVal = v end,
+            ui.separator(),
+            ui.label({
+                text = tr("panel.list_header"),
+                color = "on_surface",
+                fontSize = 11,
+                fontWeight = "bold",
             }),
-            ui.button({
-                glyph = "plus",
-                variant = "primary",
-                tooltip = tr("panel.add"),
-                onClick = function()
-                    if minutesVal and minutesVal ~= "" then
-                        noctalia.state.set("reminders_cmd", {
-                            action = "add",
-                            minutes = minutesVal,
-                            text = textVal,
-                        })
-                    end
-                end,
-            }),
+            ui.column({ gap = 4 }, listChildren),
         }),
     })
 end
 
--- Render function (called by host)
-function render(props)
-    return ui.column({ gap = 8 }, {
-        addSection(),
-        ui.separator(),
-        ui.label({ text = tr("panel.list_header"), color = "on_surface", fontSize = 11, fontWeight = "bold" }),
-    })
-end
+-- ── Panel entry points ────────────────────────────────────────────────────────
 
-M.init = function()
-    -- Watch for commands
-    noctalia.state.watch("reminders_cmd", function(cmd)
-        if not cmd then return end
-        local action = cmd.action
-        if action == "add" then
-            addReminder(cmd.minutes, cmd.text)
-        elseif action == "dismiss" then
-            dismissReminder(cmd.id)
-        elseif action == "clear" then
-            dismissAll()
-        end
-        noctalia.state.set("reminders_cmd", nil)
+function M.onOpen(context)
+    -- Watch state changes so list stays in sync
+    noctalia.state.watch("reminders", function(val)
+        if val then state = val else state = { reminders = {}, count = 0 } end
+        render()
     end)
+    render()
 end
 
-M.onClose = function()
-    -- nothing
-end
+M.onClose = function() end
 
 return M
