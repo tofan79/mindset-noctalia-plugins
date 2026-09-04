@@ -1,7 +1,7 @@
 --!nonstrict
 --
 -- Today Reminders panel — minutes-from-now input.
--- Pattern matches working plugins: gamer-mode + containers (global onOpen/render).
+-- Uses global callbacks per skill doc: closures are not resolved by the ui bridge.
 --
 
 local M = {}
@@ -9,9 +9,42 @@ local M = {}
 local state = { reminders = {}, count = 0 }
 local addMinutesVal = "5"
 local addTextVal = ""
+local pendingDismissId = nil
 
 local function tr(key)
     return noctalia.tr(key) or key
+end
+
+-- ── Named global callbacks (must be global, referenced by string from ui props) ─
+
+function addReminder()
+    local mins = addMinutesVal
+    local text = addTextVal
+    if mins == "" or not tonumber(mins) then return end
+    noctalia.state.set("reminders_cmd", {
+        action = "add",
+        minutes = mins,
+        text = text,
+    })
+    addMinutesVal = "5"
+    addTextVal = ""
+    render()
+end
+
+function dismissReminder(_)
+    local id = pendingDismissId
+    pendingDismissId = nil
+    if not id then return end
+    noctalia.state.set("reminders_cmd", { action = "dismiss", id = id })
+    render()
+end
+
+function onAddMinutesChanged(v)
+    addMinutesVal = v or ""
+end
+
+function onAddTextChanged(v)
+    addTextVal = v or ""
 end
 
 -- ── UI helpers ────────────────────────────────────────────────────────────────
@@ -20,15 +53,13 @@ local function reminderRow(r)
     local minsLeft = math.max(0, math.floor((r.fireAt - os.time()) / 60))
     local label = minsLeft > 0 and ("in " .. minsLeft .. " min") or "now"
     local text = r.text and r.text ~= "" and r.text or "(no text)"
-    return ui.row({ gap = 6, align = "center", key = "row-" .. r.id }, {
+    return ui.row({ gap = 6, align = "center", key = "row-" .. tostring(r.id) }, {
         ui.label({ text = label, fontSize = 12 }),
         ui.label({ text = text, flexGrow = 1, color = "on_surface_variant" }),
         ui.button({
             glyph = "x", variant = "ghost", controlSize = "sm",
             tooltip = tr("panel.remove"),
-            onClick = function()
-                noctalia.state.set("reminders_cmd", { action = "dismiss", id = r.id })
-            end,
+            onClick = "dismissReminder",
         }),
     })
 end
@@ -40,21 +71,22 @@ local function emptyState()
     })
 end
 
--- ── Render (must be global) ───────────────────────────────────────────────────
+-- ── Render ────────────────────────────────────────────────────────────────────
 
-local function buildTree()
+function render()
     state = noctalia.state.get("reminders") or { reminders = {}, count = 0 }
 
     local listChildren = {}
     local reminders = state.reminders or {}
     for _, r in pairs(reminders) do
+        pendingDismissId = r.id
         listChildren[#listChildren + 1] = reminderRow(r)
     end
     if #listChildren == 0 then
         listChildren[#listChildren + 1] = emptyState()
     end
 
-    return ui.scroll({ fill = true, stickToBottom = true }, {
+    panel.render(ui.scroll({ fill = true, stickToBottom = true }, {
         ui.column({ gap = 8, padding = 12 }, {
             ui.column({ gap = 6 }, {
                 ui.label({
@@ -67,30 +99,19 @@ local function buildTree()
                         placeholder = tr("panel.minutes_placeholder"),
                         value = addMinutesVal,
                         flexGrow = 0,
-                        onChange = function(v) addMinutesVal = v end,
+                        onChange = "onAddMinutesChanged",
                     }),
                     ui.input({
                         key = "add-text",
                         placeholder = tr("panel.text_placeholder"),
                         value = addTextVal,
                         flexGrow = 1,
-                        onChange = function(v) addTextVal = v end,
+                        onChange = "onAddTextChanged",
                     }),
                     ui.button({
                         glyph = "plus", variant = "primary",
                         tooltip = tr("panel.add"),
-                        onClick = function()
-                            if addMinutesVal ~= "" and tonumber(addMinutesVal) then
-                                noctalia.state.set("reminders_cmd", {
-                                    action = "add",
-                                    minutes = addMinutesVal,
-                                    text = addTextVal,
-                                })
-                                addMinutesVal = "5"
-                                addTextVal = ""
-                                render()
-                            end
-                        end,
+                        onClick = "addReminder",
                     }),
                 }),
             }),
@@ -101,14 +122,10 @@ local function buildTree()
             }),
             ui.column({ gap = 4 }, listChildren),
         }),
-    })
+    }))
 end
 
-function render()
-    panel.render(buildTree())
-end
-
--- ── shell entry points (must be globals) ──────────────────────────────────────
+-- ── shell entry points ────────────────────────────────────────────────────────
 
 function onOpen()
     noctalia.state.watch("reminders", function(val)
