@@ -26,7 +26,14 @@ end
 
 -- ── State ────────────────────────────────────────────────────────────────────
 
+local function countReminders()
+    local n = 0
+    for _ in pairs(M.reminders) do n = n + 1 end
+    return n
+end
+
 local function broadcast()
+    noctalia.log("today-reminders: broadcast count=" .. n)
     local n = 0
     for _ in pairs(M.reminders) do n = n + 1 end
     noctalia.state.set("reminders", {
@@ -62,6 +69,7 @@ end
 -- ── IPC: called from panel ───────────────────────────────────────────────────
 
 function M.handleCommand(cmd)
+    noctalia.log("today-reminders: cmd=" .. (cmd and cmd.action or "nil"))
     if not cmd or type(cmd) ~= "table" then return end
     local action = cmd.action
     if action == "add" then
@@ -76,6 +84,7 @@ end
 -- ── Timer ─────────────────────────────────────────────────────────────────────
 
 local function tick()
+    noctalia.log("today-reminders: tick, reminders=" .. countReminders())
     local now = os.time()
     local changed = false
     for id, r in pairs(M.reminders) do
