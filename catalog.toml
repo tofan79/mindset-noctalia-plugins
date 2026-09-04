@@ -60,12 +60,12 @@ tags = ["bar", "panel", "service", "gaming", "system", "hardware"]
 [[plugin]]
 id = "mindset/today-reminders"
 name = "Today Reminders"
-version = "1.0.0"
+version = "1.0.1"
 updated_at = 1788493822
 added_at = 1788493822
 author = "mindset"
 license = "MIT"
-icon = "bell"
+icon = "bell-ringing"
 description = "Set a reminder for later today. Gets dismissed after it fires and never carries into tomorrow."
 deprecated = false
 plugin_api = 19
