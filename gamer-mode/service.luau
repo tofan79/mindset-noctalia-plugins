@@ -1647,6 +1647,9 @@ function M.enable(profileOverride)
             -- machine is already in its gaming power state when gamer mode activates. Tying
             -- this to the suspend batch would leave the boost on but the profile unchanged
             -- whenever that batch hung on a polkit dialog nobody answers.
+            noctalia.log("gamermode DEBUG startSuspend autoPerf=" .. tostring(autoPerformance())
+                .. " avail=" .. tostring(powerState.available)
+                .. " suppPerf=" .. tostring(powerSupports("performance")))
             if autoPerformance() and powerState.available and powerSupports("performance") then
                 M.setPowerProfile("performance")
             end
