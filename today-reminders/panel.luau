@@ -26,6 +26,7 @@ function addReminder()
     })
     addMinutesVal = ""
     addTextVal = ""
+    panel.close()
 end
 
 function dismissReminder(_)
