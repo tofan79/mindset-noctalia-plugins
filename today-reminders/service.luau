@@ -95,17 +95,24 @@ local function tick()
                 { "notify-send", "-u", "normal", "Reminder", body },
                 function() end
             )
-            -- auto-clear setelah 3 detik biar user lihat status "done" dulu
-            local laterId = id
-            local laterBody = body
-            noctalia.runAsync(
-                { "sleep", "3" },
-                function()
-                    M.dismiss(laterId)
-                end
-            )
+            -- store fire time so we can auto-dismiss after 3s
+            r.firedAt = now
         end
     end
+end
+
+-- Called every update() — removes reminders that fired >3s ago
+function update()
+    tick()
+    local now = os.time()
+    local anyFired = false
+    for id, r in pairs(M.reminders) do
+        if r.done and r.firedAt and (now - r.firedAt) >= 3 then
+            M.reminders[id] = nil
+            anyFired = true
+        end
+    end
+    if anyFired then save(); broadcast() end
 end
 
 -- ── Entry points ──────────────────────────────────────────────────────────────
