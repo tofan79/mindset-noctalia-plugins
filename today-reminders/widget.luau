@@ -12,10 +12,10 @@ local function render()
     barWidget.setGlyph(noctalia.getConfig("glyph") or "bell")
     if noctalia.getConfig("show_count") ~= false and count > 0 then
         barWidget.setTooltip(count .. " reminder" .. (count > 1 and "s" or "") .. " today")
-        barWidget.setLabel(tostring(count))
+        barWidget.setText(tostring(count))
     else
         barWidget.setTooltip("No reminders today")
-        barWidget.setLabel("")
+        barWidget.setText("")
     end
 end
 

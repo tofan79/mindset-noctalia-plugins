@@ -10,11 +10,8 @@ local M = { reminders = {} }
 
 local function load()
     if DATA_FILE == "" then return {} end
-    local f = io.open(DATA_FILE, "r")
-    if not f then return {} end
-    local raw = f:read("*a")
-    f:close()
-    if raw == "" then return {} end
+    local raw, err = noctalia.readFile(DATA_FILE)
+    if not raw then return {} end
     local ok, val = pcall(noctalia.json.decode, raw)
     if not ok or type(val) ~= "table" then return {} end
     return val
@@ -22,12 +19,9 @@ end
 
 local function save()
     if DATA_FILE == "" then return end
-    local ok, data = pcall(noctalia.json.encode, M.reminders)
+    local ok, encoded = pcall(noctalia.json.encode, M.reminders)
     if not ok then return end
-    local f = io.open(DATA_FILE, "w")
-    if not f then return end
-    f:write(data)
-    f:close()
+    noctalia.writeFile(DATA_FILE, encoded)
 end
 
 -- ── State ────────────────────────────────────────────────────────────────────
