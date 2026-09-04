@@ -56,3 +56,17 @@ description = "Live CPU/RAM/GPU metrics and a one-click gamer mode that suspends
 deprecated = false
 plugin_api = 19
 tags = ["bar", "panel", "service", "gaming", "system", "hardware"]
+
+[[plugin]]
+id = "mindset/containers"
+name = "Containers"
+version = "1.0.0"
+updated_at = 1788493822
+added_at = 1788493822
+author = "mindset"
+license = "MIT"
+icon = "container"
+description = "Docker and Podman status in the bar: containers, images, volumes, networks, and live stats, with start/stop/restart and removal controls."
+deprecated = false
+plugin_api = 19
+tags = ["bar", "panel", "service", "system", "docker", "podman"]
