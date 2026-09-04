@@ -105,14 +105,12 @@ local function buildTree()
 end
 
 function render()
-    noctalia.log("today-reminders: panel render, count=" .. (state and state.count or "?"))
     panel.render(buildTree())
 end
 
 -- ── shell entry points (must be globals) ──────────────────────────────────────
 
 function onOpen()
-    noctalia.log("today-reminders: panel onOpen")
     noctalia.state.watch("reminders", function(val)
         if val then state = val else state = { reminders = {}, count = 0 } end
         render()
