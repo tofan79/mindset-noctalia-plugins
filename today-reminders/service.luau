@@ -87,19 +87,25 @@ end
 
 local function tick()
     local now = os.time()
-    local changed = false
     for id, r in pairs(M.reminders) do
         if not r.done and r.fireAt <= now then
             r.done = true
-            changed = true
             local body = r.text or "Reminder!"
             noctalia.runAsync(
                 { "notify-send", "-u", "normal", "Reminder", body },
                 function() end
             )
+            -- auto-clear setelah 3 detik biar user lihat status "done" dulu
+            local laterId = id
+            local laterBody = body
+            noctalia.runAsync(
+                { "sleep", "3" },
+                function()
+                    M.dismiss(laterId)
+                end
+            )
         end
     end
-    if changed then save(); broadcast() end
 end
 
 -- ── Entry points ──────────────────────────────────────────────────────────────

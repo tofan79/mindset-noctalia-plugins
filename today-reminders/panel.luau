@@ -47,22 +47,25 @@ end
 
 local function reminderRow(r)
     local minsLeft = math.max(0, math.floor((r.fireAt - os.time()) / 60))
-    local label = minsLeft > 0 and ("in " .. minsLeft .. " min") or "now"
+    local label = r.done and "✓ done" or (minsLeft > 0 and ("in " .. minsLeft .. " min") or "now")
     local text = r.text and r.text ~= "" and r.text or "(no text)"
     local rid = tostring(r.id)
     local dismissFn = function()
         pendingDismissId = r.id
         dismissReminder(nil)
     end
-    return ui.row({ gap = 6, align = "center", key = "row-" .. rid }, {
-        ui.label({ text = label, fontSize = 12 }),
-        ui.label({ text = text, flexGrow = 1, color = "on_surface_variant" }),
-        ui.button({
+    local rowChildren = {
+        ui.label({ text = label, fontSize = 12, color = r.done and "secondary" or "on_surface_variant" }),
+        ui.label({ text = text, flexGrow = 1, color = r.done and "secondary" or "on_surface_variant", opacity = r.done and 0.5 or 1 }),
+    }
+    if not r.done then
+        table.insert(rowChildren, ui.button({
             glyph = "x", variant = "ghost", controlSize = "sm",
             tooltip = tr("panel.remove"),
             onClick = dismissFn,
-        }),
-    })
+        }))
+    end
+    return ui.row({ gap = 6, align = "center", key = "row-" .. rid }, rowChildren)
 end
 
 local function emptyState()
