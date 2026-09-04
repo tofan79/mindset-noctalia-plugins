@@ -1194,8 +1194,13 @@ end
 
 local function refreshLists(done)
     done = done or function() end
-    local wantDocker = M.enginePref ~= "podman" and M.dockerInstalled
-    local wantPodman = M.enginePref ~= "docker" and M.podmanInstalled
+    -- Recompute the intent on every poll: a stale module (hot-reload) may have left
+    -- M.dockerInstalled/M.podmanInstalled as nil, which would otherwise skip both list
+    -- fetches. The preference decides which engines we try; the fetch exit decides success.
+    M.dockerInstalled = M.enginePref ~= "podman"
+    M.podmanInstalled = M.enginePref ~= "docker"
+    local wantDocker = M.dockerInstalled
+    local wantPodman = M.podmanInstalled
     local left = 0
     local dockerC, podmanC = {}, {}
     local function maybe()
