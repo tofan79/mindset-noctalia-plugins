@@ -1,13 +1,17 @@
-# Mindset Noctalia plugins
+# Mindset Noctalia Plugins
 
-A personal **[Noctalia](https://github.com/noctalia-dev/noctalia) v5** plugin
-source for Hyprland sessions. Each plugin lives in its own top-level directory
-(the part of its id after the `/`) and installs through Noctalia's plugin
-system.
+Personal **[Noctalia](https://github.com/noctalia-dev/noctalia) v5** plugin source for
+Hyprland sessions. Six plugins covering display, layout, animation, gaming, reminders,
+and container management.
 
-<!-- markdownlint-disable-file MD033 -->
 <p align="center">
   <img src="https://assets.noctalia.dev/noctalia-logo.svg?v=2" alt="Noctalia Logo" style="width: 128px" />
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT"></a>
+  <img src="https://img.shields.io/badge/plugin%20API-13%E2%80%9319-ff69b4" alt="Plugin API 13–19">
+  <img src="https://img.shields.io/badge/WM-Hyprland-7b68ee" alt="Hyprland">
 </p>
 
 ## Plugins
@@ -25,25 +29,14 @@ system.
 
 ```
 mindset-noctalia-plugins/
-  catalog.toml          # index of every plugin this source ships
-  README.md             # this file
-  better-displays/
-    plugin.toml         # manifest: id, metadata, entries, settings
-    widget.luau         # bar widget entry
-    panel.luau          # panel entry
-    bin/                # standalone omarchy backend scripts
-    translations/en.json
-    README.md
-  gamer-mode/
-    ...
-  hypr-animations/
-    ...
-  hypr-layouts/
-    ...
-  today-reminders/
-    ...
-  containers/
-    ...
+├── catalog.toml           # index Noctalia reads for updates
+├── README.md              # this file
+├── better-displays/       # monitor & terminal font config
+├── containers/            # Docker & Podman manager
+├── gamer-mode/            # live metrics + gamer toggle
+├── hypr-animations/      # animation preset picker
+├── hypr-layouts/          # tiling layout picker
+└── today-reminders/       # quick reminder from the bar
 ```
 
 `plugin.toml` is authoritative for each plugin's id, entries, and settings;
@@ -51,13 +44,10 @@ mindset-noctalia-plugins/
 
 ## Install
 
-Add this checkout as a `path` source while developing, or use the GitHub URL on
-a machine that has network access to it.
-
-### Local checkout (development)
+### From GitHub (recommended)
 
 ```sh
-noctalia msg plugins source add mindset path /home/mindset/Projects/mindset-noctalia-plugins
+noctalia msg plugins source add mindset git https://github.com/tofan79/mindset-noctalia-plugins.git
 noctalia msg plugins enable mindset/hypr-layouts
 noctalia msg plugins enable mindset/hypr-animations
 noctalia msg plugins enable mindset/better-displays
@@ -66,16 +56,18 @@ noctalia msg plugins enable mindset/today-reminders
 noctalia msg plugins enable mindset/containers
 ```
 
-### From GitHub
+### Local development
 
 ```sh
-noctalia msg plugins source add mindset git https://github.com/tofan79/mindset-noctalia-plugins.git
-noctalia msg plugins enable mindset/<plugin>
+noctalia msg plugins source add mindset path ~/Projects/mindset-noctalia-plugins
+# edit files, then sync to materialized (hot-reload):
+noc-sync              # sync all plugins
+noc-sync today-reminders  # sync one plugin
 ```
 
-Noctalia fetches the source tag it tracks at startup, so after a reboot the
-plugins materialize from this remote automatically. `.luau` edits hot-reload;
-manifest changes are picked up on the next config reload.
+Noctalia fetches the source tag at startup, so plugins materialize from this
+remote automatically after a reboot. `.luau` edits hot-reload; manifest changes
+need a config reload.
 
 ## Development
 
@@ -97,9 +89,7 @@ When you bump a plugin:
    both must stay in sync, or the Plugins/Updates UI shows a stale upgrade.
 3. Update the plugin's `README.md` if behaviour changed.
 4. Commit and push.
-5. Resync the materialized source: run Noctalia's startup fetch, or
-   `git -C ~/.local/state/noctalia/plugins/sources/<author>/repo reset --hard origin/main`.
-6. Verify with `noctalia msg plugins list | grep mindset` that the new version
+5. Verify with `noctalia msg plugins list | grep mindset` that the new version
    is listed.
 
 ## License
