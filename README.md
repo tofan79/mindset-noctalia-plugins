@@ -56,15 +56,6 @@ noctalia msg plugins enable mindset/today-reminders
 noctalia msg plugins enable mindset/containers
 ```
 
-### Local development
-
-```sh
-noctalia msg plugins source add mindset path ~/Projects/mindset-noctalia-plugins
-# edit files, then sync to materialized (hot-reload):
-noc-sync              # sync all plugins
-noc-sync today-reminders  # sync one plugin
-```
-
 Noctalia fetches the source tag at startup, so plugins materialize from this
 remote automatically after a reboot. `.luau` edits hot-reload; manifest changes
 need a config reload.
