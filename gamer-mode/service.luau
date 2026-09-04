@@ -1738,7 +1738,12 @@ function M.disable()
         busy = false
         M.publishGameMode()
         if autoPerformance() and snap.power_profile_before then
-            M.setPowerProfile(snap.power_profile_before)
+            -- Resolve the live profile list first: powerState.available can be stale (e.g.
+            -- power-profiles-daemon restarted), which would make setPowerProfile bail to a
+            -- no-op and leave power stuck on performance after a disable.
+            M.refreshPower(function()
+                M.setPowerProfile(snap.power_profile_before)
+            end)
         end
         if snap.wallpaper_automation_before ~= nil then
             if not M.setWallpaperAutomation(snap.wallpaper_automation_before) then
