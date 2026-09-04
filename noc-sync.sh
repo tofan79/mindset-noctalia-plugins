@@ -17,7 +17,6 @@ if [ ! -d "$DST" ]; then
 fi
 
 rsync -a --delete "$SRC/" "$DST/" && echo "✓ synced to sources"
-for f in panel.luau service.luau widget.luau; do
-  [ -f "$DST/$f" ] && cp "$DST/$f" "$MAT/$f" 2>/dev/null && echo "✓ updated materialized/$f"
-done
+# Copy everything to materialized so panel/service see latest
+rsync -a --delete "$DST/" "$MAT/" && echo "✓ synced to materialized"
 echo "Done. Wait ~2s for hot-reload."
