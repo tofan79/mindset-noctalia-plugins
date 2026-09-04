@@ -1,120 +1,84 @@
 --!nonstrict
 --
--- Today Reminders service: set reminder in X minutes from now.
--- Stores fireAt as absolute timestamp, checks in tick().
+-- Today Reminders service — simplest possible: minutes from now.
+-- No HH:MM parsing. Input is minutes from current time.
+--
 
-local DATA_FILE = noctalia.appdir() .. "/reminders.json"
+local STORAGE_KEY = "mindset/today-reminders:reminders"
 
+-- Module
 local M = {}
-local reminders = {}
 
--- ── Persistence ──────────────────────────────────────────────────────────────
-
-local function load()
-    local f = io.open(DATA_FILE, "r")
-    if not f then return {} end
-    local data = f:read("*a")
-    f:close()
-    if data == "" then return {} end
-    local ok, parsed = pcall(noctalia.json.decode, data)
-    if not ok or type(parsed) ~= "table" then return {} end
-    return parsed
+-- Persist reminders to noctalia.json
+local function loadReminders()
+    local data = noctalia.json.decode(noctalia.readFile(noctalia.json))
+    if not data then return {} end
+    if type(data.reminders) ~= "table" then return {} end
+    return data.reminders
 end
 
-local function save()
-    local ok, data = pcall(noctalia.json.encode, reminders)
-    if not ok then return end
-    local f = io.open(DATA_FILE, "w")
-    if not f then return end
-    f:write(data)
-    f:close()
+local function saveReminders(reminders)
+    local data = noctalia.json.decode(noctalia.readFile(noctalia.json)) or {}
+    data.reminders = reminders
+    noctalia.writeFile(noctalia.json, noctalia.json.encode(data))
 end
 
--- ── Broadcast ───────────────────────────────────────────────────────────────
+-- Load on init
+M.reminders = loadReminders()
 
-local function broadcast()
-    local pending = 0
-    for _, r in ipairs(reminders) do
-        if not r.done then pending = pending + 1 end
-    end
-    noctalia.state.set("reminders", { reminders = reminders, count = pending })
-end
-
--- ── Add reminder ─────────────────────────────────────────────────────────────
-
-function M.add(minutes, text)
-    local fireAt = os.time() + (tonumber(minutes) or 1) * 60
-    table.insert(reminders, {
-        id = os.time(),
-        text = text or "",
-        fireAt = fireAt,
-        done = false,
-    })
-    save()
-    broadcast()
-end
-
-function M.dismiss(id)
-    local num = tonumber(id)
-    for i, r in ipairs(reminders) do
-        if r.id == num then table.remove(reminders, i); break end
-    end
-    save()
-    broadcast()
-end
-
-function M.clearDone()
-    local changed = false
-    for i = #reminders, 1, -1 do
-        if reminders[i].done then table.remove(reminders, i); changed = true end
-    end
-    if changed then save(); broadcast() end
-end
-
--- ── IPC handler ─────────────────────────────────────────────────────────────
-
-function M.handleCommand(cmd)
-    if not cmd or type(cmd) ~= "table" then return end
-    local action = cmd.action
-    if action == "add" then
-        M.add(cmd.minutes, cmd.text)
-    elseif action == "dismiss" then
-        M.dismiss(cmd.id)
-    elseif action == "clearDone" then
-        M.clearDone()
-    end
-end
-
--- ── Timer (every 10s) ───────────────────────────────────────────────────────
-
-local function tick()
+-- Called by plugin host every tick
+function update()
     local now = os.time()
-    for _, r in ipairs(reminders) do
-        if not r.done and r.fireAt <= now then
-            r.done = true
-            local body = r.text or ""
-            noctalia.runAsync({ "sh", "-c", "notify-send -u normal 'Reminder' " .. string.format("%q", body) }, function() end)
+    local changed = false
+
+    for i = #M.reminders, 1, -1 do
+        local r = M.reminders[i]
+        if r.fireAt <= now then
+            -- Fire notification
+            local text = r.text or "Reminder!"
+            os.execute('notify-send "⏰ ' .. text .. '" --expire-time=10000')
+            table.remove(M.reminders, i)
+            changed = true
         end
     end
-    save()
-    broadcast()
+
+    if changed then
+        saveReminders(M.reminders)
+    end
+
+    -- Publish count for widget
+    noctalia.state.set("reminders_count", #M.reminders)
 end
 
--- ── Entry points ─────────────────────────────────────────────────────────────
-
-function init()
-    reminders = load()
-    broadcast()
-    noctalia.setUpdateInterval(10000)  -- every 10s
+-- IPC: add reminder
+function addReminder(minutes, text)
+    local fireAt = os.time() + (tonumber(minutes) or 0) * 60
+    table.insert(M.reminders, { fireAt = fireAt, text = text or "" })
+    saveReminders(M.reminders)
 end
 
-function update()
-    tick()
+-- IPC: dismiss
+function dismissReminder(id)
+    table.remove(M.reminders, id)
+    saveReminders(M.reminders)
 end
 
-function onConfigChanged() end
-function onIpc(event) end
+-- IPC: clear all
+function dismissAll()
+    M.reminders = {}
+    saveReminders(M.reminders)
+end
 
-noctalia.state.watch("reminders_cmd", M.handleCommand)
-M.init()
+-- IPC: list
+function getReminders()
+    return M.reminders
+end
+
+-- Init: set initial state
+noctalia.state.set("reminders_count", #M.reminders)
+
+M.init = function()
+    -- nothing extra needed
+end
+
 return M
