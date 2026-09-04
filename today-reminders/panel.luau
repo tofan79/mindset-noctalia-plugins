@@ -78,7 +78,7 @@ function render()
     -- Always read fresh from state — never trust a cached variable
     local s = noctalia.state.get("reminders") or { reminders = {}, count = 0 }
     local listChildren = {}
-    local reminders = state.reminders or {}
+    local reminders = s.reminders or {}
     for _, r in pairs(reminders) do
         listChildren[#listChildren + 1] = reminderRow(r)
     end
@@ -86,42 +86,40 @@ function render()
         listChildren[#listChildren + 1] = emptyState()
     end
 
-    panel.render(ui.scroll({ fill = true, stickToBottom = true }, {
-        ui.column({ gap = 8, padding = 12 }, {
-            ui.column({ gap = 6 }, {
-                ui.label({
-                    text = tr("panel.add_header"), color = "on_surface",
-                    fontSize = 11, fontWeight = "bold",
-                }),
-                ui.row({ gap = 6 }, {
-                    ui.input({
-                        key = "add-minutes",
-                        placeholder = tr("panel.minutes_placeholder"),
-                        value = addMinutesVal,
-                        flexGrow = 0,
-                        onChange = "onAddMinutesChanged",
-                    }),
-                    ui.input({
-                        key = "add-text",
-                        placeholder = tr("panel.text_placeholder"),
-                        value = addTextVal,
-                        flexGrow = 1,
-                        onChange = "onAddTextChanged",
-                    }),
-                    ui.button({
-                        glyph = "plus", variant = "primary",
-                        tooltip = tr("panel.add"),
-                        onClick = "addReminder",
-                    }),
-                }),
-            }),
-            ui.separator(),
+    panel.render(ui.column({ flexGrow = 1, gap = 8, padding = 12 }, {
+        ui.column({ gap = 6 }, {
             ui.label({
-                text = tr("panel.list_header"), color = "on_surface",
+                text = tr("panel.add_header"), color = "on_surface",
                 fontSize = 11, fontWeight = "bold",
             }),
-            ui.column({ gap = 4 }, listChildren),
+            ui.row({ gap = 6 }, {
+                ui.input({
+                    key = "add-minutes",
+                    placeholder = tr("panel.minutes_placeholder"),
+                    value = addMinutesVal,
+                    flexGrow = 0,
+                    onChange = "onAddMinutesChanged",
+                }),
+                ui.input({
+                    key = "add-text",
+                    placeholder = tr("panel.text_placeholder"),
+                    value = addTextVal,
+                    flexGrow = 1,
+                    onChange = "onAddTextChanged",
+                }),
+                ui.button({
+                    glyph = "plus", variant = "primary",
+                    tooltip = tr("panel.add"),
+                    onClick = "addReminder",
+                }),
+            }),
         }),
+        ui.separator(),
+        ui.label({
+            text = tr("panel.list_header"), color = "on_surface",
+            fontSize = 11, fontWeight = "bold",
+        }),
+        ui.scroll({ flexGrow = 1, gap = 4 }, listChildren),
     }))
 end
 

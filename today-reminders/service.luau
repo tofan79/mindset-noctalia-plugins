@@ -115,7 +115,20 @@ function update()
 end
 
 function onConfigChanged() end
-function onIpc(event) end
+function onIpc(event, payload)
+    noctalia.log("onIpc: event=" .. tostring(event) .. " payload=" .. tostring(payload))
+    if type(payload) == "string" then
+        local ok, decoded = pcall(noctalia.json.decode, payload)
+        if ok and type(decoded) == "table" then payload = decoded end
+    end
+    if event == "add" then
+        M.add(payload.minutes, payload.text)
+    elseif event == "dismiss" then
+        M.dismiss(payload.id)
+    elseif event == "clearDone" then
+        M.clearDone()
+    end
+end
 
 -- Watch for panel commands
 noctalia.state.watch("reminders_cmd", M.handleCommand)
