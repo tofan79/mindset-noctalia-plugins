@@ -1109,29 +1109,14 @@ end
 M.barLabel = barLabel
 M.barEngine = barEngine
 M.probeWhich = function(whichDone)
+    -- With the preference preserved as an optimistic intent, there is nothing to probe
+    -- synchronously: the fetch exit codes decide reality. `command -v` is PATH-dependent
+    -- and the sandboxed service PATH can miss /usr/bin, so we keep it out of the loop.
     M.wantDocker = M.enginePref ~= "podman"
     M.wantPodman = M.enginePref ~= "docker"
-    local whichLeft = 0
-    local dockerInstalled = noctalia.commandExists("docker")
-    local podmanInstalled = noctalia.commandExists("podman")
-    if M.wantDocker then
-        whichLeft = whichLeft + 1
-        noctalia.runAsync({ "command", "-v", "docker" }, function(r)
-            M.dockerInstalled = (r and r.exitCode == 0)
-            whichDone()
-        end)
-    else
-        M.dockerInstalled = false
-    end
-    if M.wantPodman then
-        whichLeft = whichLeft + 1
-        noctalia.runAsync({ "command", "-v", "podman" }, function(r)
-            M.podmanInstalled = (r and r.exitCode == 0)
-            whichDone()
-        end)
-    else
-        M.podmanInstalled = false
-    end
+    M.dockerInstalled = M.wantDocker
+    M.podmanInstalled = M.wantPodman
+    whichDone()
 end
 
 -- ── service runtime engine ──
@@ -1411,10 +1396,13 @@ function M.init()
     if M.enginePref ~= "podman" and M.enginePref ~= "docker" then
         M.enginePref = "auto"
     end
-    -- Seed the installed flags synchronously so the first poll knows what to probe, then
-    -- probeWhich refines them against the live PATH.
-    M.dockerInstalled = noctalia.commandExists("docker") == true
-    M.podmanInstalled = noctalia.commandExists("podman") == true
+    -- Seed the installed flags optimistically from the preference; each poll then
+    -- discovers the real engine(s) via the actual fetch exit code (dockerOk/podmanOk).
+    -- We deliberately do NOT gate on `command -v`: the service's sandboxed PATH may not
+    -- resolve docker/podman even though the daemon binary is present, which would turn
+    -- every poll into an empty list. The fetch itself is the honest probe.
+    M.dockerInstalled = M.enginePref ~= "podman"
+    M.podmanInstalled = M.enginePref ~= "docker"
     noctalia.state.set("containers", { available = false, containers = {}, images = {}, volumes = {}, networks = {} })
     M.probeWhich(function()
         M.refreshNow()
