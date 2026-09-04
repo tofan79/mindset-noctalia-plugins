@@ -1643,12 +1643,16 @@ function M.enable(profileOverride)
             -- rather than waiting on any polkit or systemctl round-trips. The snapshot
             -- already holds the pre-boost values, which is all disable needs.
             applyBoost(true)
+            -- The power profile switches to performance before anything is suspended, so the
+            -- machine is already in its gaming power state when gamer mode activates. Tying
+            -- this to the suspend batch would leave the boost on but the profile unchanged
+            -- whenever that batch hung on a polkit dialog nobody answers.
+            if autoPerformance() and powerState.available and powerSupports("performance") then
+                M.setPowerProfile("performance")
+            end
             suspendAll(probed, function(stopped)
                 busy = false
                 M.publishGameMode()
-                if autoPerformance() and powerState.available and powerSupports("performance") then
-                    M.setPowerProfile("performance")
-                end
                 if stopped > 0 then
                     noctalia.notify(noctalia.tr("notify.enabled_title"), noctalia.trp("notify.suspended_count", stopped))
                 else
@@ -1695,15 +1699,14 @@ end
 local disableWatchdog = { armed = false, ticks = 0, maxTicks = 6, pendingRef = nil, finish = nil }
 
 function M.disable()
-    if busy then
-        return
-    end
     local snap = M.readSnapshot()
     if not snap then
         M.publishGameMode()
         return
     end
-
+    -- A disable is allowed even while `busy`: if enable's suspend wedged on an unanswered
+    -- polkit dialog, busy stays set and the toggle that should turn gamer mode off must not
+    -- be rejected for it. Enabling is what busy gates, not disabling.
     busy = true
     M.publishGameMode()
 
