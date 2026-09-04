@@ -1479,6 +1479,8 @@ function M.snapshotDecor(done)
             return
         end
         settled = true
+        snapshotWatchdog.armed = false
+        snapshotWatchdog.finish = nil
         done(decor)
     end
     local function settle()
@@ -1506,6 +1508,11 @@ function M.snapshotDecor(done)
             settle()
         end)
     end
+    -- Arm a tick deadline so a dropped read cannot stall enable: update() resolves the
+    -- snapshot with whatever came back if the reads have not all completed in time.
+    snapshotWatchdog.armed = true
+    snapshotWatchdog.ticks = 0
+    snapshotWatchdog.finish = finish
 end
 
 -- buildBoostOn rebuilds the user's own style from the snapshot. Fields that were read are
@@ -1700,6 +1707,12 @@ end
 -- It counts ticks rather than reading a wall or monotonic clock, because the only thing
 -- guaranteed to fire is update() itself; a timing API may not be exposed on every host.
 local disableWatchdog = { armed = false, ticks = 0, maxTicks = 6, pendingRef = nil, finish = nil }
+
+-- The decoration snapshot is best-effort and must never hold up enable: if one of its
+-- reads is dropped (a host dropping a slow async callback), pending would never reach zero
+-- and startSuspend would wait forever. So it gets the same tick-driven deadline pushed to
+-- completion with whatever it managed to read.
+local snapshotWatchdog = { armed = false, ticks = 0, maxTicks = 4, finish = nil }
 
 function M.disable()
     local snap = M.readSnapshot()
@@ -2239,6 +2252,20 @@ function update()
     -- which needs the rest of the shell to hold the whole process cap. The poll tick is the
     -- one thing guaranteed to keep firing, so it is what gets the queue moving again.
     pump()
+    -- The decoration snapshot is best-effort: a read that never calls back must not hold
+    -- enable waiting forever, so once enough ticks have passed the snapshot settles with
+    -- what it managed to read.
+    if snapshotWatchdog.armed then
+        snapshotWatchdog.ticks = snapshotWatchdog.ticks + 1
+        if snapshotWatchdog.ticks >= snapshotWatchdog.maxTicks then
+            local finalize = snapshotWatchdog.finish
+            snapshotWatchdog.armed = false
+            snapshotWatchdog.finish = nil
+            if finalize then
+                finalize()
+            end
+        end
+    end
     -- Resolve a stuck disable: if a restore job never called back (a pkexec wedged on an
     -- unanswered polkit dialog is the case that hangs), force finish() once enough update
     -- ticks have passed so the power profile is handed back and the session file cleared.
