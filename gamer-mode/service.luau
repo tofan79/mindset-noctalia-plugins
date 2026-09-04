@@ -1645,21 +1645,20 @@ function M.enable(profileOverride)
                     noctalia.log("gamermode: could not pause wallpaper automation")
                 end
             end
+            -- The power profile switches to performance before anything else, so the machine
+            -- reaches its gaming power state before the boost or any suspend work starts.
+            -- Tying it to the suspend batch would leave the boost on but the profile unchanged
+            -- whenever that batch hung on a polkit dialog nobody answers.
+            if autoPerformance() and powerState.available and powerSupports("performance") then
+                M.setPowerProfile("performance")
+            else
+                noctalia.log("gamermode: power profile stays put (auto_performance off, or profiles unavailable)")
+            end
             -- Boost is applied as soon as the session is committed, not after the async
             -- suspend finishes, so the Hyprland strip lands the moment the toggle fires
             -- rather than waiting on any polkit or systemctl round-trips. The snapshot
             -- already holds the pre-boost values, which is all disable needs.
             applyBoost(true)
-            -- The power profile switches to performance before anything is suspended, so the
-            -- machine is already in its gaming power state when gamer mode activates. Tying
-            -- this to the suspend batch would leave the boost on but the profile unchanged
-            -- whenever that batch hung on a polkit dialog nobody answers.
-            noctalia.log("gamermode DEBUG startSuspend autoPerf=" .. tostring(autoPerformance())
-                .. " avail=" .. tostring(powerState.available)
-                .. " suppPerf=" .. tostring(powerSupports("performance")))
-            if autoPerformance() and powerState.available and powerSupports("performance") then
-                M.setPowerProfile("performance")
-            end
             suspendAll(probed, function(stopped)
                 busy = false
                 M.publishGameMode()
@@ -1672,27 +1671,25 @@ function M.enable(profileOverride)
         end)
     end
 
-    local ready = 0
+    -- Kick the power lookup early and leave it as soon as it has the active profile; the
+    -- snapshot is allowed to resolve from the watchdog with whatever it gathered, so a
+    -- dropped async callback on either side must not hold back the enable. powerState.active
+    -- becomes the recorded "before" value once refreshPower's callback lands; until then the
+    -- snapshot carries nil and disable has no power profile to hand back (harmless: mode
+    -- never switched it).
     local powerBefore = nil
-    local decorBefore = nil
-    local function maybeGo()
-        ready = ready + 1
-        if ready >= 2 then
-            startSuspend(powerBefore, decorBefore)
-        end
-    end
-    M.snapshotDecor(function(decor)
-        decorBefore = decor
-        maybeGo()
-    end)
     if autoPerformance() then
-        M.refreshPower(function(before)
-            powerBefore = before
-            maybeGo()
+        M.refreshPower(function(active)
+            powerBefore = active
         end)
-    else
-        maybeGo()
     end
+    -- startSuspend fires once the decoration snapshot has come home, which the enabled
+    -- snapshotWatchdog guarantees even if a read never calls back. No second gate: the
+    -- power family is kicked above and applies itself, and waiting on it would re-expose
+    -- the wedge this guard exists to remove.
+    M.snapshotDecor(function(decor)
+        startSuspend(powerBefore, decor)
+    end)
 end
 
 -- ── disable ──
