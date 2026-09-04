@@ -14,7 +14,7 @@ key = "glyph"
 type = "glyph"
 label_key = "settings.glyph.label"
 description_key = "settings.glyph.description"
-default = "bell"
+default = "bell-ringing"
 
 [[setting]]
 key = "show_count"
