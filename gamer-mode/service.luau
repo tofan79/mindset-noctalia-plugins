@@ -1479,8 +1479,6 @@ function M.snapshotDecor(done)
             return
         end
         settled = true
-        snapshotWatchdog.armed = false
-        snapshotWatchdog.finish = nil
         done(decor)
     end
     local function settle()
@@ -1489,13 +1487,6 @@ function M.snapshotDecor(done)
         end
         finish()
     end
-    -- Arm the tick deadline *before* the reads are issued. Issuing a batch of async runs
-    -- from this loop can push the script over its CPU budget and abort the iteration, so the
-    -- arm has to already be in place for update() to resolve it; it cannot sit after a loop
-    -- that might not reach the end.
-    snapshotWatchdog.armed = true
-    snapshotWatchdog.ticks = 0
-    snapshotWatchdog.finish = finish
     for _, spec in ipairs(DECOR_SNAPSHOT) do
         run(getoptionCmd(spec.option), function(result)
             local parsed = M.parseOptionLine(trim(result and result.stdout or ""))
@@ -1647,15 +1638,6 @@ function M.enable(profileOverride)
                     noctalia.log("gamermode: could not pause wallpaper automation")
                 end
             end
-            -- The power profile switches to performance before anything else, so the machine
-            -- reaches its gaming power state before the boost or any suspend work starts.
-            -- Tying it to the suspend batch would leave the boost on but the profile unchanged
-            -- whenever that batch hung on a polkit dialog nobody answers.
-            if autoPerformance() and powerState.available and powerSupports("performance") then
-                M.setPowerProfile("performance")
-            else
-                noctalia.log("gamermode: power profile stays put (auto_performance off, or profiles unavailable)")
-            end
             -- Boost is applied as soon as the session is committed, not after the async
             -- suspend finishes, so the Hyprland strip lands the moment the toggle fires
             -- rather than waiting on any polkit or systemctl round-trips. The snapshot
@@ -1664,6 +1646,9 @@ function M.enable(profileOverride)
             suspendAll(probed, function(stopped)
                 busy = false
                 M.publishGameMode()
+                if autoPerformance() and powerState.available and powerSupports("performance") then
+                    M.setPowerProfile("performance")
+                end
                 if stopped > 0 then
                     noctalia.notify(noctalia.tr("notify.enabled_title"), noctalia.trp("notify.suspended_count", stopped))
                 else
@@ -1673,25 +1658,27 @@ function M.enable(profileOverride)
         end)
     end
 
-    -- Kick the power lookup early and leave it as soon as it has the active profile; the
-    -- snapshot is allowed to resolve from the watchdog with whatever it gathered, so a
-    -- dropped async callback on either side must not hold back the enable. powerState.active
-    -- becomes the recorded "before" value once refreshPower's callback lands; until then the
-    -- snapshot carries nil and disable has no power profile to hand back (harmless: mode
-    -- never switched it).
+    local ready = 0
     local powerBefore = nil
-    if autoPerformance() then
-        M.refreshPower(function(active)
-            powerBefore = active
-        end)
+    local decorBefore = nil
+    local function maybeGo()
+        ready = ready + 1
+        if ready >= 2 then
+            startSuspend(powerBefore, decorBefore)
+        end
     end
-    -- startSuspend fires once the decoration snapshot has come home, which the enabled
-    -- snapshotWatchdog guarantees even if a read never calls back. No second gate: the
-    -- power family is kicked above and applies itself, and waiting on it would re-expose
-    -- the wedge this guard exists to remove.
     M.snapshotDecor(function(decor)
-        startSuspend(powerBefore, decor)
+        decorBefore = decor
+        maybeGo()
     end)
+    if autoPerformance() then
+        M.refreshPower(function(before)
+            powerBefore = before
+            maybeGo()
+        end)
+    else
+        maybeGo()
+    end
 end
 
 -- ── disable ──
@@ -1699,29 +1686,22 @@ end
 -- Watchdog arm, filled in by disable and checked by update() on every poll tick.
 -- A restore must never wedge the shell: enable recorded the power profile to hand back,
 -- and disable has to hand it back even if a privileged restore hangs on a polkit dialog
--- that nobody answers. The watchdog forces finish() once enough update ticks have passed
--- (each tick is the poll interval), logging anything that was still pending, and the
--- settled guard swallows whatever callbacks arrive afterwards.
---
--- It counts ticks rather than reading a wall or monotonic clock, because the only thing
--- guaranteed to fire is update() itself; a timing API may not be exposed on every host.
-local disableWatchdog = { armed = false, ticks = 0, maxTicks = 6, pendingRef = nil, finish = nil }
-
--- The decoration snapshot is best-effort and must never hold up enable: if one of its
--- reads is dropped (a host dropping a slow async callback), pending would never reach zero
--- and startSuspend would wait forever. So it gets the same tick-driven deadline pushed to
--- completion with whatever it managed to read.
-local snapshotWatchdog = { armed = false, ticks = 0, maxTicks = 4, finish = nil }
+-- that nobody answers. The watchdog forces finish() once a deadline has passed, logging
+-- anything that was still pending, then swallows the dropped callbacks with the settled
+-- guard.
+local DISABLE_RESOLVE_MS = 15000
+local disableWatchdog = { armed = false, deadline = 0, pendingRef = nil, finish = nil }
 
 function M.disable()
+    if busy then
+        return
+    end
     local snap = M.readSnapshot()
     if not snap then
         M.publishGameMode()
         return
     end
-    -- A disable is allowed even while `busy`: if enable's suspend wedged on an unanswered
-    -- polkit dialog, busy stays set and the toggle that should turn gamer mode off must not
-    -- be rejected for it. Enabling is what busy gates, not disabling.
+
     busy = true
     M.publishGameMode()
 
@@ -1870,10 +1850,10 @@ function M.disable()
     end
     -- Arm the watchdog once every restore job is queued. From here, if anything fails to
     -- call back (a pkexec sitting on an unanswered polkit dialog being the target case),
-    -- update() forces finish() after a few poll ticks so the power profile is handed back and
+    -- update() forces finish() after the deadline so the power profile is handed back and
     -- the session file is cleared rather than leaving gamer mode permanently wedged.
     disableWatchdog.armed = true
-    disableWatchdog.ticks = 0
+    disableWatchdog.deadline = noctalia.nowMs() + DISABLE_RESOLVE_MS
     disableWatchdog.pendingRef = function()
         return pending
     end
@@ -2251,39 +2231,22 @@ function update()
     -- which needs the rest of the shell to hold the whole process cap. The poll tick is the
     -- one thing guaranteed to keep firing, so it is what gets the queue moving again.
     pump()
-    -- The decoration snapshot is best-effort: a read that never calls back must not hold
-    -- enable waiting forever, so once enough ticks have passed the snapshot settles with
-    -- what it managed to read.
-    if snapshotWatchdog.armed then
-        snapshotWatchdog.ticks = snapshotWatchdog.ticks + 1
-        if snapshotWatchdog.ticks >= snapshotWatchdog.maxTicks then
-            local finalize = snapshotWatchdog.finish
-            snapshotWatchdog.armed = false
-            snapshotWatchdog.finish = nil
-            if finalize then
-                finalize()
-            end
-        end
-    end
     -- Resolve a stuck disable: if a restore job never called back (a pkexec wedged on an
-    -- unanswered polkit dialog is the case that hangs), force finish() once enough update
-    -- ticks have passed so the power profile is handed back and the session file cleared.
-    if disableWatchdog.armed then
-        disableWatchdog.ticks = disableWatchdog.ticks + 1
-        if disableWatchdog.ticks >= disableWatchdog.maxTicks then
-            local pending = disableWatchdog.pendingRef and disableWatchdog.pendingRef() or 0
-            local finalize = disableWatchdog.finish
-            disableWatchdog.armed = false
-            disableWatchdog.finish = nil
-            disableWatchdog.pendingRef = nil
-            if finalize then
-                finalize()
-            else
-                noctalia.log("gamermode: disable watchdog fired with no finalize hook")
-            end
-            if pending > 0 then
-                noctalia.log("gamermode: disabled with " .. tostring(pending) .. " restore job(s) unresolved; session cleared anyway")
-            end
+    -- unanswered polkit dialog is the case that hangs), force finish() past the deadline so
+    -- the power profile is handed back and the session file cleared.
+    if disableWatchdog.armed and noctalia.nowMs() > disableWatchdog.deadline then
+        local pending = disableWatchdog.pendingRef and disableWatchdog.pendingRef() or 0
+        local finalize = disableWatchdog.finish
+        disableWatchdog.armed = false
+        disableWatchdog.finish = nil
+        disableWatchdog.pendingRef = nil
+        if finalize then
+            finalize()
+        else
+            noctalia.log("gamermode: disable watchdog fired with no finalize hook")
+        end
+        if pending > 0 then
+            noctalia.log("gamermode: disabled with " .. tostring(pending) .. " restore job(s) unresolved; session cleared anyway")
         end
     end
 end
