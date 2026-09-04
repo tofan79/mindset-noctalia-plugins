@@ -625,7 +625,7 @@ end
 -- names each unit it could not act on, and that stderr is logged whole.
 local BATCH_ARGS = {
     stop = "stop",
-    start = "start",
+    start = "start --no-block",
     freeze = "kill --kill-whom=all -s SIGSTOP",
     thaw = "kill --kill-whom=all -s SIGCONT",
 }
