@@ -7,13 +7,13 @@
   "settings.sound.label": "Sound",
   "settings.sound.description": "Play a sound when a reminder fires.",
   "panel.title": "Today Reminders",
-  "panel.empty": "No reminders set for today.",
+  "panel.empty": "No reminders set.",
   "panel.pending": "Pending",
   "panel.done": "Done",
   "panel.add_header": "New reminder",
+  "panel.minutes_placeholder": "Minutes",
   "panel.placeholder": "What to remind you of…",
   "panel.add": "Add",
-  "panel.remove": "Remove",
   "panel.clear_done": "Clear done",
-  "panel.footer": "reminder(s) today"
+  "panel.footer": "reminder(s)"
 }

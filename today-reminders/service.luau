@@ -1,18 +1,12 @@
 --!nonstrict
 --
--- Today Reminders service: loads reminders, fires notifications when due,
--- and auto-deletes them at end of day.
---
--- IPC: panel sets commands via noctalia.state.set("reminders_cmd", {...})
--- Service watches reminders_cmd and processes actions.
--- Timer via global update() + noctalia.setUpdateInterval().
+-- Today Reminders service: set reminder in X minutes from now.
+-- Stores fireAt as absolute timestamp, checks in tick().
 
 local DATA_FILE = noctalia.appdir() .. "/reminders.json"
 
 local M = {}
-
 local reminders = {}
-local REFRESH_MS = 30000  -- poll every 30s
 
 -- ── Persistence ──────────────────────────────────────────────────────────────
 
@@ -24,16 +18,11 @@ local function load()
     if data == "" then return {} end
     local ok, parsed = pcall(noctalia.json.decode, data)
     if not ok or type(parsed) ~= "table" then return {} end
-    local today = os.date("%Y-%m-%d")
-    local filtered = {}
-    for _, r in ipairs(parsed) do
-        if r.date == today then table.insert(filtered, r) end
-    end
-    return filtered
+    return parsed
 end
 
-local function save(list)
-    local ok, data = pcall(noctalia.json.encode, list)
+local function save()
+    local ok, data = pcall(noctalia.json.encode, reminders)
     if not ok then return end
     local f = io.open(DATA_FILE, "w")
     if not f then return end
@@ -41,68 +30,54 @@ local function save(list)
     f:close()
 end
 
--- ── State broadcast ───────────────────────────────────────────────────────────
+-- ── Broadcast ───────────────────────────────────────────────────────────────
 
 local function broadcast()
     local pending = 0
     for _, r in ipairs(reminders) do
         if not r.done then pending = pending + 1 end
     end
-    noctalia.state.set("reminders", {
-        reminders = reminders,
-        count = pending,
-    })
+    noctalia.state.set("reminders", { reminders = reminders, count = pending })
 end
 
--- ── Actions ───────────────────────────────────────────────────────────────────
+-- ── Add reminder ─────────────────────────────────────────────────────────────
 
-function M.add(time_str, text)
-    local today = os.date("%Y-%m-%d")
+function M.add(minutes, text)
+    local fireAt = os.time() + (tonumber(minutes) or 1) * 60
     table.insert(reminders, {
         id = os.time(),
-        date = today,
-        time = time_str or "00:00",
         text = text or "",
+        fireAt = fireAt,
         done = false,
     })
-    table.sort(reminders, function(a, b) return a.time < b.time end)
-    save(reminders)
+    save()
     broadcast()
 end
 
 function M.dismiss(id)
     local num = tonumber(id)
     for i, r in ipairs(reminders) do
-        if r.id == num then
-            table.remove(reminders, i)
-            save(reminders)
-            broadcast()
-            return
-        end
+        if r.id == num then table.remove(reminders, i); break end
     end
+    save()
+    broadcast()
 end
 
 function M.clearDone()
     local changed = false
     for i = #reminders, 1, -1 do
-        if reminders[i].done then
-            table.remove(reminders, i)
-            changed = true
-        end
+        if reminders[i].done then table.remove(reminders, i); changed = true end
     end
-    if changed then
-        save(reminders)
-        broadcast()
-    end
+    if changed then save(); broadcast() end
 end
 
--- ── IPC handler: watches state changes from the panel ─────────────────────────
+-- ── IPC handler ─────────────────────────────────────────────────────────────
 
 function M.handleCommand(cmd)
     if not cmd or type(cmd) ~= "table" then return end
     local action = cmd.action
     if action == "add" then
-        M.add(cmd.time, cmd.text)
+        M.add(cmd.minutes, cmd.text)
     elseif action == "dismiss" then
         M.dismiss(cmd.id)
     elseif action == "clearDone" then
@@ -110,44 +85,36 @@ function M.handleCommand(cmd)
     end
 end
 
--- ── Timer ─────────────────────────────────────────────────────────────────────
+-- ── Timer (every 10s) ───────────────────────────────────────────────────────
 
 local function tick()
-    local now = os.date("%H:%M")
+    local now = os.time()
     for _, r in ipairs(reminders) do
-        if not r.done and r.time == now then
+        if not r.done and r.fireAt <= now then
             r.done = true
             local body = r.text or ""
             noctalia.runAsync({ "sh", "-c", "notify-send -u normal 'Reminder' " .. string.format("%q", body) }, function() end)
         end
     end
-    save(reminders)
+    save()
     broadcast()
 end
 
--- ── Noctalia entry points ─────────────────────────────────────────────────────
+-- ── Entry points ─────────────────────────────────────────────────────────────
 
 function init()
     reminders = load()
     broadcast()
-    noctalia.setUpdateInterval(REFRESH_MS)
+    noctalia.setUpdateInterval(10000)  -- every 10s
 end
 
 function update()
     tick()
 end
 
-function onConfigChanged()
-    -- no runtime config changes
-end
+function onConfigChanged() end
+function onIpc(event) end
 
-function onIpc(event)
-    -- handles CLI: noctalia msg plugin mindset/today-reminders:service all <event>
-end
-
--- Watch for panel commands
 noctalia.state.watch("reminders_cmd", M.handleCommand)
-
 M.init()
-
 return M

@@ -1,65 +1,49 @@
 --!nonstrict
 --
--- Today Reminders panel: add, view, dismiss reminders for today.
--- Commands sent via noctalia.state.set("reminders_cmd", {...})
+-- Today Reminders panel: set reminder in X minutes from now.
 
 local M = {}
-
 local state = { reminders = {}, count = 0 }
-local addTime = "09:00"
+local addMinutes = "5"
 local addText = ""
-
 local render
 
--- ── i18n helpers ─────────────────────────────────────────────────────────────
+local function tr(key) return noctalia.tr(key) end
 
-local function tr(key, subst)
-    return noctalia.tr(key, subst)
-end
+-- ── Time formatting ─────────────────────────────────────────────────────────
 
--- ── time helpers ─────────────────────────────────────────────────────────────
-
-local function formatTime(time_str)
-    local h = tonumber(time_str:sub(1, 2)) or 0
-    local m = tonumber(time_str:sub(4, 5)) or 0
-    local ampm = h >= 12 and "PM" or "AM"
-    local h12 = h % 12
-    if h12 == 0 then h12 = 12 end
-    return string.format("%d:%02d %s", h12, m, ampm)
-end
-
-local function sortByTime(list)
-    local sorted = {}
-    for _, r in ipairs(list or {}) do
-        sorted[#sorted + 1] = r
+local function formatRemaining(fireAt)
+    local diff = (tonumber(fireAt) or 0) - os.time()
+    if diff <= 0 then return "now" end
+    local mins = math.floor(diff / 60)
+    local secs = diff % 60
+    if mins >= 60 then
+        local hrs = math.floor(mins / 60)
+        mins = mins % 60
+        return string.format("%dh %dm", hrs, mins)
     end
-    table.sort(sorted, function(a, b) return a.time < b.time end)
-    return sorted
+    return string.format("%dm %ds", mins, secs)
 end
 
--- ── send command to service ───────────────────────────────────────────────────
+-- ── Send command ────────────────────────────────────────────────────────────
 
-local function sendCommand(cmd)
-    noctalia.state.set("reminders_cmd", cmd)
-end
+local function send(cmd) noctalia.state.set("reminders_cmd", cmd) end
 
--- ── add reminder ──────────────────────────────────────────────────────────────
+-- ── Add ────────────────────────────────────────────────────────────────────
 
 local function addReminder()
     local text = addText or ""
     if text == "" then return end
-    sendCommand({ action = "add", time = addTime, text = text })
+    send({ action = "add", minutes = addMinutes, text = text })
     addText = ""
-    addTime = "09:00"
+    addMinutes = "5"
     render()
 end
 
--- ── render helpers ────────────────────────────────────────────────────────────
+-- ── Render helpers ─────────────────────────────────────────────────────────
 
 local function reminderRow(r)
-    local timeLabel = formatTime(r.time)
-    local doneColor = r.done and "on_surface_variant" or "on_surface"
-    local doneDeco = r.done and "line_through" or "none"
+    local remaining = formatRemaining(r.fireAt)
     return ui.row({
         key = "r" .. tostring(r.id),
         align = "center",
@@ -68,23 +52,12 @@ local function reminderRow(r)
     }, {
         ui.glyph({ name = r.done and "check-circle" or "clock", size = 16, color = r.done and "success" or "primary" }),
         ui.column({ gap = 2, flexGrow = 1 }, {
-            ui.label({
-                text = r.text or "",
-                color = doneColor,
-                fontSize = 13,
-                fontWeight = "medium",
-                textDecoration = doneDeco,
-            }),
-            ui.label({ text = timeLabel, color = "on_surface_variant", fontSize = 11 }),
+            ui.label({ text = r.text or "", color = r.done and "on_surface_variant" or "on_surface", fontSize = 13, fontWeight = "medium" }),
+            ui.label({ text = r.done and "fired" or remaining, color = "on_surface_variant", fontSize = 11 }),
         }),
         ui.button({
-            glyph = "x",
-            variant = "ghost",
-            controlSize = "sm",
-            tooltip = tr("panel.remove"),
-            onClick = function()
-                sendCommand({ action = "dismiss", id = r.id })
-            end,
+            glyph = "x", variant = "ghost", controlSize = "sm",
+            onClick = function() send({ action = "dismiss", id = r.id }) end,
         }),
     })
 end
@@ -96,61 +69,20 @@ local function emptyState()
     })
 end
 
-local function addSection()
-    return ui.column({ gap = 8 }, {
-        ui.label({ text = tr("panel.add_header"):upper(), color = "on_surface", fontSize = 11, fontWeight = "bold" }),
-        ui.row({ gap = 6 }, {
-            ui.input({
-                key = "reminder-time",
-                placeholder = "HH:MM",
-                value = addTime,
-                flexGrow = 0,
-                onChange = function(v) addTime = v or "09:00" end,
-            }),
-            ui.input({
-                key = "reminder-text",
-                placeholder = tr("panel.placeholder"),
-                value = addText,
-                flexGrow = 1,
-                onChange = function(v) addText = v or "" end,
-                onSubmit = addReminder,
-            }),
-            ui.button({
-                glyph = "plus",
-                text = tr("panel.add"),
-                variant = "primary",
-                onClick = addReminder,
-            }),
-        }),
-    })
-end
-
 local function listSection()
-    local sorted = sortByTime(state.reminders)
-    local pending = {}
-    local done = {}
-    for _, r in ipairs(sorted) do
-        if r.done then
-            done[#done + 1] = r
-        else
-            pending[#pending + 1] = r
-        end
+    local pending, done = {}, {}
+    for _, r in ipairs(state.reminders) do
+        if r.done then done[#done + 1] = r else pending[#pending + 1] = r end
     end
     local children = {}
     if #pending > 0 then
         children[#children + 1] = ui.label({ text = tr("panel.pending"):upper(), color = "on_surface", fontSize = 11, fontWeight = "bold" })
-        for _, r in ipairs(pending) do
-            children[#children + 1] = reminderRow(r)
-        end
+        for _, r in ipairs(pending) do children[#children + 1] = reminderRow(r) end
     end
     if #done > 0 then
-        if #pending > 0 then
-            children[#children + 1] = ui.separator({})
-        end
+        if #pending > 0 then children[#children + 1] = ui.separator({}) end
         children[#children + 1] = ui.label({ text = tr("panel.done"):upper(), color = "on_surface_variant", fontSize = 11, fontWeight = "bold" })
-        for _, r in ipairs(done) do
-            children[#children + 1] = reminderRow(r)
-        end
+        for _, r in ipairs(done) do children[#children + 1] = reminderRow(r) end
     end
     return children
 end
@@ -159,14 +91,8 @@ local function footer()
     return ui.row({ align = "center", gap = 6 }, {
         ui.label({ text = tostring(state.count) .. " " .. tr("panel.footer"), color = "on_surface_variant", fontSize = 10, flexGrow = 1 }),
         ui.button({
-            glyph = "trash",
-            text = tr("panel.clear_done"),
-            variant = "ghost",
-            controlSize = "sm",
-            tooltip = tr("panel.clear_done"),
-            onClick = function()
-                sendCommand({ action = "clearDone" })
-            end,
+            glyph = "trash", text = tr("panel.clear_done"), variant = "ghost", controlSize = "sm",
+            onClick = function() send({ action = "clearDone" }) end,
         }),
     })
 end
@@ -183,32 +109,45 @@ render = function()
         }),
         ui.separator({}),
         -- Add form
-        addSection(),
+        ui.column({ gap = 8 }, {
+            ui.label({ text = tr("panel.add_header"):upper(), color = "on_surface", fontSize = 11, fontWeight = "bold" }),
+            ui.row({ gap = 6 }, {
+                ui.input({
+                    key = "reminder-minutes",
+                    placeholder = tr("panel.minutes_placeholder"),
+                    value = addMinutes,
+                    flexGrow = 0,
+                    onChange = function(v) addMinutes = v or "5" end,
+                }),
+                ui.input({
+                    key = "reminder-text",
+                    placeholder = tr("panel.placeholder"),
+                    value = addText,
+                    flexGrow = 1,
+                    onChange = function(v) addText = v or "" end,
+                    onSubmit = addReminder,
+                }),
+                ui.button({
+                    glyph = "plus", text = tr("panel.add"), variant = "primary",
+                    onClick = addReminder,
+                }),
+            }),
+        }),
         ui.separator({}),
         -- List
-        ui.scroll({ flexGrow = 1, gap = 2 }, (function()
-            if (state.count or 0) == 0 and #(state.reminders or {}) == 0 then
-                return { emptyState() }
-            end
-            return listSection()
-        end)()),
+        ui.scroll({ flexGrow = 1, gap = 2 }, (#(state.reminders or {}) == 0) and { emptyState() } or listSection()),
         ui.separator({}),
         footer(),
     }))
 end
 
--- ── shell entry points ────────────────────────────────────────────────────────
-
 function onOpen()
     state = noctalia.state.get("reminders") or { reminders = {}, count = 0 }
-    addText = ""
-    addTime = "09:00"
+    addText = ""; addMinutes = "5"
     render()
 end
 
-function onCloseClicked()
-    panel.close()
-end
+function onCloseClicked() panel.close() end
 
 noctalia.state.watch("reminders", function(value)
     state = type(value) == "table" and value or { reminders = {}, count = 0 }
