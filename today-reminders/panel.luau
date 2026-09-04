@@ -98,7 +98,7 @@ local function addSection()
         ui.row({ gap = 6 }, {
             ui.input({
                 key = "reminder-time",
-                type = "time",
+                placeholder = "HH:MM",
                 value = addTime,
                 flexGrow = 0,
                 onChange = function(v) addTime = v end,
