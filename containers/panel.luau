@@ -44,6 +44,10 @@ local function tr(key, subst)
     return noctalia.tr(key, subst)
 end
 
+local function trim(s)
+    return (tostring(s or "")):match("^%s*(.-)%s*$")
+end
+
 local function formatBytes(n)
     local value = tonumber(n) or 0
     if not (value > 0) then
@@ -153,7 +157,7 @@ end
 
 local function searchBy(list, query)
     list = list or {}
-    local needle = tostring(query or ""):trim():lower()
+    local needle = trim(query):lower()
     if needle == "" then
         return list
     end
@@ -691,7 +695,7 @@ local function groupSection(group)
 end
 
 local function emptyText()
-    local needle = tostring(uiState.query or ""):trim()
+    local needle = trim(uiState.query)
     local kind = uiState.kind
     if needle ~= "" then
         return tr("panel.no_match")
