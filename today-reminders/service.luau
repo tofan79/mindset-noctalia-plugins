@@ -120,11 +120,20 @@ end
 function M.init()
     M.reminders = load()
     broadcast()
-    noctalia.setUpdateInterval(10000)
+    noctalia.setUpdateInterval(1000)
 end
 
 function update()
     tick()
+    local now = os.time()
+    local anyCleared = false
+    for id, r in pairs(M.reminders) do
+        if r.done and r.firedAt and (now - r.firedAt) >= 3 then
+            M.reminders[id] = nil
+            anyCleared = true
+        end
+    end
+    if anyCleared then save(); broadcast() end
 end
 
 function onConfigChanged() end
