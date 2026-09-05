@@ -201,7 +201,7 @@ function update()
   refresh()
 end
 
-noctalia.setUpdateInterval(300)  -- 300ms: responsive without hammering hyprctl
+noctalia.setUpdateInterval(100)  -- 100ms: very responsive, still reasonable load
 
 refresh()
 persistWorkspaceRules()
