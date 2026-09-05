@@ -10,6 +10,10 @@ local dimEmpty = true
 local workspaces = {} -- {id, occupied, focused, apps}
 local selectedIndex = 0
 
+-- Forward-declared: loadWorkspaces (defined below) calls render() from an async
+-- callback. Without this the upvalue would be nil and the call would crash.
+local render
+
 -- Number to text converters
 local converters = {}
 
@@ -181,7 +185,7 @@ local function renderRow(id, index)
   }, children)
 end
 
-local function render()
+render = function()
   local rows = {}
   local ids = getWorkspaceIds()
   for index, id in ipairs(ids) do

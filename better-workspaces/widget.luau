@@ -1,13 +1,13 @@
 --!nonstrict
 -- Better Workspaces bar widget.
--- Shows all workspaces as pills. Click widget to cycle next workspace.
+-- Shows all workspaces as pills. Scroll to cycle, click to open panel.
 
-local currentWorkspace = 1
+local activeWorkspace = 1
 local workspaces = {}
 local displayMode = "default"
 local workspaceCount = 9
 
-converters = {}
+local converters = {}
 converters["default"] = function(n) return tostring(n) end
 
 converters["roman"] = function(n)
@@ -69,11 +69,9 @@ local function conv(n)
   return (converters[displayMode] or converters["default"])(n)
 end
 
--- Get all workspace ids to show
 local function getIds()
   local ids = {}
   for n = 1, workspaceCount do ids[n] = n end
-  -- Add occupied workspaces beyond count
   for id in pairs(workspaces) do
     if id > workspaceCount and id <= 20 then
       local exists = false
@@ -85,26 +83,24 @@ local function getIds()
   return ids
 end
 
--- Build pills tree
 local function buildPills()
   local children = {}
   local ids = getIds()
   for _, id in ipairs(ids) do
-    local ws = workspaces[id] or {}
-    local occ = ws.occupied or false
-    local focused = (id == currentWorkspace)
+    local focused = (id == activeWorkspace)
     local fill = focused and "primary" or "surface"
     local txt = focused and "on_primary" or "on_surface"
-    local op = (occ or focused) and 1.0 or 0.4
-    table.insert(children, ui.box({
+    table.insert(children, ui.column({
       key = "pill-" .. id,
-      width = 24,
-      height = 20,
+      minWidth = 24,
+      minHeight = 20,
       radius = 4,
       fill = fill,
-      opacity = op,
+      align = "center",
+      justify = "center",
     }, {
       ui.label({
+        key = "pill-label-" .. id,
         text = conv(id),
         fontSize = 10,
         fontWeight = focused and "bold" or "normal",
@@ -120,18 +116,28 @@ local function render()
   barWidget.render(ui.row({ gap = 4, align = "center" }, buildPills()))
 end
 
--- Click = cycle to next workspace
+local function switchTo(id)
+  noctalia.runAsync("hyprctl dispatch workspace " .. tostring(id), function() end)
+end
+
+-- Click = open panel (for direct workspace selection)
 function onClick()
+  noctalia.togglePanel("mindset/better-workspaces:panel")
+end
+
+-- Scroll = cycle workspaces (host calls onScroll(axis, steps, startsGesture);
+-- `steps` is negative for up/left. Act once per gesture so a flick doesn't jump several.)
+function onScroll(axis, steps, startsGesture)
+  if axis ~= "vertical" then return end
+  if not startsGesture then return end
   local ids = getIds()
-  local nextIdx = 1
+  local currentIdx = 1
   for i, id in ipairs(ids) do
-    if id == currentWorkspace then
-      nextIdx = (i % #ids) + 1
-      break
-    end
+    if id == activeWorkspace then currentIdx = i break end
   end
-  local nextWs = ids[nextIdx]
-  noctalia.runAsync("hyprctl dispatch workspace " .. tostring(nextWs), function() end)
+  local delta = (steps < 0) and -1 or 1
+  local newIdx = ((currentIdx - 1 + delta + #ids) % #ids) + 1
+  switchTo(ids[newIdx])
 end
 
 local function refresh()
@@ -141,7 +147,7 @@ local function refresh()
   noctalia.runAsync("hyprctl activeworkspace -j", function(r)
     if r.exitCode == 0 and r.stdout then
       local d = noctalia.json.decode(r.stdout)
-      if d and d.id then currentWorkspace = d.id end
+      if d and d.id then activeWorkspace = d.id end
     end
     noctalia.runAsync("hyprctl workspaces -j", function(r2)
       if r2.exitCode == 0 and r2.stdout then
