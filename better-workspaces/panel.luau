@@ -229,6 +229,7 @@ end
 
 function onOpen(_context)
   isOpen = true
+  render()
 end
 
 function onClose()
