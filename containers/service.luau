@@ -627,9 +627,9 @@ end
 
 -- ── resource bundle (images/volumes/networks from one script) ──
 
-M.SEP_IMAGES = "---CONTAINERS-IMAGES---"
-M.SEP_VOLUMES = "---CONTAINERS-VOLUMES---"
-M.SEP_NETWORKS = "---CONTAINERS-NETWORKS---"
+M.SEP_IMAGES = "__CONTAINERS_IMAGES__"
+M.SEP_VOLUMES = "__CONTAINERS_VOLUMES__"
+M.SEP_NETWORKS = "__CONTAINERS_NETWORKS__"
 
 function M.imagesCommand(engine)
     local bin = (engine == "podman") and "podman" or "docker"
@@ -1167,6 +1167,9 @@ local function publishState()
     state.containers = attached
     local stats = M.summary(state.containers)
     local hw = M.composeHardware(statRows, host, diskUsed)
+    noctalia.log(string.format("RESOURCE_DEBUG images=%d volumes=%d networks=%d dockerOk=%s podmanOk=%s",
+        #(state.images or {}), #(state.volumes or {}), #(state.networks or {}),
+        tostring(dockerOk), tostring(podmanOk)))
     noctalia.state.set("containers", {
         available = true,
         engine = M.barEngine(stats, dockerOk, podmanOk),
