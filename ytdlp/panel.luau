@@ -1,5 +1,5 @@
 --!nonstrict
--- YT-DLP panel - test with basic UI
+-- YT-DLP panel
 
 noctalia.log("ytdlp panel: loading...")
 
@@ -14,14 +14,10 @@ local selectedMode = 1
 local selectedQuality = 1
 local downloadDir = "/home/Downloads"
 
-noctalia.log("ytdlp: variables initialized")
-
 local modeOptions = { "Best Quality", "Video Only", "Audio Only" }
 local qualityOptions = { "Best", "2160p", "1440p", "1080p", "720p", "480p", "360p", "240p" }
 
 local stateFile = (noctalia.pluginDataDir() or "") .. "/state.json"
-
-noctalia.log("ytdlp: stateFile=" .. stateFile)
 
 local function saveState()
   local ok, err = noctalia.writeFile(stateFile, noctalia.json.encode({
@@ -44,14 +40,13 @@ local function loadState()
   end
 end
 
-noctalia.log("ytdlp: functions defined")
+loadState()
 
 local function shellQuote(s)
   return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
 end
 
 local function doExtract()
-  noctalia.log("ytdlp: doExtract called, url=" .. tostring(url))
   if not url or url == "" then
     lastError = "Please enter a URL"
     render()
@@ -63,29 +58,23 @@ local function doExtract()
   render()
 
   local cmd = "yt-dlp -J --no-download --no-warnings " .. shellQuote(url)
-  noctalia.log("ytdlp: running: " .. cmd)
   noctalia.runAsync(cmd, function(r)
-    noctalia.log("ytdlp: extract callback, exitCode=" .. tostring(r.exitCode))
     isExtracting = false
     if r.exitCode == 0 and r.stdout then
       local ok, data = pcall(noctalia.json.decode, r.stdout)
       if ok and data then
         videoInfo = data
-        noctalia.log("ytdlp: extract success, title=" .. tostring(data.title))
       else
         lastError = "Failed to parse video info"
-        noctalia.log("ytdlp: extract parse failed")
       end
     else
       lastError = "Failed to extract"
-      noctalia.log("ytdlp: extract failed")
     end
     render()
   end)
 end
 
 local function doDownload()
-  noctalia.log("ytdlp: doDownload called")
   if not url or url == "" then
     lastError = "Please enter a URL"
     render()
@@ -99,10 +88,8 @@ local function doDownload()
 
   local outputTemplate = downloadDir .. "/%(title)s.%(ext)s"
   local cmd = "yt-dlp -f best -o " .. shellQuote(outputTemplate) .. " " .. shellQuote(url)
-  noctalia.log("ytdlp: download running")
 
   noctalia.runAsync(cmd, function(r)
-    noctalia.log("ytdlp: download callback")
     isDownloading = false
     if r.exitCode == 0 then
       downloadProgress = "Done!"
@@ -206,7 +193,6 @@ render = function()
 end
 
 function onOpen(_context)
-  noctalia.log("ytdlp: onOpen called")
   isOpen = true
   loadState()
   render()
@@ -224,11 +210,7 @@ function onKey(chord, pressed)
   if not pressed then return end
   if chord == "Escape" then
     panel.close()
-  elseif chord == "Enter" then
-    if url and url ~= "" and not isDownloading then
-      doDownload()
-    end
   end
 end
 
-noctalia.log("ytdlp panel: fully loaded")
+noctalia.log("ytdlp panel: loaded")
