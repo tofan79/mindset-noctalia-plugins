@@ -127,14 +127,13 @@ end
 render = function()
   local modeOptions = {
     "default", "roman", "kanji", "arabic", "korean",
-    "thai", "greek", "hindi", "emoji", "russian",
-    "appIcon", "appName"
+    "thai", "greek", "hindi", "emoji", "russian"
   }
   local modeLabels = {
     "Default (1,2,3...)", "Roman (I,II,III...)", "Kanji (一,二,三...)",
     "Arabic (١,٢,٣...)", "Korean (ㄱ,ㄴ,ㄷ...)", "Thai (๑,๒,๓...)",
     "Greek (α,β,γ...)", "Hindi (१,२,३...)", "Emoji (①,②,③...)",
-    "Russian (а,б,в...)", "App Icon", "App Name"
+    "Russian (а,б,в...)"
   }
   local modeIndex = 0
   for i, m in ipairs(modeOptions) do

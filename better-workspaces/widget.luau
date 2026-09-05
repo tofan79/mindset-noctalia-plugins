@@ -92,7 +92,6 @@ converters["russian"] = function(n)
 end
 
 converters["appIcon"] = function(n) return converters["default"](n) end
-converters["appName"] = function(n) return converters["default"](n) end
 
 local function conv(n)
   return (converters[displayMode] or converters["default"])(n)
