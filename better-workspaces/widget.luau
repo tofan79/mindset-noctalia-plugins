@@ -1,7 +1,7 @@
 --!nonstrict
 -- Better Workspaces bar widget.
 -- Workspace pills behave like a normal indicator: click to switch, right-click
--- for the panel, scroll to cycle. Workspace rules sync to hypr workspaces.lua.
+-- for the panel, scroll to cycle.
 
 local activeWorkspace = 1
 local workspaces = {}
@@ -189,14 +189,6 @@ local function refresh()
   end)
 end
 
--- Keep ~/.config/hypr/config/workspaces.lua in sync with the configured workspace
--- count, same way better-displays owns its monitor lines. Runs on every widget
--- reload (startup and config change); the script no-ops when already in sync.
-local scriptDir = noctalia.pluginDir() .. "/bin"
-local function persistWorkspaceRules()
-  noctalia.runAsync(shellQuote(scriptDir .. "/better-workspace-persist") .. " " .. tostring(workspaceCount), function() end)
-end
-
 -- Poll active workspace so the pill fill tracks workspace switches made from
 -- outside the widget too (keybinds, other indicators).
 function update()
@@ -206,4 +198,3 @@ end
 noctalia.setUpdateInterval(100)  -- 100ms: very responsive, still reasonable load
 
 refresh()
-persistWorkspaceRules()
