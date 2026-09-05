@@ -154,19 +154,47 @@ local function buildPills()
       focused = (id == activeWorkspace)
     end
 
-    table.insert(children, ui.button({
+    local bgColor
+    if focused then
+      bgColor = "primary"
+    elseif isSpecial then
+      bgColor = "secondary"
+    elseif pillVariant == "primary" then
+      bgColor = "primary"
+    elseif pillVariant == "secondary" then
+      bgColor = "secondary"
+    else
+      bgColor = "surface_container"
+    end
+
+    local textColor
+    if focused or pillVariant == "primary" or pillVariant == "secondary" or isSpecial then
+      textColor = "on_primary"
+    else
+      textColor = "on_surface"
+    end
+
+    local borderColor = focused and "primary" or "outline"
+    local borderWidth = focused and 2 or 1
+
+    table.insert(children, ui.box({
       key = "pill-" .. tostring(id),
-      text = isSpecial and tostring(id) or conv(id),
-      fontSize = 11,
+      fill = bgColor,
+      border = borderColor,
+      borderWidth = borderWidth,
+      radius = pillRounded,
       width = pillWidth,
       height = pillHeight,
-      radius = pillRounded,
-      variant = focused and "primary" or (isSpecial and "secondary" or pillVariant),
-      selected = focused,
       onClick = function()
         switchTo(pid)
       end,
-    }))
+    }, ui.label({
+      text = isSpecial and tostring(id) or conv(id),
+      fontSize = 11,
+      color = textColor,
+      align = "center",
+      flexGrow = 1,
+    })))
   end
   return children
 end

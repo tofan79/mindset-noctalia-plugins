@@ -149,15 +149,23 @@ render = function()
 
   local previewPills = {}
   for n = 1, math.min(workspaceCount, 6) do
-    table.insert(previewPills, ui.button({
+    local bgColor = pillVariant == "primary" and "primary" or (pillVariant == "secondary" and "secondary" or "surface_container")
+    local textColor = pillVariant == "primary" or pillVariant == "secondary" and "on_primary" or "on_surface"
+    table.insert(previewPills, ui.box({
       key = "preview-" .. n,
-      text = convert(n),
-      fontSize = 11,
+      fill = bgColor,
+      border = "outline",
+      borderWidth = 1,
+      radius = pillRounded,
       width = pillWidth,
       height = pillHeight,
-      radius = pillRounded,
-      variant = pillVariant,
-    }))
+    }, ui.label({
+      text = convert(n),
+      fontSize = 11,
+      color = textColor,
+      align = "center",
+      flexGrow = 1,
+    })))
   end
 
   local function sliderRow(label, value, min, max, onChange)
