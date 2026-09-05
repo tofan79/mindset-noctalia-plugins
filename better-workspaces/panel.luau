@@ -9,6 +9,7 @@ local revealOccupied = true
 local dimEmpty = true
 local workspaces = {} -- {id, occupied, focused, apps}
 local selectedIndex = 0
+local _switching = false  -- prevents concurrent switches from rapid clicks
 
 -- Forward-declared: loadWorkspaces (defined below) calls render() from an async
 -- callback. Without this the upvalue would be nil and the call would crash.
@@ -95,8 +96,11 @@ local function shellQuote(s)
 end
 
 local function switchWorkspace(id)
+  if _switching then return end  -- ignore rapid/repeated clicks
+  _switching = true
   local expr = 'hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })'
-  noctalia.runAsync("hyprctl dispatch " .. shellQuote(expr), function(result)
+  noctalia.runAsync("hyprctl eval " .. shellQuote(expr), function(result)
+    _switching = false
     if result.exitCode == 0 then
       panel.close()
     else
@@ -116,12 +120,13 @@ local function loadWorkspaces()
           workspaces[ws.id] = {
             id = ws.id,
             occupied = ws.windows > 0,
-            focused = ws.hasfullscreen == "true" or false,
+            focused = (ws.id == currentWorkspace),
           }
         end
       end
     end
-    render()
+    -- only render if we got valid data (avoid rendering empty/stale state)
+    if result.exitCode == 0 then render() end
   end)
 end
 

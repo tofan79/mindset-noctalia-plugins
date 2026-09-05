@@ -7,6 +7,8 @@ local activeWorkspace = 1
 local workspaces = {}
 local displayMode = "default"
 local workspaceCount = 9
+local _switching = false  -- guard: prevent rapid back-to-back switchTo calls
+local _refreshing = false -- guard: prevent concurrent refresh() calls
 
 local converters = {}
 converters["default"] = function(n) return tostring(n) end
@@ -89,13 +91,17 @@ local function getIds()
 end
 
 local function switchTo(id)
+  if _switching then return end
+  _switching = true
   local expr = 'hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })'
   noctalia.runAsync("hyprctl dispatch " .. shellQuote(expr), function(r)
+    _switching = false
     if r.exitCode ~= 0 then
       noctalia.log("better-workspaces: dispatch to " .. id .. " failed (exit " .. tostring(r.exitCode) .. ")")
-    else
-      refresh()
     end
+    -- do NOT call refresh() here — update() polls every 1s and will pick up the change;
+    -- calling refresh() here creates nested async chains that survive module hot-reloads
+    -- as stale callbacks trying to call the new module's refresh().
   end)
 end
 
@@ -150,6 +156,8 @@ function onScroll(axis, steps, startsGesture)
 end
 
 local function refresh()
+  if _refreshing then return end
+  _refreshing = true
   displayMode = noctalia.getConfig("displayMode") or "default"
   workspaceCount = noctalia.getConfig("workspaceCount") or 9
 
@@ -169,6 +177,7 @@ local function refresh()
         end
       end
       render()
+      _refreshing = false
     end)
   end)
 end
