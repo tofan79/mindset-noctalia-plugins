@@ -92,8 +92,13 @@ local function shellQuote(s)
 end
 
 local function isSpecialWorkspace(id)
+  -- A workspace is "special" if its name differs from its numeric id.
+  -- e.g. id=-1337 name="gaming" -> special; id=3 name="3" -> normal numeric workspace
   local ws = workspaces[id]
-  return ws and ws.name and ws.name:find("^name:") ~= nil
+  if not ws then return false end
+  if not ws.name then return false end
+  if tostring(id) == ws.name then return false end
+  return true
 end
 
 local function getIds()
@@ -109,7 +114,7 @@ local function getIds()
     end
   end
 
-  -- Sort: numbers first (ascending), then special workspaces (by name string)
+  -- Sort: positive numbers first (ascending), then special (negative IDs or named) at the end
   table.sort(ids, function(a, b)
     local aSpec = isSpecialWorkspace(a)
     local bSpec = isSpecialWorkspace(b)
@@ -150,8 +155,7 @@ local function buildPills()
 
     local text
     if isSpecial then
-      local short = (wsData.name):gsub("^name:", "★")
-      text = short
+      text = wsData.name  -- e.g. "gaming"
     else
       text = conv(id)
     end
