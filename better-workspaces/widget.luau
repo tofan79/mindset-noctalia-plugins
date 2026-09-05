@@ -154,46 +154,49 @@ local function buildPills()
       focused = (id == activeWorkspace)
     end
 
-    local bgColor
-    if focused then
-      bgColor = "primary"
-    elseif isSpecial then
-      bgColor = "secondary"
-    elseif pillVariant == "primary" then
-      bgColor = "primary"
-    elseif pillVariant == "secondary" then
-      bgColor = "secondary"
-    else
-      bgColor = "surface_container"
-    end
-
+    local fillColor
     local textColor
-    if focused or pillVariant == "primary" or pillVariant == "secondary" or isSpecial then
-      textColor = "on_primary"
-    else
-      textColor = "on_surface"
-    end
+    local borderColor
 
-    local borderColor = focused and "primary" or "outline"
-    local borderWidth = focused and 2 or 1
+    if focused then
+      fillColor = "primary"
+      textColor = "on_primary"
+      borderColor = "primary"
+    elseif isSpecial then
+      fillColor = "secondary"
+      textColor = "on_secondary"
+      borderColor = "secondary"
+    elseif pillVariant == "primary" then
+      fillColor = "primary"
+      textColor = "on_primary"
+      borderColor = "primary"
+    elseif pillVariant == "secondary" then
+      fillColor = "secondary"
+      textColor = "on_secondary"
+      borderColor = "secondary"
+    else
+      fillColor = "surface_container"
+      textColor = "on_surface"
+      borderColor = "outline"
+    end
 
     table.insert(children, ui.box({
       key = "pill-" .. tostring(id),
-      fill = bgColor,
+      fill = fillColor,
       border = borderColor,
-      borderWidth = borderWidth,
+      borderWidth = focused and 2 or 1,
       radius = pillRounded,
       width = pillWidth,
       height = pillHeight,
       onClick = function()
         switchTo(pid)
       end,
-    }, ui.label({
-      text = isSpecial and tostring(id) or conv(id),
-      fontSize = 11,
-      color = textColor,
-      align = "center",
-      flexGrow = 1,
+    }, ui.column({ align = "center", justify = "center", flexGrow = 1 }, {
+      ui.label({
+        text = isSpecial and tostring(id) or conv(id),
+        fontSize = 11,
+        color = textColor,
+      })
     })))
   end
   return children

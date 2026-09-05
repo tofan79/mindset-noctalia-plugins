@@ -150,21 +150,22 @@ render = function()
   local previewPills = {}
   for n = 1, math.min(workspaceCount, 6) do
     local bgColor = pillVariant == "primary" and "primary" or (pillVariant == "secondary" and "secondary" or "surface_container")
-    local textColor = pillVariant == "primary" or pillVariant == "secondary" and "on_primary" or "on_surface"
+    local textColor = (pillVariant == "primary" or pillVariant == "secondary") and "on_primary" or "on_surface"
+    local borderColor = pillVariant == "primary" and "primary" or (pillVariant == "secondary" and "secondary" or "outline")
     table.insert(previewPills, ui.box({
       key = "preview-" .. n,
       fill = bgColor,
-      border = "outline",
+      border = borderColor,
       borderWidth = 1,
       radius = pillRounded,
       width = pillWidth,
       height = pillHeight,
-    }, ui.label({
-      text = convert(n),
-      fontSize = 11,
-      color = textColor,
-      align = "center",
-      flexGrow = 1,
+    }, ui.column({ align = "center", justify = "center", flexGrow = 1 }, {
+      ui.label({
+        text = convert(n),
+        fontSize = 11,
+        color = textColor,
+      })
     })))
   end
 
