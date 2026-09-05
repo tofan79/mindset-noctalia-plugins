@@ -94,13 +94,6 @@ end
 local function getIds()
   local ids = {}
   for n = 1, workspaceCount do ids[n] = n end
-  for id in pairs(workspaces) do
-    if id > workspaceCount and id <= 20 then
-      local exists = false
-      for _, v in ipairs(ids) do if v == id then exists = true break end end
-      if not exists then table.insert(ids, id) end
-    end
-  end
   table.sort(ids)
   return ids
 end
