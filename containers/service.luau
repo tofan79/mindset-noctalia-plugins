@@ -719,7 +719,7 @@ local function normalizeStat(raw)
     local mem = parsePair(raw.MemUsage or raw.Mem or raw.mem_usage or "")
     local net = parsePair(raw.NetIO or raw.net_io or "")
     local block = parsePair(raw.BlockIO or raw.block_io or "")
-    local cpu = parsePercent(raw.CPUPerc ~= nil and raw.CPUPerc or (raw.CPU ~= nil and raw.CPU or raw.cpu))
+    local cpu = parsePercent(raw.CPUPerc ~= nil and raw.CPUPerc or (raw.CPU ~= nil and raw.CPU or (raw.cpu_percent ~= nil and raw.cpu_percent or raw.cpu)))
     local memPerc = parsePercent(raw.MemPerc ~= nil and raw.MemPerc or (raw.MemPercentage ~= nil and raw.MemPercentage or 0))
     if memPerc == 0 and mem.limit > 0 then
         memPerc = (mem.used / mem.limit) * 100
@@ -1296,24 +1296,28 @@ local function refreshStats(done)
         done()
         return
     end
-    if anyRunning then
-        local bin = (engine == "podman") and "podman" or "docker"
-        local fmt = (engine == "podman") and "json" or "{{json .}}"
-        noctalia.runAsync({ bin, "stats", "--no-stream", "--format", fmt }, function(result)
-            if result and result.exitCode == 0 then
-                local parsed = M.parseStats(result.stdout)
-                statRows = parsed.rows
-                statCache.rows = parsed.rows
-                statCache.freshAt = noctalia.nowMs() + 6000
-            end
+    local pending = 2
+    local function maybe()
+        pending = pending - 1
+        if pending == 0 then
             done()
-        end)
-    else
-        statRows = {}
-        diskUsed = 0
-        statCache.rows = {}
-        done()
+        end
     end
+    local bin = (engine == "podman") and "podman" or "docker"
+    local fmt = (engine == "podman") and "json" or "{{json .}}"
+    noctalia.runAsync({ bin, "stats", "--no-stream", "--format", fmt }, function(result)
+        if result and result.exitCode == 0 then
+            local parsed = M.parseStats(result.stdout)
+            statRows = parsed.rows
+            statCache.rows = parsed.rows
+            statCache.freshAt = noctalia.nowMs() + 6000
+        end
+        maybe()
+    end)
+    dfUsed(engine, function(used)
+        diskUsed = used
+        maybe()
+    end)
 end
 
 local function recognizeEngine()
