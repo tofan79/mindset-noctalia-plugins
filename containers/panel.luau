@@ -529,7 +529,7 @@ local function gauge(label, glyph, fraction, percentText, usedText, totalText, h
             ui.label({ text = percentText, color = percentColor, fontSize = 11, fontWeight = "bold" }),
         }),
         ui.progress({ height = 5, progress = percentOf(fraction), fill = fill, track = "surface_variant", radius = 3 }),
-        ui.label({ text = usedText .. " / " .. totalText, color = "on_surface_variant", fontSize = 10 }),
+        ui.label({ text = (totalText == "" and usedText) or (usedText .. " / " .. totalText), color = "on_surface_variant", fontSize = 10 }),
     })
 end
 
@@ -560,11 +560,11 @@ local function hardwareSection()
             ui.label({ text = tr("panel.hardware"):upper(), color = "on_surface", fontSize = 11, fontWeight = "bold" }),
             ui.row({ gap = 10, align = "center" }, {
                 gauge("CPU", "cpu", frac(cpuPerc), percentText(cpuPerc),
-                    formatCores(hw.cpuUsed), formatCores(hw.cpuTotal), cpuPerc >= 80),
+                    percentText(cpuPerc), "", cpuPerc >= 80),
                 gauge("RAM", "chart-donut", frac(memPerc), percentText(memPerc),
-                    formatBytes(hw.memUsed), formatBytes(hw.memTotal), memPerc >= 90),
+                    formatBytes(hw.memUsed), "", memPerc >= 90),
                 gauge("HD", "database", frac(diskPerc), percentText(diskPerc),
-                    formatBytes(hw.diskUsed), formatBytes(hw.diskTotal), diskPerc >= 90),
+                    formatBytes(hw.diskUsed), "", diskPerc >= 90),
             }),
         }),
     }

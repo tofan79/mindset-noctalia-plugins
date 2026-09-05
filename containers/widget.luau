@@ -54,14 +54,22 @@ function M.formatTooltip(s)
 end
 
 local function render()
-    barWidget.setGlyph(noctalia.getConfig("glyph") or "brand-docker")
+    local glyph = noctalia.getConfig("glyph") or "brand-docker"
+    barWidget.setGlyph(glyph)
     local tooltip = M.formatTooltip(state)
     if noctalia.getConfig("show_running_count") ~= false and state and state.stats then
         tooltip = tostring(state.stats.running .. " | " .. tooltip)
     end
     barWidget.setTooltip(tooltip)
-    local problem = (state and state.stats and state.stats.unhealthy and state.stats.unhealthy > 0)
-    barWidget.setGlyphColor(problem and "error" or "on_surface")
+    local running = (state and state.stats and state.stats.running) or 0
+    local unhealthy = (state and state.stats and state.stats.unhealthy) or 0
+    if unhealthy > 0 then
+        barWidget.setGlyphColor("error")
+    elseif running > 0 then
+        barWidget.setGlyphColor("primary")
+    else
+        barWidget.setGlyphColor("on_surface_variant")
+    end
 end
 
 function M.onClick()

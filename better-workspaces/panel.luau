@@ -91,8 +91,7 @@ local function shellQuote(s)
 end
 
 local function switchWorkspace(id)
-  local lua = string.format("hl.workspace_rule({ workspace = tostring(%s) })", tostring(id))
-  noctalia.runAsync("hyprctl eval " .. shellQuote(lua), function(result)
+  noctalia.runAsync("hyprctl dispatch workspace " .. tostring(id), function(result)
     if result.exitCode == 0 then
       panel.close()
     else

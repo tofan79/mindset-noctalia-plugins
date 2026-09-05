@@ -901,7 +901,7 @@ function M.composeHardware(statRows, host, diskUsed)
         cpuUsed = cpuUsed,
         cpuTotal = cpuTotal,
         cpuPerc = (cpuTotal > 0) and ((cpuUsed / cpuTotal) * 100) or 0,
-        cpuText = formatUsedTotal(cpuUsed, cpuTotal, "cpu"),
+        cpuText = formatPercent(cpuPerc),
         memUsed = live.memUsed,
         memLimit = live.memLimit,
         memTotal = memTotal,
@@ -1111,7 +1111,7 @@ local function barEngine(stats, dockerOk, podmanOk)
     if podmanOk then
         return "podman"
     end
-    return "docker"
+    return ""
 end
 
 M.barLabel = barLabel
@@ -1329,8 +1329,11 @@ local function recognizeEngine()
     end
 end
 
+local pendingRefresh = false
+
 function M.refreshNow()
     if refreshing then
+        pendingRefresh = true
         return
     end
     refreshing = true
@@ -1341,6 +1344,10 @@ function M.refreshNow()
                 refreshHost(function()
                     refreshing = false
                     publishState()
+                    if pendingRefresh then
+                        pendingRefresh = false
+                        M.refreshNow()
+                    end
                 end)
             end)
         end)
@@ -1369,6 +1376,10 @@ function M.init()
         if not cmd then
             return
         end
+        -- A user action changed state: bypass the resource cache (images/volumes/
+        -- networks) and the stats cache so the panel shows the new reality immediately.
+        resourceCache.freshAt = 0
+        statCache.freshAt = 0
         M.refreshNow()
     end)
 
@@ -1400,5 +1411,9 @@ function onConfigChanged()
     end
     M.refreshNow()
 end
+
+-- Noctalia has no `init()` global: the top-level chunk runs once at load. Register
+-- the refresh watcher (and seed state) here, or panel refresh commands go nowhere.
+M.init()
 
 return M
