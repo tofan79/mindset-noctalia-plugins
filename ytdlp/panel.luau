@@ -1,14 +1,30 @@
 --!nonstrict
--- YT-DLP panel - ultra simple
+-- YT-DLP panel
 
 local url = ""
+local selectedMode = 1
+local isExtracting = false
+local isDownloading = false
+
+local function shellQuote(s)
+  return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
+end
 
 function onUrlChange(val)
   url = val or ""
 end
 
-function onTest()
-  noctalia.notify("YT-DLP", "Button clicked! URL=" .. url)
+function onModeChange(idx)
+  selectedMode = tonumber(idx) + 1
+  render()
+end
+
+function onExtract()
+  noctalia.notify("YT-DLP Extract", "URL: " .. url)
+end
+
+function onDownload()
+  noctalia.notify("YT-DLP Download", "URL: " .. url)
 end
 
 function onCloseClicked()
@@ -26,8 +42,15 @@ render = function()
     ui.separator({}),
     ui.label({ text = "URL", fontSize = 12 }),
     ui.input({ key = "url", placeholder = "Paste URL", value = url, onChange = "onUrlChange" }),
-    ui.button({ text = "Test Alert", variant = "primary", onClick = "onTest" }),
-    ui.label({ text = "URL entered: " .. url, fontSize = 11, color = "on_surface_variant" }),
+    ui.row({ gap = 8 }, {
+      ui.button({ text = "Extract", variant = "primary", disabled = url == "", onClick = "onExtract" }),
+      ui.button({ text = "Download", variant = "primary", disabled = url == "", onClick = "onDownload" }),
+    }),
+    ui.separator({}),
+    ui.label({ text = "Mode", fontSize = 12 }),
+    ui.select({ key = "mode", options = { "Best", "Video", "Audio" }, selectedIndex = selectedMode - 1, onChange = "onModeChange" }),
+    ui.separator({}),
+    ui.label({ text = "URL: " .. url, fontSize = 11, color = "on_surface_variant", wrap = true }),
   }))
 end
 
