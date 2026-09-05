@@ -314,6 +314,10 @@ end
 
 -- ── actions (bulk, faithful to dockmarchy runSelected/runBulkAction) ──
 
+-- Forward-declared: referenced by runBulkAction (defined above) — without this the
+-- upvalue inside the async callback would be nil and the click would crash the panel.
+local refreshNow
+
 local function engineBinOf(item)
     return (item.engine == "podman") and "podman" or "docker"
 end
@@ -360,7 +364,7 @@ local function runBulkAction(action)
     end
 end
 
-local function refreshNow()
+refreshNow = function()
     -- Pull fresh data from the service: the panel's cached state only changes when the
     -- service re-publishes, so after an action we ask it to re-poll immediately.
     noctalia.state.set("containers_refresh", { at = noctalia.nowMs() })

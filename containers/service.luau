@@ -1213,25 +1213,27 @@ local function refreshLists(done)
     end)
 end
 
-local function fetchEngineResources(engine, done)
+local function fetchEngineResource(engine, sub, parse, done)
+    -- One resource kind per async call keeps each callback well under the VM CPU
+    -- budget; batching all three (images+volumes+networks) into a single callback
+    -- blew the budget and wedged the refresh pipeline (refreshing stayed true and
+    -- nothing was ever published again).
     local bin = (engine == "podman") and "podman" or "docker"
-    local fmt = "{{json .}}"
-    local script = table.concat({
-        bin .. " images --format '" .. fmt .. "'; echo " .. M.SEP_IMAGES .. ";",
-        bin .. " volume ls --format '" .. fmt .. "'; echo " .. M.SEP_VOLUMES .. ";",
-        bin .. " network ls --format '" .. fmt .. "'",
-    }, "")
-    noctalia.runAsync({ "sh", "-c", script }, function(result)
+    local cmd
+    if sub == "images" then
+        cmd = { bin, "images", "--format", "{{json .}}" }
+    elseif sub == "volumes" then
+        cmd = { bin, "volume", "ls", "--format", "{{json .}}" }
+    else
+        cmd = { bin, "network", "ls", "--format", "{{json .}}" }
+    end
+    noctalia.runAsync(cmd, function(result)
         local out = (result and result.stdout) or ""
-        local images, volumes, networks = {}, {}, {}
+        local parsed = {}
         if result and result.exitCode == 0 then
-            local imgPart, rest = out:match("^(.-)" .. M.SEP_IMAGES .. "(.*)$")
-            local volPart, netPart = (rest or ""):match("^(.-)" .. M.SEP_VOLUMES .. "(.*)$")
-            images = parseImages(imgPart or "", engine)
-            volumes = parseVolumes(volPart or "", engine)
-            networks = parseNetworks(netPart or "", engine)
+            parsed = parse(out or "", engine)
         end
-        done(images, volumes, networks)
+        done(parsed)
     end)
 end
 
@@ -1239,20 +1241,28 @@ local resourceCache = { freshAt = 0 }
 
 local function refreshResources(done)
     done = done or function() end
-    -- Images/volumes/networks change rarely; a single host runs podman/docker, so
-    -- fetching and decoding them every poll is needless CPU churn that occasionally
-    -- trips the VM budget. Re-fetch at most every 10s.
+    -- Images/volumes/networks change rarely; re-fetch at most every 10s. Fetch each
+    -- kind sequentially (one async callback at a time) so the peak callback load stays
+    -- well under the VM CPU budget; running all three in parallel blew it and wedged
+    -- the refresh pipeline.
     if noctalia.nowMs() < resourceCache.freshAt then
         done()
         return
     end
     local engine = selectedEngine()
-    fetchEngineResources(engine, function(i, v, n)
-        state.images = i
-        state.volumes = v
-        state.networks = n
+    local function finish()
         resourceCache.freshAt = noctalia.nowMs() + 10000
         done()
+    end
+    fetchEngineResource(engine, "images", parseImages, function(parsed)
+        state.images = parsed
+        fetchEngineResource(engine, "volumes", parseVolumes, function(parsedV)
+            state.volumes = parsedV
+            fetchEngineResource(engine, "networks", parseNetworks, function(parsedN)
+                state.networks = parsedN
+                finish()
+            end)
+        end)
     end)
 end
 
@@ -1339,6 +1349,9 @@ function M.refreshNow()
     refreshing = true
     refreshLists(function()
         recognizeEngine()
+        -- Publish the container list right away so the panel always shows something
+        -- even if a later bucket (resources/stats/host) crashes or exceeds its budget.
+        publishState()
         refreshResources(function()
             refreshStats(function()
                 refreshHost(function()
