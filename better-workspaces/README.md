@@ -24,8 +24,6 @@ with beautiful display modes.
 | Hindi | `१, २, ३` | Devanagari numerals |
 | Emoji | `①, ②, ③` | Circled numbers |
 | Russian | `а, б, в` | Cyrillic alphabet |
-| App Icon | `🪟` | Window icon when occupied |
-| App Name | `1 📱` | Number with icon |
 
 ## Usage
 
