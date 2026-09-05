@@ -62,8 +62,14 @@ local function resolveHyprConfigDir()
 end
 
 local function discoverSpecialWorkspaces()
-  -- Scan workspaces.lua and main Hyprland config for workspace_rule definitions.
-  local configDir = resolveHyprConfigDir()
+  -- Use custom path from settings if set, otherwise auto-detect.
+  local customPath = noctalia.getConfig("workspaceConfigPath")
+  local configDir
+  if customPath and customPath ~= "" then
+    configDir = customPath
+  else
+    configDir = resolveHyprConfigDir()
+  end
   local mainConfigs = {
     configDir .. "/hyprland.lua",
     configDir .. "/hypr.lua",

@@ -28,6 +28,10 @@
       "label": "Workspace Count",
       "description": "Number of workspaces to show in the bar (1-20)"
     },
+    "workspaceConfigPath": {
+      "label": "Custom Workspace Config Path",
+      "description": "Custom path to workspace config file (e.g. ~/.config/hypr/config/workspaces.lua). Leave empty for auto-detect."
+    },
     "revealOccupied": {
       "label": "Reveal Occupied",
       "description": "Show workspaces beyond the count while they exist"
