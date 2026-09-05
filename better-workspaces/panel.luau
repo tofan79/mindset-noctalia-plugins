@@ -227,18 +227,109 @@ render = function()
     if v == pillVariant then variantIndex = i - 1 break end
   end
 
-  -- Build live preview pills
   local previewPills = {}
   for n = 1, math.min(workspaceCount, 6) do
     table.insert(previewPills, ui.button({
       key = "preview-" .. n,
-      text = convert(n),
+      text = conv(n),
       fontSize = 11,
       controlSize = pillSize,
-      fontWeight = fontWeight,
-      textStyle = fontStyle,
       variant = pillVariant,
     }))
+  end
+
+  local function scrollBody()
+    return {
+      ui.label({ text = noctalia.tr("panel.display_mode"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+      ui.select({
+        key = "mode-select",
+        options = modeLabels,
+        selectedIndex = modeIndex,
+        controlSize = "sm",
+        onChange = function(idx)
+          displayMode = modeOptions[tonumber(idx) + 1]
+          saveState()
+          render()
+        end,
+      }),
+      ui.separator({}),
+      ui.label({ text = noctalia.tr("panel.workspace_count"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+      ui.row({ gap = 8, align = "center" }, {
+        ui.label({ text = tostring(workspaceCount), fontSize = 13, fontWeight = "bold", width = 24 }),
+        ui.slider({
+          min = 1, max = 9, step = 1, value = workspaceCount,
+          controlSize = "sm",
+          onChange = function(val)
+            workspaceCount = tonumber(val) or 9
+            saveState()
+            render()
+          end,
+        }),
+      }),
+      ui.separator({}),
+      ui.label({ text = "Pill Size", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+      ui.select({
+        key = "size-select",
+        options = sizeLabels,
+        selectedIndex = sizeIndex,
+        controlSize = "sm",
+        onChange = function(idx)
+          pillSize = sizeOptions[tonumber(idx) + 1]
+          saveState()
+          render()
+        end,
+      }),
+      ui.separator({}),
+      ui.label({ text = "Font Weight", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+      ui.select({
+        key = "weight-select",
+        options = weightLabels,
+        selectedIndex = weightIndex,
+        controlSize = "sm",
+        onChange = function(idx)
+          fontWeight = weightOptions[tonumber(idx) + 1]
+          saveState()
+          render()
+        end,
+      }),
+      ui.separator({}),
+      ui.label({ text = "Font Style", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+      ui.select({
+        key = "style-select",
+        options = styleLabels,
+        selectedIndex = styleIndex,
+        controlSize = "sm",
+        onChange = function(idx)
+          fontStyle = styleOptions[tonumber(idx) + 1]
+          saveState()
+          render()
+        end,
+      }),
+      ui.separator({}),
+      ui.label({ text = "Pill Shape", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+      ui.select({
+        key = "variant-select",
+        options = variantLabels,
+        selectedIndex = variantIndex,
+        controlSize = "sm",
+        onChange = function(idx)
+          pillVariant = variantOptions[tonumber(idx) + 1]
+          saveState()
+          render()
+        end,
+      }),
+      ui.separator({}),
+      ui.label({ text = "Gap: " .. gap, fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+      ui.slider({
+        min = 2, max = 16, step = 1, value = gap,
+        controlSize = "sm",
+        onChange = function(val)
+          gap = tonumber(val) or 4
+          saveState()
+          render()
+        end,
+      }),
+    }
   end
 
   panel.render(ui.column({ flexGrow = 1, gap = 0 }, {
@@ -250,97 +341,8 @@ render = function()
     ui.separator({}),
     ui.label({ text = "Preview", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.box({ fill = "surface_container", radius = 6, padding = 8 }, ui.row({ gap = gap, align = "center", justify = "center" }, previewPills)),
-    ui.scroll({ gap = 6 }, ui.column({ gap = 6 }, {
-    ui.label({ text = noctalia.tr("panel.display_mode"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-    ui.select({
-      key = "mode-select",
-      options = modeLabels,
-      selectedIndex = modeIndex,
-      controlSize = "sm",
-      onChange = function(idx)
-        displayMode = modeOptions[tonumber(idx) + 1]
-        saveState()
-        render()
-      end,
-    }),
     ui.separator({}),
-    ui.label({ text = noctalia.tr("panel.workspace_count"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-    ui.row({ gap = 8, align = "center" }, {
-      ui.label({ text = tostring(workspaceCount), fontSize = 13, fontWeight = "bold", width = 24 }),
-      ui.slider({
-        min = 1, max = 9, step = 1, value = workspaceCount,
-        controlSize = "sm",
-        onChange = function(val)
-          workspaceCount = tonumber(val) or 9
-          saveState()
-          render()
-        end,
-      }),
-    }),
-    ui.separator({}),
-    ui.label({ text = "Pill Size", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-    ui.select({
-      key = "size-select",
-      options = sizeLabels,
-      selectedIndex = sizeIndex,
-      controlSize = "sm",
-      onChange = function(idx)
-        pillSize = sizeOptions[tonumber(idx) + 1]
-        saveState()
-        render()
-      end,
-    }),
-    ui.separator({}),
-    ui.label({ text = "Font Weight", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-    ui.select({
-      key = "weight-select",
-      options = weightLabels,
-      selectedIndex = weightIndex,
-      controlSize = "sm",
-      onChange = function(idx)
-        fontWeight = weightOptions[tonumber(idx) + 1]
-        saveState()
-        render()
-      end,
-    }),
-    ui.separator({}),
-    ui.label({ text = "Font Style", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-    ui.select({
-      key = "style-select",
-      options = styleLabels,
-      selectedIndex = styleIndex,
-      controlSize = "sm",
-      onChange = function(idx)
-        fontStyle = styleOptions[tonumber(idx) + 1]
-        saveState()
-        render()
-      end,
-    }),
-    ui.separator({}),
-    ui.label({ text = "Pill Shape", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-    ui.select({
-      key = "variant-select",
-      options = variantLabels,
-      selectedIndex = variantIndex,
-      controlSize = "sm",
-      onChange = function(idx)
-        pillVariant = variantOptions[tonumber(idx) + 1]
-        saveState()
-        render()
-      end,
-    }),
-    ui.separator({}),
-    ui.label({ text = "Gap: " .. gap, fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-    ui.slider({
-      min = 2, max = 16, step = 1, value = gap,
-      controlSize = "sm",
-      onChange = function(val)
-        gap = tonumber(val) or 4
-        saveState()
-        render()
-      end,
-    }),
-    })),
+    ui.scroll({ flexGrow = 1, gap = 6 }, scrollBody()),
   }))
 end
 
