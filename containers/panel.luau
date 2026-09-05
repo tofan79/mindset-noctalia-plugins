@@ -178,7 +178,9 @@ local function groupByProject(list)
     local order = {}
     local map = {}
     for _, item in ipairs(list) do
-        local key = item.project or ""
+        -- No compose project? Fall back to the engine, so an ungrouped container shows
+        -- "PODMAN" / "DOCKER" as its header instead of a meaningless "default".
+        local key = (item.project ~= nil and item.project ~= "") and item.project or (item.engine or "podman")
         if not map[key] then
             map[key] = { name = key, running = 0, total = 0, problem = 0, containers = {} }
             order[#order + 1] = key
@@ -269,7 +271,11 @@ local function toggleSelectAllVisible()
     for _, item in ipairs(list) do
         local key = M.resourceKey(item)
         if key ~= "" then
-            map[key] = allOn and false or true
+            if allOn then
+                map[key] = false
+            else
+                map[key] = true
+            end
         end
     end
     local next = {}
@@ -315,7 +321,11 @@ end
 local function commandFor(action, item)
     local bin = engineBinOf(item)
     if uiState.kind == "containers" then
-        return { bin, action, item.containerId or item.shortId }
+        local cid = item.containerId or item.shortId
+        if action == "remove" then
+            return { bin, "rm", "-f", cid }
+        end
+        return { bin, action, cid }
     end
     -- resources: remove only (images/volumes/networks)
     local verb = "rmi"
@@ -344,13 +354,16 @@ local function runBulkAction(action)
             if left <= 0 then
                 uiState.selectedKeys = {}
                 uiState.revision = uiState.revision + 1
-                render()
+                refreshNow()
             end
         end)
     end
 end
 
 local function refreshNow()
+    -- Pull fresh data from the service: the panel's cached state only changes when the
+    -- service re-publishes, so after an action we ask it to re-poll immediately.
+    noctalia.state.set("containers_refresh", { at = noctalia.nowMs() })
     uiState.revision = uiState.revision + 1
     render()
 end
@@ -657,6 +670,7 @@ local function commandBar()
         children[#children + 1] = actionButton("player-play", "panel.start", "start", selectedCount > 0)
         children[#children + 1] = actionButton("player-stop", "panel.stop", "stop", selectedCount > 0)
         children[#children + 1] = actionButton("rotate-clockwise", "panel.restart", "restart", selectedCount > 0)
+        children[#children + 1] = actionButton("trash", "panel.remove", "remove", selectedCount > 0)
     else
         children[#children + 1] = actionButton("trash", "panel.remove", "remove", selectedCount > 0)
     end
@@ -801,7 +815,7 @@ local function hero()
     local hasEngine = state.available and state.stats and (state.stats.running or 0) > 0
     local iconColor = state.available and state.stats and state.stats.unhealthy and state.stats.unhealthy > 0 and "error" or (hasEngine and "primary" or "on_surface_variant")
     return ui.row({ align = "center", gap = 10 }, {
-        ui.glyph({ name = "container", size = 24, color = iconColor }),
+        ui.glyph({ name = "brand-docker", size = 24, color = iconColor }),
         ui.column({ gap = 1, flexGrow = 1 }, {
             ui.label({ text = engineTitle(), fontSize = 17, fontWeight = "bold", color = "on_surface" }),
             ui.label({ text = heroMeta(), fontSize = 11, color = "on_surface_variant", flexGrow = 1 }),

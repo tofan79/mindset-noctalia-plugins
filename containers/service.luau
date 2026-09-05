@@ -1361,6 +1361,17 @@ function M.init()
     M.dockerInstalled = M.enginePref ~= "podman"
     M.podmanInstalled = M.enginePref ~= "docker"
     noctalia.state.set("containers", { available = false, containers = {}, images = {}, volumes = {}, networks = {} })
+
+    -- The panel signals "something changed (start/stop/restart/remove)" by writing a
+    -- refresh command; re-poll immediately instead of waiting for the next tick.
+    -- The first delivery may be nil — guard it.
+    noctalia.state.watch("containers_refresh", function(cmd)
+        if not cmd then
+            return
+        end
+        M.refreshNow()
+    end)
+
     M.probeWhich(function()
         M.refreshNow()
     end)
