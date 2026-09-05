@@ -241,7 +241,7 @@ render = function()
     }))
   end
 
-  panel.render(ui.column({ flexGrow = 1, gap = 8, padding = 12 }, {
+  panel.render(ui.column({ flexGrow = 1, gap = 0 }, {
     ui.row({ align = "center", justify = "space_between" }, {
       ui.label({ text = noctalia.tr("title"), fontSize = 16, fontWeight = "bold", color = "primary", flexGrow = 1 }),
       ui.button({ glyph = "settings", variant = "ghost", onClick = "onOpenSettings" }),
@@ -250,7 +250,7 @@ render = function()
     ui.separator({}),
     ui.label({ text = "Preview", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.box({ fill = "surface_container", radius = 6, padding = 8 }, ui.row({ gap = gap, align = "center", justify = "center" }, previewPills)),
-    ui.separator({}),
+    ui.scroll({ flexGrow = 1, gap = 6 }, ui.column({ gap = 6 }, {
     ui.label({ text = noctalia.tr("panel.display_mode"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.select({
       key = "mode-select",
@@ -340,6 +340,7 @@ render = function()
         render()
       end,
     }),
+    })),  -- close scroll and column
   }))
 end
 
