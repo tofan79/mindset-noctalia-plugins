@@ -231,7 +231,7 @@ render = function()
   for n = 1, math.min(workspaceCount, 6) do
     table.insert(previewPills, ui.button({
       key = "preview-" .. n,
-      text = conv(n),
+      text = convert(n),
       fontSize = 11,
       controlSize = pillSize,
       variant = pillVariant,
