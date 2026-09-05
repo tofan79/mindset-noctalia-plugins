@@ -7,9 +7,9 @@ local workspaceCount = 9
 local displayMode = "default"
 local _switching = false
 
-local pillWidth = 60
-local pillHeight = 28
-local pillRounded = 6
+local pillWidth = 40
+local pillHeight = 20
+local pillRounded = 0
 local pillVariant = "default"
 local gap = 4
 
