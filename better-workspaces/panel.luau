@@ -340,7 +340,7 @@ render = function()
         render()
       end,
     }),
-    })),  -- close scroll and column
+    })),
   }))
 end
 

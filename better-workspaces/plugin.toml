@@ -1,11 +1,11 @@
 id           = "mindset/better-workspaces"
 name         = "Better Workspaces"
-version      = "1.0.2"
+version      = "1.1.0"
 plugin_api   = 19
 author       = "mindset"
 license      = "MIT"
 icon         = "layout-grid"
-description  = "Workspace indicator: click to switch, scroll to cycle, right-click for panel. Display mode and workspace count are controlled directly from the panel — no separate settings page."
+description  = "Workspace indicator with 12 display modes, special workspace support, and full customization — pill size, font weight/style, shape, gap. Right-click panel for all settings."
 tags         = ["hyprland", "workspace", "indicator", "bar"]
 
 dependencies = ["hyprctl"]
