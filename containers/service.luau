@@ -1167,9 +1167,6 @@ local function publishState()
     state.containers = attached
     local stats = M.summary(state.containers)
     local hw = M.composeHardware(statRows, host, diskUsed)
-    noctalia.log(string.format("RESOURCE_DEBUG images=%d volumes=%d networks=%d dockerOk=%s podmanOk=%s",
-        #(state.images or {}), #(state.volumes or {}), #(state.networks or {}),
-        tostring(dockerOk), tostring(podmanOk)))
     noctalia.state.set("containers", {
         available = true,
         engine = M.barEngine(stats, dockerOk, podmanOk),
@@ -1196,45 +1193,21 @@ function M.fetchEngineList(engine, done)
     end)
 end
 
+local function selectedEngine()
+    -- docker and podman are the same engine on many hosts (docker is a podman shim),
+    -- so we never fetch both: pick the preferred binary and fall back to the other.
+    return (M.enginePref == "docker") and "docker" or "podman"
+end
+
 local function refreshLists(done)
     done = done or function() end
-    -- Recompute the intent on every poll: a stale module (hot-reload) may have left
-    -- M.dockerInstalled/M.podmanInstalled as nil, which would otherwise skip both list
-    -- fetches. The preference decides which engines we try; the fetch exit decides success.
-    M.dockerInstalled = M.enginePref ~= "podman"
-    M.podmanInstalled = M.enginePref ~= "docker"
-    local wantDocker = M.dockerInstalled
-    local wantPodman = M.podmanInstalled
-    local left = 0
-    local dockerC, podmanC = {}, {}
-    local function maybe()
-        left = left - 1
-        if left > 0 then
-            return
-        end
-        state.containers = mergeLists(dockerC, podmanC)
+    local engine = selectedEngine()
+    M.fetchEngineList(engine, function(ok, containers)
+        dockerOk = (engine == "docker") and ok or false
+        podmanOk = (engine == "podman") and ok or false
+        state.containers = ok and containers or {}
         done()
-    end
-    if wantDocker then
-        left = left + 1
-        M.fetchEngineList("docker", function(ok, containers)
-            dockerOk = ok
-            dockerC = containers
-            maybe()
-        end)
-    end
-    if wantPodman then
-        left = left + 1
-        M.fetchEngineList("podman", function(ok, containers)
-            podmanOk = ok
-            podmanC = containers
-            maybe()
-        end)
-    end
-    if left == 0 then
-        state.containers = {}
-        done()
-    end
+    end)
 end
 
 local function fetchEngineResources(engine, done)
@@ -1247,20 +1220,13 @@ local function fetchEngineResources(engine, done)
     }, "")
     noctalia.runAsync({ "sh", "-c", script }, function(result)
         local out = (result and result.stdout) or ""
-        noctalia.log(string.format("RES_START engine=%s len=%d exit=%s",
-            engine, #out, tostring(result and result.exitCode)))
         local images, volumes, networks = {}, {}, {}
         if result and result.exitCode == 0 then
             local imgPart, rest = out:match("^(.-)" .. M.SEP_IMAGES .. "(.*)$")
-            noctalia.log(string.format("RES_SPLIT engine=%s img=%s",
-                engine, tostring(imgPart ~= nil)))
             local volPart, netPart = (rest or ""):match("^(.-)" .. M.SEP_VOLUMES .. "(.*)$")
             images = parseImages(imgPart or "", engine)
-            noctalia.log(string.format("RES_IMAGES engine=%s n=%d", engine, #images))
             volumes = parseVolumes(volPart or "", engine)
-            noctalia.log(string.format("RES_VOLUMES engine=%s n=%d", engine, #volumes))
             networks = parseNetworks(netPart or "", engine)
-            noctalia.log(string.format("RES_NETWORKS engine=%s n=%d", engine, #networks))
         end
         done(images, volumes, networks)
     end)
@@ -1268,39 +1234,13 @@ end
 
 local function refreshResources(done)
     done = done or function() end
-    local wantDocker = M.enginePref ~= "podman" and M.dockerInstalled
-    local wantPodman = M.enginePref ~= "docker" and M.podmanInstalled
-    local left = 0
-    local dI, dV, dN = {}, {}, {}
-    local pI, pV, pN = {}, {}, {}
-    local function maybe()
-        left = left - 1
-        if left > 0 then
-            return
-        end
-        state.images = mergeLists(dI, pI)
-        state.volumes = mergeLists(dV, pV)
-        state.networks = mergeLists(dN, pN)
+    local engine = selectedEngine()
+    fetchEngineResources(engine, function(i, v, n)
+        state.images = i
+        state.volumes = v
+        state.networks = n
         done()
-    end
-    if wantDocker then
-        left = left + 1
-        fetchEngineResources("docker", function(i, v, n)
-            dI, dV, dN = i, v, n
-            maybe()
-        end)
-    end
-    if wantPodman then
-        left = left + 1
-        fetchEngineResources("podman", function(i, v, n)
-            pI, pV, pN = i, v, n
-            maybe()
-        end)
-    end
-    if left == 0 then
-        state.images, state.volumes, state.networks = {}, {}, {}
-        done()
-    end
+    end)
 end
 
 local HOST_SCRIPT = "cpu=$(nproc); mem=$(awk '/^MemTotal:/{print $2; exit}' /proc/meminfo); df -B1 / | awk 'NR==2{print $2}' | { read disk; printf '{\"cpuTotal\":%s,\"memTotal\":%s,\"diskTotal\":%s}\\n' $cpu $((mem * 1024)) $disk; }"
@@ -1328,8 +1268,7 @@ end
 
 local function refreshStats(done)
     done = done or function() end
-    local wantDocker = M.enginePref ~= "podman" and M.dockerInstalled and dockerOk
-    local wantPodman = M.enginePref ~= "docker" and M.podmanInstalled and podmanOk
+    local engine = selectedEngine()
     local anyRunning = false
     for _, c in ipairs(state.containers) do
         if c.running then
@@ -1344,48 +1283,33 @@ local function refreshStats(done)
         done()
         return
     end
-    local left = 0
-    local acc = {}
-    local function maybe()
-        left = left - 1
-        if left > 0 then
-            return
-        end
-        statRows = acc
-        statCache.rows = acc
-        statCache.freshAt = noctalia.nowMs() + 6000
-        done()
-    end
-    local function fetch(engine)
+    if anyRunning then
         local bin = (engine == "podman") and "podman" or "docker"
         local fmt = (engine == "podman") and "json" or "{{json .}}"
         noctalia.runAsync({ bin, "stats", "--no-stream", "--format", fmt }, function(result)
             if result and result.exitCode == 0 then
                 local parsed = M.parseStats(result.stdout)
-                for _, row in ipairs(parsed.rows) do
-                    acc[#acc + 1] = row
-                end
+                statRows = parsed.rows
+                statCache.rows = parsed.rows
+                statCache.freshAt = noctalia.nowMs() + 6000
             end
-            maybe()
+            done()
         end)
-    end
-    if wantDocker then
-        left = left + 1
-        fetch("docker")
-    end
-    if wantPodman then
-        left = left + 1
-        fetch("podman")
-    end
-    if left == 0 then
-        maybe()
+    else
+        statRows = {}
+        diskUsed = 0
+        statCache.rows = {}
+        done()
     end
 end
 
 local function recognizeEngine()
-    local wantDocker = M.enginePref ~= "podman"
-    local wantPodman = M.enginePref ~= "docker"
-    state.engine = (wantDocker and dockerOk) and "docker" or ((wantPodman and podmanOk) and "podman" or "")
+    local engine = selectedEngine()
+    if engine == "docker" then
+        state.engine = dockerOk and "docker" or ""
+    else
+        state.engine = podmanOk and "podman" or ""
+    end
 end
 
 function M.refreshNow()
