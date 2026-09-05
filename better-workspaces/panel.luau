@@ -5,15 +5,15 @@ local isOpen = false
 local currentWorkspace = 1
 local workspaceCount = 9
 local displayMode = "default"
-local revealOccupied = true
-local dimEmpty = true
-local workspaces = {}
-local selectedIndex = 0
+local specialWorkspaces = {}
 local _switching = false
-local specialWorkspaces = {}  -- { { name = "gaming" }, ... } discovered from workspaces.lua
 
--- Persist panel setting changes to a JSON file so the widget can override
--- Noctalia config without needing a settings-UI round-trip.
+local pillSize = "sm"
+local fontWeight = "normal"
+local fontStyle = "normal"
+local pillVariant = "default"
+local gap = 4
+
 local stateFile = (noctalia.pluginDataDir() or "") .. "/state.json"
 
 local function saveState()
@@ -21,6 +21,11 @@ local function saveState()
     displayMode = displayMode,
     workspaceCount = workspaceCount,
     specialWorkspaces = specialWorkspaces,
+    pillSize = pillSize,
+    fontWeight = fontWeight,
+    fontStyle = fontStyle,
+    pillVariant = pillVariant,
+    gap = gap,
   }, true))
   if not ok then noctalia.log("better-workspaces: saveState failed: " .. tostring(err)) end
 end
@@ -33,6 +38,11 @@ local function loadState()
       if data.displayMode then displayMode = data.displayMode end
       if data.workspaceCount then workspaceCount = data.workspaceCount end
       if data.specialWorkspaces then specialWorkspaces = data.specialWorkspaces end
+      if data.pillSize then pillSize = data.pillSize end
+      if data.fontWeight then fontWeight = data.fontWeight end
+      if data.fontStyle then fontStyle = data.fontStyle end
+      if data.pillVariant then pillVariant = data.pillVariant end
+      if data.gap then gap = data.gap end
     end
   end
 end
@@ -173,7 +183,6 @@ local function switchWorkspace(id)
 end
 
 render = function()
-  -- Display mode options
   local modeOptions = {
     "default", "roman", "kanji", "arabic", "korean",
     "thai", "greek", "hindi", "emoji", "russian",
@@ -185,10 +194,51 @@ render = function()
     "Greek (α,β,γ...)", "Hindi (१,२,३...)", "Emoji (①,②,③...)",
     "Russian (а,б,в...)", "App Icon", "App Name"
   }
-
   local modeIndex = 0
   for i, m in ipairs(modeOptions) do
     if m == displayMode then modeIndex = i - 1 break end
+  end
+
+  local sizeOptions = { "sm", "md", "lg" }
+  local sizeLabels = { "Small", "Medium", "Large" }
+  local sizeIndex = 0
+  for i, s in ipairs(sizeOptions) do
+    if s == pillSize then sizeIndex = i - 1 break end
+  end
+
+  local weightOptions = { "normal", "bold" }
+  local weightLabels = { "Normal", "Bold" }
+  local weightIndex = 0
+  for i, w in ipairs(weightOptions) do
+    if w == fontWeight then weightIndex = i - 1 break end
+  end
+
+  local styleOptions = { "normal", "italic" }
+  local styleLabels = { "Normal", "Italic" }
+  local styleIndex = 0
+  for i, s in ipairs(styleOptions) do
+    if s == fontStyle then styleIndex = i - 1 break end
+  end
+
+  local variantOptions = { "default", "rounded" }
+  local variantLabels = { "Default (Sharp)", "Rounded" }
+  local variantIndex = 0
+  for i, v in ipairs(variantOptions) do
+    if v == pillVariant then variantIndex = i - 1 break end
+  end
+
+  -- Build live preview pills
+  local previewPills = {}
+  for n = 1, math.min(workspaceCount, 6) do
+    table.insert(previewPills, ui.button({
+      key = "preview-" .. n,
+      text = convert(n),
+      fontSize = 11,
+      controlSize = pillSize,
+      fontWeight = fontWeight,
+      textStyle = fontStyle,
+      variant = pillVariant,
+    }))
   end
 
   panel.render(ui.column({ flexGrow = 1, gap = 8, padding = 12 }, {
@@ -197,6 +247,9 @@ render = function()
       ui.button({ glyph = "settings", variant = "ghost", onClick = "onOpenSettings" }),
       ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
     }),
+    ui.separator({}),
+    ui.label({ text = "Preview", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+    ui.box({ fill = "surface_container", radius = 6, padding = 8 }, ui.row({ gap = gap, align = "center", justify = "center" }, previewPills)),
     ui.separator({}),
     ui.label({ text = noctalia.tr("panel.display_mode"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.select({
@@ -223,6 +276,69 @@ render = function()
           render()
         end,
       }),
+    }),
+    ui.separator({}),
+    ui.label({ text = "Pill Size", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+    ui.select({
+      key = "size-select",
+      options = sizeLabels,
+      selectedIndex = sizeIndex,
+      controlSize = "sm",
+      onChange = function(idx)
+        pillSize = sizeOptions[tonumber(idx) + 1]
+        saveState()
+        render()
+      end,
+    }),
+    ui.separator({}),
+    ui.label({ text = "Font Weight", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+    ui.select({
+      key = "weight-select",
+      options = weightLabels,
+      selectedIndex = weightIndex,
+      controlSize = "sm",
+      onChange = function(idx)
+        fontWeight = weightOptions[tonumber(idx) + 1]
+        saveState()
+        render()
+      end,
+    }),
+    ui.separator({}),
+    ui.label({ text = "Font Style", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+    ui.select({
+      key = "style-select",
+      options = styleLabels,
+      selectedIndex = styleIndex,
+      controlSize = "sm",
+      onChange = function(idx)
+        fontStyle = styleOptions[tonumber(idx) + 1]
+        saveState()
+        render()
+      end,
+    }),
+    ui.separator({}),
+    ui.label({ text = "Pill Shape", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+    ui.select({
+      key = "variant-select",
+      options = variantLabels,
+      selectedIndex = variantIndex,
+      controlSize = "sm",
+      onChange = function(idx)
+        pillVariant = variantOptions[tonumber(idx) + 1]
+        saveState()
+        render()
+      end,
+    }),
+    ui.separator({}),
+    ui.label({ text = "Gap: " .. gap, fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+    ui.slider({
+      min = 2, max = 16, step = 1, value = gap,
+      controlSize = "sm",
+      onChange = function(val)
+        gap = tonumber(val) or 4
+        saveState()
+        render()
+      end,
     }),
   }))
 end

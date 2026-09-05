@@ -4,16 +4,19 @@
 -- for the panel, scroll to cycle.
 
 local activeWorkspace = 1
-local activeSpecialName = nil  -- name of current special workspace if on one
-local workspaces = {}          -- keyed by id (numeric): { occupied, name }
-local specialWorkspaces = {}  -- { { name = "gaming" }, ... } from state.json
+local activeSpecialName = nil
+local workspaces = {}
+local specialWorkspaces = {}
 local displayMode = "default"
 local workspaceCount = 9
 local _switching = false
 local _refreshing = false
+local pillSize = "sm"
+local fontWeight = "normal"
+local fontStyle = "normal"
+local pillVariant = "rounded"
+local gap = 4
 
--- Read persisted panel choices (displayMode, workspaceCount) from state.json.
--- Panel writes here so changes survive without needing the settings UI.
 local stateFile = (noctalia.pluginDataDir() or "") .. "/state.json"
 local function loadState()
   local raw = noctalia.readFile(stateFile)
@@ -23,6 +26,11 @@ local function loadState()
       if data.displayMode then displayMode = data.displayMode end
       if data.workspaceCount then workspaceCount = data.workspaceCount end
       if data.specialWorkspaces then specialWorkspaces = data.specialWorkspaces end
+      if data.pillSize then pillSize = data.pillSize end
+      if data.fontWeight then fontWeight = data.fontWeight end
+      if data.fontStyle then fontStyle = data.fontStyle end
+      if data.pillVariant then pillVariant = data.pillVariant end
+      if data.gap then gap = data.gap end
     end
   end
 end
@@ -177,8 +185,10 @@ local function buildPills()
       key = "pill-" .. id,
       text = isSpecial and id or conv(id),
       fontSize = 11,
-      controlSize = "sm",
-      variant = focused and "primary" or (isSpecial and "secondary" or "default"),
+      controlSize = pillSize,
+      fontWeight = fontWeight,
+      textStyle = fontStyle,
+      variant = focused and "primary" or (isSpecial and "secondary" or pillVariant),
       selected = focused,
       onClick = function()
         switchTo(pid)
@@ -189,7 +199,7 @@ local function buildPills()
 end
 
 local function render()
-  barWidget.render(ui.row({ gap = 4, align = "center" }, buildPills()))
+  barWidget.render(ui.row({ gap = gap, align = "center" }, buildPills()))
 end
 
 -- Right-click = open panel (settings + per-workspace selection)
