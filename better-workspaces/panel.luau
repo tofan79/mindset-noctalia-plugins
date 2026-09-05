@@ -152,13 +152,15 @@ render = function()
     if v == pillVariant then variantIndex = i - 1 break end
   end
 
+  local heights = { sm = 24, md = 28, lg = 32 }
+  local previewH = heights[pillSize] or 24
   local previewPills = {}
   for n = 1, math.min(workspaceCount, 6) do
     table.insert(previewPills, ui.button({
       key = "preview-" .. n,
       text = convert(n),
       fontSize = 11,
-      controlSize = pillSize,
+      height = previewH,
       variant = pillVariant,
     }))
   end

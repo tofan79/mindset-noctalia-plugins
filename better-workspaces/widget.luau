@@ -140,6 +140,8 @@ end
 local function buildPills()
   local children = {}
   local ids = getIds()
+  local heights = { sm = 24, md = 28, lg = 32 }
+  local h = heights[pillSize] or 24
   for _, id in ipairs(ids) do
     local pid = id
     local isSpecial = isSpecialWorkspaceName(tostring(id))
@@ -155,7 +157,7 @@ local function buildPills()
       key = "pill-" .. tostring(id),
       text = isSpecial and tostring(id) or conv(id),
       fontSize = 11,
-      controlSize = pillSize,
+      height = h,
       variant = focused and "primary" or (isSpecial and "secondary" or pillVariant),
       selected = focused,
       onClick = function()
