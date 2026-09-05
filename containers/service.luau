@@ -1247,13 +1247,20 @@ local function fetchEngineResources(engine, done)
     }, "")
     noctalia.runAsync({ "sh", "-c", script }, function(result)
         local out = (result and result.stdout) or ""
+        noctalia.log(string.format("RES_START engine=%s len=%d exit=%s",
+            engine, #out, tostring(result and result.exitCode)))
         local images, volumes, networks = {}, {}, {}
         if result and result.exitCode == 0 then
             local imgPart, rest = out:match("^(.-)" .. M.SEP_IMAGES .. "(.*)$")
+            noctalia.log(string.format("RES_SPLIT engine=%s img=%s",
+                engine, tostring(imgPart ~= nil)))
             local volPart, netPart = (rest or ""):match("^(.-)" .. M.SEP_VOLUMES .. "(.*)$")
             images = parseImages(imgPart or "", engine)
+            noctalia.log(string.format("RES_IMAGES engine=%s n=%d", engine, #images))
             volumes = parseVolumes(volPart or "", engine)
+            noctalia.log(string.format("RES_VOLUMES engine=%s n=%d", engine, #volumes))
             networks = parseNetworks(netPart or "", engine)
+            noctalia.log(string.format("RES_NETWORKS engine=%s n=%d", engine, #networks))
         end
         done(images, volumes, networks)
     end)
