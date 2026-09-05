@@ -220,8 +220,8 @@ render = function()
     if s == fontStyle then styleIndex = i - 1 break end
   end
 
-  local variantOptions = { "default", "rounded" }
-  local variantLabels = { "Default (Sharp)", "Rounded" }
+  local variantOptions = { "default", "primary", "secondary" }
+  local variantLabels = { "Default", "Primary", "Secondary" }
   local variantIndex = 0
   for i, v in ipairs(variantOptions) do
     if v == pillVariant then variantIndex = i - 1 break end
@@ -280,33 +280,7 @@ render = function()
         end,
       }),
       ui.separator({}),
-      ui.label({ text = "Font Weight", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-      ui.select({
-        key = "weight-select",
-        options = weightLabels,
-        selectedIndex = weightIndex,
-        controlSize = "sm",
-        onChange = function(idx)
-          fontWeight = weightOptions[tonumber(idx) + 1]
-          saveState()
-          render()
-        end,
-      }),
-      ui.separator({}),
-      ui.label({ text = "Font Style", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-      ui.select({
-        key = "style-select",
-        options = styleLabels,
-        selectedIndex = styleIndex,
-        controlSize = "sm",
-        onChange = function(idx)
-          fontStyle = styleOptions[tonumber(idx) + 1]
-          saveState()
-          render()
-        end,
-      }),
-      ui.separator({}),
-      ui.label({ text = "Pill Shape", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+      ui.label({ text = "Pill Color", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
       ui.select({
         key = "variant-select",
         options = variantLabels,
@@ -340,7 +314,7 @@ render = function()
     }),
     ui.separator({}),
     ui.label({ text = "Preview", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-    ui.box({ fill = "surface_container", radius = 6, padding = 8 }, ui.row({ gap = gap, align = "center", justify = "center" }, previewPills)),
+    ui.box({ fill = "secondary", radius = 6 }, ui.row({ gap = gap, align = "center", justify = "center" }, previewPills)),
     ui.separator({}),
     ui.scroll({ flexGrow = 1, gap = 6 }, scrollBody()),
   }))

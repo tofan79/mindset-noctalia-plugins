@@ -14,7 +14,7 @@ local _refreshing = false
 local pillSize = "sm"
 local fontWeight = "normal"
 local fontStyle = "normal"
-local pillVariant = "rounded"
+local pillVariant = "default"
 local gap = 4
 
 local stateFile = (noctalia.pluginDataDir() or "") .. "/state.json"
@@ -27,8 +27,6 @@ local function loadState()
       if data.workspaceCount then workspaceCount = data.workspaceCount end
       if data.specialWorkspaces then specialWorkspaces = data.specialWorkspaces end
       if data.pillSize then pillSize = data.pillSize end
-      if data.fontWeight then fontWeight = data.fontWeight end
-      if data.fontStyle then fontStyle = data.fontStyle end
       if data.pillVariant then pillVariant = data.pillVariant end
       if data.gap then gap = data.gap end
     end
@@ -186,8 +184,6 @@ local function buildPills()
       text = isSpecial and id or conv(id),
       fontSize = 11,
       controlSize = pillSize,
-      fontWeight = fontWeight,
-      textStyle = fontStyle,
       variant = focused and "primary" or (isSpecial and "secondary" or pillVariant),
       selected = focused,
       onClick = function()
