@@ -3,6 +3,7 @@
   "tooltip": "Better Workspaces · click to open",
   "panel": {
     "display_mode": "DISPLAY MODE",
+    "workspace_count": "WORKSPACE COUNT",
     "workspaces": "WORKSPACES",
     "current": "Current"
   },

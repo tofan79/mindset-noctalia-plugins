@@ -10,6 +10,21 @@ local workspaceCount = 9
 local _switching = false
 local _refreshing = false
 
+-- Read persisted panel choices (displayMode, workspaceCount) from state.json.
+-- Panel writes here so changes survive without needing the settings UI.
+local stateFile = (noctalia.pluginDataDir() or "") .. "/state.json"
+local function loadState()
+  local raw = noctalia.readFile(stateFile)
+  if raw then
+    local ok, data = pcall(noctalia.json.decode, raw)
+    if ok and data then
+      if data.displayMode then displayMode = data.displayMode end
+      if data.workspaceCount then workspaceCount = data.workspaceCount end
+    end
+  end
+end
+loadState()
+
 local converters = {}
 converters["default"] = function(n) return tostring(n) end
 
@@ -156,8 +171,7 @@ end
 local function refresh()
   if _refreshing then return end
   _refreshing = true
-  displayMode = noctalia.getConfig("displayMode") or "default"
-  workspaceCount = noctalia.getConfig("workspaceCount") or 9
+  -- displayMode and workspaceCount come from state.json (set by panel), not Noctalia config
 
   noctalia.runAsync("hyprctl activeworkspace -j", function(r)
     if r.exitCode == 0 and r.stdout then

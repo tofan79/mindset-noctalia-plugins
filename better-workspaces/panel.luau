@@ -7,9 +7,34 @@ local workspaceCount = 9
 local displayMode = "default"
 local revealOccupied = true
 local dimEmpty = true
-local workspaces = {} -- {id, occupied, focused, apps}
+local workspaces = {}
 local selectedIndex = 0
-local _switching = false  -- prevents concurrent switches from rapid clicks
+local _switching = false
+
+-- Persist panel setting changes to a JSON file so the widget can override
+-- Noctalia config without needing a settings-UI round-trip.
+local stateFile = (noctalia.pluginDataDir() or "") .. "/state.json"
+
+local function saveState()
+  local ok, err = noctalia.writeFile(stateFile, noctalia.json.encode({
+    displayMode = displayMode,
+    workspaceCount = workspaceCount,
+  }, true))
+  if not ok then noctalia.log("better-workspaces: saveState failed: " .. tostring(err)) end
+end
+
+local function loadState()
+  local raw = noctalia.readFile(stateFile)
+  if raw then
+    local ok, data = pcall(noctalia.json.decode, raw)
+    if ok and data then
+      if data.displayMode then displayMode = data.displayMode end
+      if data.workspaceCount then workspaceCount = data.workspaceCount end
+    end
+  end
+end
+
+loadState()
 
 -- Forward-declared: loadWorkspaces (defined below) calls render() from an async
 -- callback. Without this the upvalue would be nil and the call would crash.
@@ -231,8 +256,23 @@ render = function()
       controlSize = "sm",
       onChange = function(idx)
         displayMode = modeOptions[tonumber(idx) + 1]
+        saveState()
         render()
       end,
+    }),
+    ui.separator({}),
+    ui.label({ text = noctalia.tr("panel.workspace_count"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+    ui.row({ gap = 8, align = "center" }, {
+      ui.label({ text = tostring(workspaceCount), fontSize = 13, fontWeight = "bold", width = 24 }),
+      ui.slider({
+        min = 1, max = 20, step = 1, value = workspaceCount,
+        controlSize = "sm",
+        onChange = function(val)
+          workspaceCount = tonumber(val) or 9
+          saveState()
+          render()
+        end,
+      }),
     }),
     ui.separator({}),
     ui.label({ text = noctalia.tr("panel.workspaces"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
