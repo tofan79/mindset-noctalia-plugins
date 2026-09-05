@@ -95,7 +95,8 @@ local function shellQuote(s)
 end
 
 local function switchWorkspace(id)
-  noctalia.runAsync('hyprctl dispatch hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })', function(result)
+  local expr = 'hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })'
+  noctalia.runAsync("hyprctl dispatch " .. shellQuote(expr), function(result)
     if result.exitCode == 0 then
       panel.close()
     else

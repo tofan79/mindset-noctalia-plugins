@@ -70,6 +70,10 @@ local function conv(n)
   return (converters[displayMode] or converters["default"])(n)
 end
 
+local function shellQuote(s)
+  return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
+end
+
 local function getIds()
   local ids = {}
   for n = 1, workspaceCount do ids[n] = n end
@@ -85,39 +89,37 @@ local function getIds()
 end
 
 local function switchTo(id)
-  noctalia.runAsync('hyprctl dispatch hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })', function() end)
+  local expr = 'hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })'
+  noctalia.runAsync("hyprctl dispatch " .. shellQuote(expr), function(r)
+    if r.exitCode ~= 0 then
+      noctalia.log("better-workspaces: dispatch to " .. id .. " failed (exit " .. tostring(r.exitCode) .. ")")
+    else
+      refresh()
+    end
+  end)
 end
 
 -- Workspace pills behave like a normal workspace indicator: left-click a pill
--- switches to that workspace. Right-click (onRightClick) opens the panel.
+-- switches to that workspace. `ui.button` is the only reliably interactive
+-- element in bar widgets (no keyboard there, so column/label hit-testing is not
+-- usable); the active pill is rendered `selected` so its fill tracks the active
+-- workspace. Right-click (onRightClick) opens the panel.
 local function buildPills()
   local children = {}
   local ids = getIds()
   for _, id in ipairs(ids) do
     local pid = id
     local focused = (id == activeWorkspace)
-    local fill = focused and "primary" or "surface"
-    local txt = focused and "on_primary" or "on_surface"
-    table.insert(children, ui.column({
+    table.insert(children, ui.button({
       key = "pill-" .. id,
-      minWidth = 24,
-      minHeight = 20,
-      radius = 4,
-      fill = fill,
-      align = "center",
-      justify = "center",
+      text = conv(id),
+      fontSize = 11,
+      controlSize = "sm",
+      variant = focused and "primary" or "default",
+      selected = focused,
       onClick = function()
         switchTo(pid)
       end,
-    }, {
-      ui.label({
-        key = "pill-label-" .. id,
-        text = conv(id),
-        fontSize = 10,
-        fontWeight = focused and "bold" or "normal",
-        color = txt,
-        textAlign = "center",
-      }),
     }))
   end
   return children
@@ -175,12 +177,17 @@ end
 -- count, same way better-displays owns its monitor lines. Runs on every widget
 -- reload (startup and config change); the script no-ops when already in sync.
 local scriptDir = noctalia.pluginDir() .. "/bin"
-local function shellQuote(s)
-  return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
-end
 local function persistWorkspaceRules()
   noctalia.runAsync(shellQuote(scriptDir .. "/better-workspace-persist") .. " " .. tostring(workspaceCount), function() end)
 end
+
+-- Poll active workspace so the pill fill tracks workspace switches made from
+-- outside the widget too (keybinds, other indicators).
+function update()
+  refresh()
+end
+
+noctalia.setUpdateInterval(1000)
 
 refresh()
 persistWorkspaceRules()
