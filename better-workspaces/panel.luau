@@ -46,10 +46,36 @@ local function normalizeName(fullName)
   return fullName:gsub("^name:", "")
 end
 
+local function resolveHyprConfigDir()
+  local env = os.getenv("HYPRLAND_CONFIG_FILE")
+  if env and env:match("%.lua$") then
+    local dir = env:gsub("/[^/]+$", "")
+    return dir
+  end
+  local env2 = os.getenv("HYPR_CONFIG_DIR")
+  if env2 and env2 ~= "" then
+    return env2
+  end
+  local home = os.getenv("HOME") or ""
+  local xdg = os.getenv("XDG_CONFIG_HOME") or (home .. "/.config")
+  local candidates = {
+    xdg .. "/hypr/config",
+    xdg .. "/hyprland/config",
+    home .. "/.config/hypr/config",
+    home .. "/.config/hyprland/config",
+  }
+  for _, dir in ipairs(candidates) do
+    local f = io.open(dir .. "/workspaces.lua", "r")
+    if f then f:close(); return dir end
+  end
+  return xdg .. "/hypr/config"
+end
+
 local function discoverSpecialWorkspaces()
   -- Only scan workspaces.lua — it's the authoritative source for named workspaces.
-  -- Skip numeric workspace names (1, 2, 3...) — only real named workspaces.
-  local raw = noctalia.readFile("/home/mindset/.config/hypr/config/workspaces.lua")
+  -- Auto-detect Hyprland config directory.
+  local configDir = resolveHyprConfigDir()
+  local raw = noctalia.readFile(configDir .. "/workspaces.lua")
   if not raw then return {} end
   local found = {}
   for fullName in raw:gmatch('workspace%s*=%s*"([^"]+)"') do
