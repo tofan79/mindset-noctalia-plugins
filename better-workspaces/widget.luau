@@ -91,10 +91,33 @@ local function shellQuote(s)
   return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
 end
 
+local function isSpecialWorkspace(id)
+  local ws = workspaces[id]
+  return ws and ws.name and ws.name:find("^name:") ~= nil
+end
+
 local function getIds()
   local ids = {}
   for n = 1, workspaceCount do ids[n] = n end
-  table.sort(ids)
+
+  -- Add special occupied workspaces (name starts with "name:") e.g. "name:gaming"
+  for id in pairs(workspaces) do
+    if isSpecialWorkspace(id) and workspaces[id].occupied then
+      local seen = false
+      for _, v in ipairs(ids) do if v == id then seen = true break end end
+      if not seen then table.insert(ids, id) end
+    end
+  end
+
+  -- Sort: numbers first (ascending), then special workspaces (by name string)
+  table.sort(ids, function(a, b)
+    local aSpec = isSpecialWorkspace(a)
+    local bSpec = isSpecialWorkspace(b)
+    if aSpec ~= bSpec then return aSpec == false end
+    if type(a) == "number" and type(b) == "number" then return a < b end
+    return tostring(a) < tostring(b)
+  end)
+
   return ids
 end
 
@@ -121,13 +144,24 @@ local function buildPills()
   local ids = getIds()
   for _, id in ipairs(ids) do
     local pid = id
+    local wsData = workspaces[id]
+    local isSpecial = wsData and wsData.name and wsData.name:find("^name:") ~= nil
     local focused = (id == activeWorkspace)
+
+    local text
+    if isSpecial then
+      local short = (wsData.name):gsub("^name:", "★")
+      text = short
+    else
+      text = conv(id)
+    end
+
     table.insert(children, ui.button({
       key = "pill-" .. id,
-      text = conv(id),
+      text = text,
       fontSize = 11,
       controlSize = "sm",
-      variant = focused and "primary" or "default",
+      variant = focused and "primary" or (isSpecial and "secondary" or "default"),
       selected = focused,
       onClick = function()
         switchTo(pid)
@@ -180,7 +214,7 @@ local function refresh()
         if type(d) == "table" then
           workspaces = {}
           for _, ws in ipairs(d) do
-            workspaces[ws.id] = { occupied = (ws.windows or 0) > 0 }
+            workspaces[ws.id] = { occupied = (ws.windows or 0) > 0, name = ws.name }
           end
         end
       end

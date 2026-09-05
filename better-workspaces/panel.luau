@@ -265,7 +265,7 @@ render = function()
     ui.row({ gap = 8, align = "center" }, {
       ui.label({ text = tostring(workspaceCount), fontSize = 13, fontWeight = "bold", width = 24 }),
       ui.slider({
-        min = 1, max = 20, step = 1, value = workspaceCount,
+        min = 1, max = 9, step = 1, value = workspaceCount,
         controlSize = "sm",
         onChange = function(val)
           workspaceCount = tonumber(val) or 9
