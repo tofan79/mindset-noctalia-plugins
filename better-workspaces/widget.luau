@@ -7,8 +7,8 @@ local activeWorkspace = 1
 local workspaces = {}
 local displayMode = "default"
 local workspaceCount = 9
-local _switching = false  -- guard: prevent rapid back-to-back switchTo calls
-local _refreshing = false -- guard: prevent concurrent refresh() calls
+local _switching = false
+local _refreshing = false
 
 local converters = {}
 converters["default"] = function(n) return tostring(n) end
@@ -99,14 +99,7 @@ local function switchTo(id)
     if r.exitCode ~= 0 then
       noctalia.log("better-workspaces: dispatch to " .. id .. " failed (exit " .. tostring(r.exitCode) .. ")")
     end
-    -- Immediate fill update: single lightweight query, no nested chains
-    noctalia.runAsync("hyprctl activeworkspace -j", function(r2)
-      if r2.exitCode == 0 and r2.stdout then
-        local d = noctalia.json.decode(r2.stdout)
-        if d and d.id then activeWorkspace = d.id end
-      end
-      render()
-    end)
+    -- no render() here — 100ms poll update() catches the change fast enough
   end)
 end
 
@@ -172,6 +165,7 @@ local function refresh()
       if d and d.id then activeWorkspace = d.id end
     end
     noctalia.runAsync("hyprctl workspaces -j", function(r2)
+      _refreshing = false
       if r2.exitCode == 0 and r2.stdout then
         local d = noctalia.json.decode(r2.stdout)
         if type(d) == "table" then
@@ -182,7 +176,6 @@ local function refresh()
         end
       end
       render()
-      _refreshing = false
     end)
   end)
 end
