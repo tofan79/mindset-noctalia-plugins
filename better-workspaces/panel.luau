@@ -37,33 +37,11 @@ local function loadState()
   end
 end
 
--- Discover named workspaces from ~/.config/hypr/config/workspaces.lua
--- Returns array of { name = "gaming" } entries
-local function discoverSpecialWorkspaces()
-  local wsFile = "/home/mindset/.config/hypr/config/workspaces.lua"
-  local raw = noctalia.readFile(wsFile)
-  if not raw then return {} end
-  local found = {}
-  for fullName in raw:gmatch('workspace%s*=%s*"([^"]+)"') do
-    if fullName then
-      local name = fullName:gsub("^name:", "")
-      if name and name ~= "" and not name:match("^%d+$") then
-        table.insert(found, { name = name })
-      end
-    end
-  end
-  return found
-end
-
--- Normalize workspace name: strip "name:" prefix if present (workspaces.lua uses
--- "name:gaming" but Hyprland returns just "gaming" as the workspace name)
 local function normalizeName(fullName)
   if not fullName then return nil end
   return fullName:gsub("^name:", "")
 end
 
--- Discover named workspaces from ~/.config/hypr/config/workspaces.lua
--- Returns array of { name = "gaming" } entries (normalized, no "name:" prefix)
 local function discoverSpecialWorkspaces()
   local wsFile = "/home/mindset/.config/hypr/config/workspaces.lua"
   local raw = noctalia.readFile(wsFile)
@@ -87,14 +65,13 @@ end
 
 -- Merge discovered workspaces into state (deduped by normalized name)
 local discovered = discoverSpecialWorkspaces()
-  for _, ws in ipairs(discovered) do
-    local name = ws.name
-    local seen = false
-    for _, ex in ipairs(specialWorkspaces) do
-      if normalizeName(ex.name) == name then seen = true break end
-    end
-    if not seen then table.insert(specialWorkspaces, { name = name }) end
+for _, name in ipairs(discovered) do
+  local seen = false
+  for _, ex in ipairs(specialWorkspaces) do
+    if normalizeName(ex.name) == name then seen = true break end
   end
+  if not seen then table.insert(specialWorkspaces, { name = name }) end
+end
 saveState()
 
 -- Forward-declared: loadWorkspaces (defined below) calls render() from an async
@@ -344,12 +321,6 @@ end
 function onOpen(_context)
   isOpen = true
   selectedIndex = 0
-
-  -- Load settings
-  workspaceCount = noctalia.getConfig("workspaceCount") or 9
-  displayMode = noctalia.getConfig("displayMode") or "default"
-  revealOccupied = noctalia.getConfig("revealOccupied") ~= false
-  dimEmpty = noctalia.getConfig("dimEmpty") ~= false
 
   -- Get current workspace
   noctalia.runAsync("hyprctl activeworkspace -j", function(result)
