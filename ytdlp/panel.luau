@@ -44,7 +44,7 @@ local function shellQuote(s)
   return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
 end
 
-local function extractInfo()
+local function doExtract()
   if not url or url == "" then
     lastError = "Please enter a URL"
     render()
@@ -72,7 +72,7 @@ local function extractInfo()
   end)
 end
 
-local function startDownload()
+local function doDownload()
   if not url or url == "" then
     lastError = "Please enter a URL"
     render()
@@ -133,7 +133,7 @@ local function formatSize(bytes)
 end
 
 function onUrlChange(val)
-  url = val
+  url = val or ""
 end
 
 function onDirChange(val)
@@ -155,19 +155,12 @@ function onQualityChange(idx)
   render()
 end
 
-function onExtractClick()
-  extractInfo()
-end
-
-function onDownloadClick()
-  startDownload()
-end
-
 local render
 
 render = function()
   local modeIndex = selectedMode - 1
   local qualityIndex = selectedQuality - 1
+  local canExtract = not isExtracting and not isDownloading and url and url ~= ""
 
   local infoSection = {}
   if videoInfo then
@@ -231,16 +224,20 @@ render = function()
         text = "Extract",
         glyph = "search",
         variant = "primary",
-        disabled = isExtracting or isDownloading or url == "",
-        onClick = "onExtractClick",
+        disabled = not canExtract,
+        onClick = function()
+          doExtract()
+        end,
       }),
       ui.button({
         key = "download-btn",
         text = "Download",
         glyph = "download",
         variant = "primary",
-        disabled = isExtracting or isDownloading or url == "",
-        onClick = "onDownloadClick",
+        disabled = not canExtract,
+        onClick = function()
+          doDownload()
+        end,
       }),
     }),
     ui.separator({}),
@@ -291,7 +288,7 @@ function onKey(chord, pressed)
     panel.close()
   elseif chord == "Enter" then
     if url and url ~= "" and not isDownloading then
-      startDownload()
+      doDownload()
     end
   end
 end
