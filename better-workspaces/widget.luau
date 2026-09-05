@@ -1,6 +1,7 @@
 --!nonstrict
 -- Better Workspaces bar widget.
--- Shows all workspaces as pills. Scroll to cycle, click to open panel.
+-- Workspace pills behave like a normal indicator: click to switch, right-click
+-- for the panel, scroll to cycle. Workspace rules sync to hypr workspaces.lua.
 
 local activeWorkspace = 1
 local workspaces = {}
@@ -83,10 +84,17 @@ local function getIds()
   return ids
 end
 
+local function switchTo(id)
+  noctalia.runAsync("hyprctl dispatch workspace " .. tostring(id), function() end)
+end
+
+-- Workspace pills behave like a normal workspace indicator: left-click a pill
+-- switches to that workspace. Right-click (onRightClick) opens the panel.
 local function buildPills()
   local children = {}
   local ids = getIds()
   for _, id in ipairs(ids) do
+    local pid = id
     local focused = (id == activeWorkspace)
     local fill = focused and "primary" or "surface"
     local txt = focused and "on_primary" or "on_surface"
@@ -98,6 +106,9 @@ local function buildPills()
       fill = fill,
       align = "center",
       justify = "center",
+      onClick = function()
+        switchTo(pid)
+      end,
     }, {
       ui.label({
         key = "pill-label-" .. id,
@@ -120,8 +131,8 @@ local function switchTo(id)
   noctalia.runAsync("hyprctl dispatch workspace " .. tostring(id), function() end)
 end
 
--- Click = open panel (for direct workspace selection)
-function onClick()
+-- Right-click = open panel (settings + per-workspace selection)
+function onRightClick()
   noctalia.togglePanel("mindset/better-workspaces:panel")
 end
 
@@ -164,4 +175,13 @@ local function refresh()
   end)
 end
 
+-- Keep ~/.config/hypr/config/workspaces.lua in sync with the configured workspace
+-- count, same way better-displays owns its monitor lines. Runs on every widget
+-- reload (startup and config change); the script no-ops when already in sync.
+local scriptDir = noctalia.pluginDir() .. "/bin"
+local function persistWorkspaceRules()
+  noctalia.runAsync(shellQuote(scriptDir .. "/better-workspace-persist") .. " " .. tostring(workspaceCount), function() end)
+end
+
 refresh()
+persistWorkspaceRules()

@@ -74,8 +74,8 @@ tags = ["bar", "panel", "service", "productivity", "notification"]
 [[plugin]]
 id = "mindset/better-workspaces"
 name = "Better Workspaces"
-version = "1.0.0"
-updated_at = 1788493822
+version = "1.0.1"
+updated_at = 1788642000
 added_at = 1788493822
 author = "mindset"
 license = "MIT"

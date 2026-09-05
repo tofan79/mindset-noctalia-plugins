@@ -1,0 +1,77 @@
+#!/bin/bash
+# Keep ~/.config/hypr/config/workspaces.lua in sync with the plugin's workspace
+# count. Only the plugin-managed numeric rules (workspace = "<digits>") are
+# rewritten; comments, named workspaces and any other hand-written rules survive.
+# Mirrors how better-displays owns its hl.monitor(...) lines.
+
+set -euo pipefail
+
+WSLUA="${1:-$HOME/.config/hypr/config/workspaces.lua}"
+COUNT="${2:-}"
+if [[ -z $COUNT || ! $COUNT =~ ^[0-9]+$ || $COUNT -lt 1 || $COUNT -gt 20 ]]; then
+  echo "usage: better-workspace-persist [<path>] <count 1-20>" >&2
+  exit 1
+fi
+
+mkdir -p "$(dirname "$WSLUA")"
+[[ -f $WSLUA ]] || : >"$WSLUA"
+
+# Existing numeric rules in order, so we can reuse the first monitor split.
+# Format: NUM<TAB>MONITOR
+mapfile -t EXISTING < <(grep -oE 'hl\.workspace_rule\(\{ workspace = "[0-9]+", monitor = [A-Za-z0-9_]+' "$WSLUA" \
+  | sed -E 's/.*workspace = "([0-9]+)", monitor = ([A-Za-z0-9_]+).*/\1\t\2/' || true)
+
+# Monitor for a given workspace number: keep the existing assignment if one
+# exists, otherwise fall back to the default split (1-5 -> MONITOR1, 6+ -> MONITOR2).
+monitor_for() {
+  local n="$1"
+  local num mon
+  for entry in "${EXISTING[@]:-}"; do
+    num="${entry%%$'\t'*}"
+    mon="${entry#*$'\t'}"
+    if [[ $num == "$n" && -n $mon ]]; then echo "$mon"; return; fi
+  done
+  if (( n <= 5 )); then echo "MONITOR1"; else echo "MONITOR2"; fi
+}
+
+build_rule() {
+  printf 'hl.workspace_rule({ workspace = "%s", monitor = %s, default = true, persistent = true })' "$1" "$(monitor_for "$1")"
+}
+
+# Only rewrite when the numeric rules differ from the target count/monitors.
+current_count() {
+  grep -cE '^hl\.workspace_rule\(\{ workspace = "[0-9]+"' "$WSLUA" || true
+}
+
+local_tmp="$(mktemp)"
+trap 'rm -f "$local_tmp"' EXIT
+
+if (( $(current_count) == COUNT )); then
+  # Same count — verify monitor split matches too before declaring in sync.
+  ok=1
+  n="" mon="" want=""
+  for n in $(seq 1 "$COUNT"); do
+    want="$(monitor_for "$n")"
+    mon="$(grep -E "^hl\.workspace_rule\(\{ workspace = \"$n\"," "$WSLUA" | head -1 | sed -E 's/.*monitor = ([A-Za-z0-9_]+).*/\1/')"
+    if [[ $mon != "$want" ]]; then ok=0; break; fi
+  done
+  if (( ok )); then
+    exit 0
+  fi
+fi
+
+# Strip only plugin-managed numeric rules; keep everything else verbatim.
+grep -vE '^hl\.workspace_rule\(\{ workspace = "[0-9]+"' "$WSLUA" >"$local_tmp" || true
+
+# Leftover blank line separators collapse to a single break so the numeric block
+# starts cleanly below whatever comments/rules remain.
+awk 'BEGIN{p=1} /^[[:space:]]*$/{g=1; next} {if (g) {print ""; g=0} print}' "$local_tmp" >"${local_tmp}.fmt"
+mv "${local_tmp}.fmt" "$local_tmp"
+
+{
+  cat "$local_tmp"
+  [[ -s $local_tmp ]] && printf '\n'
+  for n in $(seq 1 "$COUNT"); do
+    printf '%s\n' "$(build_rule "$n")"
+  done
+} >"$WSLUA"
