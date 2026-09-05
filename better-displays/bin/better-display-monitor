@@ -1,19 +1,19 @@
 #!/bin/bash
-# omarchy:summary=Per-monitor resolution, scale, position, and transform
-# omarchy:group=display
-# omarchy:name=monitor
-# omarchy:args=[list|set <output> [--mode WxH@Hz] [--scale N] [--pos X,Y] [--transform N]]
-# omarchy:examples=omarchy display monitor list | omarchy display monitor set DP-1 --mode 2560x1440@144 --scale 1.6 --pos 0x0 --transform 0
+# better-display-monitor:summary=Per-monitor resolution, scale, position, and transform
+# better-display-monitor:group=display
+# better-display-monitor:name=monitor
+# better-display-monitor:args=[list|set <output> [--mode WxH@Hz] [--scale N] [--pos X,Y] [--transform N]]
+# better-display-monitor:examples=better-display-monitor list | better-display-monitor set DP-1 --mode 2560x1440@144 --scale 1.6 --pos 0x0 --transform 0
 
 # Granular per-monitor display control. Applies changes live via hyprctl and
-# persists them to ~/.config/omarchy/displays.json (runtime state) and, when a
-# matching hl.monitor line exists, to ~/.config/hypr/monitors.lua (so the
-# layout survives a reboot). Terminal fonts are handled separately by
-# `omarchy display terminal`.
+# persists them to ~/.config/noctalia/plugin/better-displays/displays.json (runtime state)
+# and, when a matching hl.monitor line exists, to ~/.config/hypr/monitors.lua
+# (so the layout survives a reboot). Terminal fonts are handled separately by
+# `better-display-terminal`.
 
 set -euo pipefail
 
-CONFIG_DIR="$HOME/.config/omarchy"
+CONFIG_DIR="$HOME/.config/noctalia/plugin/better-displays"
 DISPLAYS_JSON="$CONFIG_DIR/displays.json"
 
 # Resolve the active monitors.lua location. Priority:
@@ -112,7 +112,7 @@ list_modes() {
 }
 
 clean_scale() {
-  # Mirror omarchy-hyprland-monitor-scaling: Hyprland only accepts scales where
+  # Mirror the monitor-scaling rule (Hyprland only accepts scales where
   # the mode divides into whole logical pixels (1/120 steps).
   awk -v scale="$1" -v width="$2" -v height="$3" '
     function gcd(a, b, t) { while (b) { t = a % b; a = b; b = t } return a }
@@ -165,12 +165,12 @@ cmd_list() {
 
 cmd_set() {
   local output="${1:-}"
-  [[ -n $output ]] || { echo "Usage: omarchy display monitor set <output> [--mode WxH@Hz] [--scale N] [--pos X,Y] [--transform N] [--vrr 0-3]" >&2; exit 1; }
+  [[ -n $output ]] || { echo "Usage: better-display-monitor set <output> [--mode WxH@Hz] [--scale N] [--pos X,Y] [--transform N] [--vrr 0-3]" >&2; exit 1; }
   validate_output "$output"
 
   local m
   m="$(monitor_json "$output")"
-  [[ -n $m ]] || { echo "Monitor '$output' not found (see: omarchy display monitor list)" >&2; exit 1; }
+  [[ -n $m ]] || { echo "Monitor '$output' not found (see: better-display-monitor list)" >&2; exit 1; }
 
   local cur_mode cur_scale cur_pos cur_transform
   cur_mode="$(echo "$m" | jq -r '"\(.width)x\(.height)@\(.refreshRate)"')"
@@ -231,7 +231,7 @@ cmd_set() {
     .monitors = (.monitors // {})
     | .monitors[$out] = { mode: $mode, position: $pos, scale: $scale, transform: $transform, vrr: $vrr }'
 
-  # Persist to monitors.lua when the user still keeps Omarchy monitor lines.
+  # Persist to monitors.lua when the user still keeps plugin monitor lines.
   persist_to_lua "$output" "$mode" "$pos" "$scale" "$transform" "$vrr"
 
   echo "Applied $output: mode=$mode scale=$scale pos=$pos transform=$transform vrr=${vrr:-unchanged}"
@@ -245,7 +245,7 @@ cmd_vrr() {
 }
 
 case "${1:-}" in
-  ""|-h|--help) echo "Usage: omarchy display monitor [list|set <output> ...|vrr]" >&2 ;;
+  ""|-h|--help) echo "Usage: better-display-monitor [list|set <output> ...|vrr]" >&2 ;;
   list) cmd_list ;;
   set) shift; cmd_set "$@" ;;
   vrr) cmd_vrr ;;

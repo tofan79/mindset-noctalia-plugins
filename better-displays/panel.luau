@@ -158,7 +158,7 @@ local function refresh()
     if isOpen then renderPanel() end
   end)
 
-  noctalia.runAsync(shellQuote(scriptDir .. "/omarchy-display-monitor") .. " vrr", function(result)
+  noctalia.runAsync(shellQuote(scriptDir .. "/better-display-monitor") .. " vrr", function(result)
     if result.exitCode == 0 then
       local v = {}
       for line in (result.stdout or ""):gmatch("[^\n]+") do
@@ -169,7 +169,7 @@ local function refresh()
     end
   end)
 
-  noctalia.runAsync(shellQuote(scriptDir .. "/omarchy-display-terminal") .. " list --json", function(result)
+  noctalia.runAsync(shellQuote(scriptDir .. "/better-display-terminal") .. " list --json", function(result)
     if result.exitCode == 0 then
       local data = noctalia.json.decode(result.stdout)
       if type(data) == "table" then
@@ -188,7 +188,7 @@ local function setMonitor(flag, val)
     noctalia.notifyError("Better Displays", "No monitor detected")
     return
   end
-  local script = scriptDir .. "/omarchy-display-monitor"
+  local script = scriptDir .. "/better-display-monitor"
   local ml = noctalia.getConfig("monitorsLua") or ""
   local cmd = shellQuote(script) .. " set " .. shellQuote(m.name) .. " " .. shellQuote(flag) .. " " .. shellQuote(val)
   if ml ~= "" then cmd = cmd .. " --monitors-lua " .. shellQuote(ml) end
@@ -201,7 +201,7 @@ local function setMonitor(flag, val)
 end
 
 local function setTerminal(term, size)
-  local script = scriptDir .. "/omarchy-display-terminal"
+  local script = scriptDir .. "/better-display-terminal"
   local cmd = shellQuote(script) .. " set " .. shellQuote(term) .. " " .. shellQuote(size)
   noctalia.runAsync(cmd, function()
     refresh()

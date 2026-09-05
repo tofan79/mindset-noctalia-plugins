@@ -1,17 +1,17 @@
 #!/bin/bash
-# omarchy:summary=Per-terminal font size (alacritty, kitty, ghostty, foot)
-# omarchy:group=display
-# omarchy:name=terminal
-# omarchy:args=[list|set <terminal> <size>|set-all <size>]
-# omarchy:examples=omarchy display terminal list | omarchy display terminal set ghostty 14 | omarchy display terminal set-all 13
+# better-display-terminal:summary=Per-terminal font size (alacritty, kitty, ghostty, foot)
+# better-display-terminal:group=display
+# better-display-terminal:name=terminal
+# better-display-terminal:args=[list|set <terminal> <size>|set-all <size>]
+# better-display-terminal:examples=better-display-terminal list | better-display-terminal set ghostty 14 | better-display-terminal set-all 13
 
 # Set font sizes independently per terminal emulator and persist them to
-# ~/.config/omarchy/displays.json. This is the granular alternative to the
-# coupled `omarchy display text size`, which rewrites every terminal at once.
+# ~/.config/noctalia/plugin/better-displays/displays.json. This is the granular
+# alternative to applying one size to every terminal at once.
 
 set -euo pipefail
 
-CONFIG_DIR="$HOME/.config/omarchy"
+CONFIG_DIR="$HOME/.config/noctalia/plugin/better-displays"
 DISPLAYS_JSON="$CONFIG_DIR/displays.json"
 
 TERMINALS=(alacritty kitty ghostty foot)
@@ -82,29 +82,27 @@ cmd_list() {
 
 cmd_set() {
   local term="${1:-}" pt="${2:-}"
-  [[ -n $term && -n $pt ]] || { echo "Usage: omarchy display terminal set <terminal> <size>" >&2; exit 1; }
+  [[ -n $term && -n $pt ]] || { echo "Usage: better-display-terminal set <terminal> <size>" >&2; exit 1; }
   [[ " ${TERMINALS[*]} " == *" $term "* ]] || { echo "Unknown terminal: $term" >&2; exit 1; }
   [[ $pt =~ ^[0-9]+(\.[0-9]+)?$ ]] || { echo "Size must be numeric" >&2; exit 1; }
   apply_size "$term" "$pt"
   persist_terminal "$term" "$pt"
   echo "$term font size -> $pt"
-  omarchy restart terminal >/dev/null 2>&1 || true
 }
 
 cmd_set_all() {
   local pt="${1:-}"
-  [[ -n $pt ]] || { echo "Usage: omarchy display terminal set-all <size>" >&2; exit 1; }
+  [[ -n $pt ]] || { echo "Usage: better-display-terminal set-all <size>" >&2; exit 1; }
   [[ $pt =~ ^[0-9]+(\.[0-9]+)?$ ]] || { echo "Size must be numeric" >&2; exit 1; }
   for t in "${TERMINALS[@]}"; do
     apply_size "$t" "$pt"
     persist_terminal "$t" "$pt"
     echo "$t font size -> $pt"
   done
-  omarchy restart terminal >/dev/null 2>&1 || true
 }
 
 case "${1:-}" in
-  ""|-h|--help) echo "Usage: omarchy display terminal [list|set <term> <size>|set-all <size>]" >&2 ;;
+  ""|-h|--help) echo "Usage: better-display-terminal [list|set <term> <size>|set-all <size>]" >&2 ;;
   list) shift; cmd_list "$@" ;;
   set) shift; cmd_set "$@" ;;
   set-all) shift; cmd_set_all "$@" ;;

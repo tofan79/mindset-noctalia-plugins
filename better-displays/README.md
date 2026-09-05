@@ -62,7 +62,7 @@ instead of resetting it.
 ### Applying and persisting
 
 Each change is applied immediately with `hyprctl eval` and written both to the
-runtime state (`~/.config/omarchy/displays.json`) and, when Hyprland config
+runtime state (`~/.config/noctalia/plugin/better-displays/displays.json`) and, when Hyprland config
 uses `hl.monitor(...)` lines, to your active `monitors.lua`. That is what makes
 the layout survive a reboot.
 
@@ -97,13 +97,13 @@ either opens the panel or toggles nothing — it only opens (`noctalia.togglePan
 
 - The backend scripts live in the plugin's `bin/` directory and are also usable
   standalone from a shell:
-  `omarchy-display-monitor list | set <output> [--mode WxH@Hz] [--scale N] [--pos X,Y] [--transform N] [--vrr 0-3]`
-  and `omarchy-display-terminal list | set <term> <size> | set-all <size>`.
+  `better-display-monitor list | set <output> [--mode WxH@Hz] [--scale N] [--pos X,Y] [--transform N] [--vrr 0-3]`
+  and `better-display-terminal list | set <term> <size> | set-all <size>`.
 - Scale is snapped to whole logical pixels (1/120 steps), mirroring Hyprland's
   constraint, so a requested scale may round to the nearest valid value.
 - The full panel renders inside a scroll area, so a large monitor list or many
   terminals never overflows the panel height.
-- Files written: `~/.config/omarchy/displays.json`, the selected `monitors.lua`,
+- Files written: `~/.config/noctalia/plugin/better-displays/displays.json`, the selected `monitors.lua`,
   and the config of any terminal you adjust. No network requests are made.
 
 ## License
