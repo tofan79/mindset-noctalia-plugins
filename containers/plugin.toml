@@ -40,7 +40,7 @@ key = "glyph"
 type = "glyph"
 label_key = "settings.glyph.label"
 description_key = "settings.glyph.description"
-default = "container"
+default = "brand-docker"
 
 [[setting]]
 key = "show_running_count"
