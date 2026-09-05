@@ -62,7 +62,7 @@ instead of resetting it.
 ### Applying and persisting
 
 Each change is applied immediately with `hyprctl eval` and written both to the
-runtime state (`~/.config/noctalia/plugin/better-displays/displays.json`) and, when Hyprland config
+runtime state (`~/.local/state/noctalia/plugins/data/mindset/better-displays/displays.json`) and, when Hyprland config
 uses `hl.monitor(...)` lines, to your active `monitors.lua`. That is what makes
 the layout survive a reboot.
 
@@ -103,7 +103,7 @@ either opens the panel or toggles nothing — it only opens (`noctalia.togglePan
   constraint, so a requested scale may round to the nearest valid value.
 - The full panel renders inside a scroll area, so a large monitor list or many
   terminals never overflows the panel height.
-- Files written: `~/.config/noctalia/plugin/better-displays/displays.json`, the selected `monitors.lua`,
+- Files written: `~/.local/state/noctalia/plugins/data/mindset/better-displays/displays.json`, the selected `monitors.lua`,
   and the config of any terminal you adjust. No network requests are made.
 
 ## License

@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-CONFIG_DIR="$HOME/.config/noctalia/plugin/better-displays"
+CONFIG_DIR="$HOME/.local/state/noctalia/plugins/data/mindset/better-displays"
 DISPLAYS_JSON="$CONFIG_DIR/displays.json"
 
 # Resolve the active monitors.lua location. Priority:
