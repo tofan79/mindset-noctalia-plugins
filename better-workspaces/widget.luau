@@ -174,15 +174,12 @@ local function buildPills()
       textColor = "on_surface"
     end
 
-    local borderW = focused and 2 or 0
-
-    table.insert(children, ui.row({
+    table.insert(children, ui.column({
       key = "pill-" .. tostring(id),
       width = pillWidth,
       height = pillHeight,
       align = "center",
       justify = "center",
-      gap = 0,
       onClick = function()
         switchTo(pid)
       end,
@@ -190,16 +187,14 @@ local function buildPills()
       ui.box({
         fill = fillColor,
         border = focused and "primary" or "outline",
-        borderWidth = borderW,
+        borderWidth = focused and 2 or 1,
         radius = pillRounded,
         flexGrow = 1,
-        height = pillHeight,
       }),
       ui.label({
         text = isSpecial and tostring(id) or conv(id),
         fontSize = 11,
         color = textColor,
-        align = "center",
       }),
     }))
   end
