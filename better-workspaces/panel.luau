@@ -250,7 +250,7 @@ render = function()
     ui.separator({}),
     ui.label({ text = "Preview", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.box({ fill = "surface_container", radius = 6, padding = 8 }, ui.row({ gap = gap, align = "center", justify = "center" }, previewPills)),
-    ui.scroll({ flexGrow = 1, gap = 6 }, ui.column({ gap = 6 }, {
+    ui.scroll({ gap = 6 }, ui.column({ gap = 6 }, {
     ui.label({ text = noctalia.tr("panel.display_mode"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.select({
       key = "mode-select",
