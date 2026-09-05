@@ -103,16 +103,31 @@ end
 
 local function getIds()
   local ids = {}
+
+  -- Always add 1 through workspaceCount (the "always shown" range per slider)
   for n = 1, workspaceCount do ids[n] = n end
 
-  -- Add special workspaces from state.json that are currently occupied (have windows)
-  for _, sw in ipairs(specialWorkspaces) do
-    for wsId, wsData in pairs(workspaces) do
-      if wsData.name == sw.name and wsData.occupied then
+  -- Also add workspaces beyond count that are occupied (have windows),
+  -- including special workspaces (gaming, etc.)
+  for wsId, wsData in pairs(workspaces) do
+    if wsData.occupied then
+      local isInRange = (type(wsId) == "number" and wsId >= 1 and wsId <= workspaceCount)
+      local isSpecial = false
+      for _, sw in ipairs(specialWorkspaces) do
+        if wsData.name == sw.name then isSpecial = true break end
+      end
+      if not isInRange then
         local seen = false
-        for _, v in ipairs(ids) do if v == sw.name then seen = true break end end
-        if not seen then table.insert(ids, sw.name) end
-        break
+        for _, v in ipairs(ids) do
+          if v == wsId or (isSpecial and v == wsData.name) then seen = true break end
+        end
+        if not seen then
+          if isSpecial then
+            table.insert(ids, wsData.name)
+          else
+            table.insert(ids, wsId)
+          end
+        end
       end
     end
   end
