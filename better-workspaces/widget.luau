@@ -99,9 +99,14 @@ local function switchTo(id)
     if r.exitCode ~= 0 then
       noctalia.log("better-workspaces: dispatch to " .. id .. " failed (exit " .. tostring(r.exitCode) .. ")")
     end
-    -- do NOT call refresh() here — update() polls every 1s and will pick up the change;
-    -- calling refresh() here creates nested async chains that survive module hot-reloads
-    -- as stale callbacks trying to call the new module's refresh().
+    -- Immediate fill update: single lightweight query, no nested chains
+    noctalia.runAsync("hyprctl activeworkspace -j", function(r2)
+      if r2.exitCode == 0 and r2.stdout then
+        local d = noctalia.json.decode(r2.stdout)
+        if d and d.id then activeWorkspace = d.id end
+      end
+      render()
+    end)
   end)
 end
 
@@ -196,7 +201,7 @@ function update()
   refresh()
 end
 
-noctalia.setUpdateInterval(1000)
+noctalia.setUpdateInterval(300)  -- 300ms: responsive without hammering hyprctl
 
 refresh()
 persistWorkspaceRules()
