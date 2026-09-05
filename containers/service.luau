@@ -1235,13 +1235,23 @@ local function fetchEngineResources(engine, done)
     end)
 end
 
+local resourceCache = { freshAt = 0 }
+
 local function refreshResources(done)
     done = done or function() end
+    -- Images/volumes/networks change rarely; a single host runs podman/docker, so
+    -- fetching and decoding them every poll is needless CPU churn that occasionally
+    -- trips the VM budget. Re-fetch at most every 10s.
+    if noctalia.nowMs() < resourceCache.freshAt then
+        done()
+        return
+    end
     local engine = selectedEngine()
     fetchEngineResources(engine, function(i, v, n)
         state.images = i
         state.volumes = v
         state.networks = n
+        resourceCache.freshAt = noctalia.nowMs() + 10000
         done()
     end)
 end
