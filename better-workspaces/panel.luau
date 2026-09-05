@@ -245,7 +245,7 @@ render = function()
       ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
     }),
     ui.separator({}),
-    ui.label({ text = "Preview", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+    ui.label({ text = "", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.box({ fill = "secondary", radius = 6 }, ui.row({ gap = gap, align = "center", justify = "center" }, previewPills)),
     ui.scroll({ flexGrow = 1, gap = 6 }, scrollBody()),
   }))
