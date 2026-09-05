@@ -10,7 +10,7 @@ local downloadProgress = ""
 local lastError = nil
 local selectedMode = 1
 local selectedQuality = 1
-local downloadDir = os.getenv("HOME") .. "/Downloads"
+local downloadDir = "/home/Downloads"
 
 local modeOptions = { "Best Quality", "Video Only", "Audio Only" }
 local qualityOptions = { "Best", "2160p", "1440p", "1080p", "720p", "480p", "360p", "240p" }
@@ -44,18 +44,10 @@ local function shellQuote(s)
   return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
 end
 
-local function buildYtdlpArgs(info)
-  local args = { "-J", "--no-download", "--no-warnings" }
-  if url and url ~= "" then
-    table.insert(args, url)
-  end
-  return table.concat(args, " ")
-end
-
-local function extractInfo(callback)
+local function extractInfo()
   if not url or url == "" then
     lastError = "Please enter a URL"
-    callback(nil)
+    render()
     return
   end
 
@@ -70,14 +62,11 @@ local function extractInfo(callback)
       local ok, data = pcall(noctalia.json.decode, r.stdout)
       if ok and data then
         videoInfo = data
-        callback(data)
       else
         lastError = "Failed to parse video info"
-        callback(nil)
       end
     else
       lastError = "Failed to extract: " .. (r.stderr or "Unknown error")
-      callback(nil)
     end
     render()
   end)
@@ -112,7 +101,7 @@ local function startDownload()
     if r.exitCode == 0 then
       downloadProgress = "Done!"
     else
-      lastError = "Download failed: " .. (r.stderr or "Unknown error")
+      lastError = "Download failed"
       downloadProgress = ""
     end
     render()
@@ -141,6 +130,37 @@ local function formatSize(bytes)
     i = i + 1
   end
   return string.format("%.1f %s", b, units[i])
+end
+
+function onUrlChange(val)
+  url = val
+end
+
+function onDirChange(val)
+  if val and val ~= "" then
+    downloadDir = val
+    saveState()
+  end
+end
+
+function onModeChange(idx)
+  selectedMode = tonumber(idx) + 1
+  saveState()
+  render()
+end
+
+function onQualityChange(idx)
+  selectedQuality = tonumber(idx) + 1
+  saveState()
+  render()
+end
+
+function onExtractClick()
+  extractInfo()
+end
+
+function onDownloadClick()
+  startDownload()
 end
 
 local render
@@ -184,22 +204,26 @@ render = function()
       fontSize = 11,
       color = "primary",
     }))
+  else
+    table.insert(infoSection, ui.label({
+      text = "Enter a URL and click Extract or Download",
+      fontSize = 11,
+      color = "on_surface_variant",
+    }))
   end
 
   panel.render(ui.column({ flexGrow = 1, gap = 8 }, {
     ui.row({ align = "center", justify = "space_between" }, {
-      ui.label({ text = "YT-DLP Downloader", fontSize = 16, fontWeight = "bold", color = "primary", flexGrow = 1 }),
+      ui.label({ text = "YT-DLP", fontSize = 16, fontWeight = "bold", color = "primary", flexGrow = 1 }),
       ui.button({ glyph = "close", variant = "ghost", onClick = "onCloseClicked" }),
     }),
     ui.separator({}),
     ui.label({ text = "URL", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.input({
       key = "url-input",
-      placeholder = "Paste URL here (YouTube, Twitter, etc.)",
+      placeholder = "Paste URL here",
       value = url,
-      onChange = function(val)
-        url = val
-      end,
+      onChange = "onUrlChange",
     }),
     ui.row({ gap = 8 }, {
       ui.button({
@@ -208,10 +232,7 @@ render = function()
         glyph = "search",
         variant = "primary",
         disabled = isExtracting or isDownloading or url == "",
-        onClick = function()
-          extractInfo(function(info)
-          end)
-        end,
+        onClick = "onExtractClick",
       }),
       ui.button({
         key = "download-btn",
@@ -219,13 +240,11 @@ render = function()
         glyph = "download",
         variant = "primary",
         disabled = isExtracting or isDownloading or url == "",
-        onClick = function()
-          startDownload()
-        end,
+        onClick = "onDownloadClick",
       }),
     }),
     ui.separator({}),
-    ui.label({ text = "Download Options", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+    ui.label({ text = "Options", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.row({ gap = 8, align = "center" }, {
       ui.label({ text = "Mode:", fontSize = 11, width = 50 }),
       ui.select({
@@ -233,11 +252,7 @@ render = function()
         options = modeOptions,
         selectedIndex = modeIndex,
         controlSize = "sm",
-        onChange = function(idx)
-          selectedMode = tonumber(idx) + 1
-          saveState()
-          render()
-        end,
+        onChange = "onModeChange",
       }),
     }),
     ui.row({ gap = 8, align = "center" }, {
@@ -248,25 +263,7 @@ render = function()
         selectedIndex = qualityIndex,
         controlSize = "sm",
         disabled = selectedMode == 3,
-        onChange = function(idx)
-          selectedQuality = tonumber(idx) + 1
-          saveState()
-          render()
-        end,
-      }),
-    }),
-    ui.row({ gap = 8, align = "center" }, {
-      ui.label({ text = "Folder:", fontSize = 11, width = 50 }),
-      ui.input({
-        key = "dir-input",
-        placeholder = downloadDir,
-        value = downloadDir,
-        onChange = function(val)
-          if val and val ~= "" then
-            downloadDir = val
-            saveState()
-          end
-        end,
+        onChange = "onQualityChange",
       }),
     }),
     ui.separator({}),

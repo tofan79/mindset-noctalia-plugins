@@ -4,52 +4,36 @@
 local isExtracting = false
 local isDownloading = false
 local downloadProgress = ""
-local currentUrl = ""
-local lastError = nil
 
-local function shellQuote(s)
-  return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
-end
-
-local function getStatus()
-  if isExtracting then
-    return "Extracting..."
-  elseif isDownloading then
-    return "Downloading " .. downloadProgress
-  else
-    return "YT-DLP"
-  end
-end
+local PANEL_ID = "mindset/ytdlp:panel"
 
 local function render()
   local glyph = isExtracting and "loader" or (isDownloading and "download" or "download")
-  barWidget.render(ui.button({
-    key = "ytdlp-btn",
-    text = getStatus(),
-    glyph = glyph,
-    variant = "ghost",
-    selected = false,
-    onClick = function()
-      noctalia.togglePanel("mindset/ytdlp:panel")
-    end,
-  }))
+  barWidget.setGlyph(glyph)
+  local tooltip = "YT-DLP"
+  if isExtracting then
+    tooltip = "Extracting..."
+  elseif isDownloading then
+    tooltip = "Downloading " .. downloadProgress
+  end
+  barWidget.setTooltip(tooltip)
 end
 
-local function refresh()
-  render()
+function onClick()
+  noctalia.togglePanel(PANEL_ID)
 end
 
 function onRightClick()
-  noctalia.togglePanel("mindset/ytdlp:panel")
+  noctalia.togglePanel(PANEL_ID)
 end
 
 function onScroll(axis, steps, startsGesture)
 end
 
 function update()
-  refresh()
+  render()
 end
 
 noctalia.setUpdateInterval(5000)
 
-refresh()
+render()
