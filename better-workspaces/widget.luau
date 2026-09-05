@@ -156,48 +156,52 @@ local function buildPills()
 
     local fillColor
     local textColor
-    local borderColor
 
     if focused then
       fillColor = "primary"
       textColor = "on_primary"
-      borderColor = "primary"
     elseif isSpecial then
       fillColor = "secondary"
       textColor = "on_secondary"
-      borderColor = "secondary"
     elseif pillVariant == "primary" then
       fillColor = "primary"
       textColor = "on_primary"
-      borderColor = "primary"
     elseif pillVariant == "secondary" then
       fillColor = "secondary"
       textColor = "on_secondary"
-      borderColor = "secondary"
     else
       fillColor = "surface_container"
       textColor = "on_surface"
-      borderColor = "outline"
     end
 
-    table.insert(children, ui.box({
+    local borderW = focused and 2 or 0
+
+    table.insert(children, ui.row({
       key = "pill-" .. tostring(id),
-      fill = fillColor,
-      border = borderColor,
-      borderWidth = focused and 2 or 1,
-      radius = pillRounded,
       width = pillWidth,
       height = pillHeight,
+      align = "center",
+      justify = "center",
+      gap = 0,
       onClick = function()
         switchTo(pid)
       end,
-    }, ui.column({ align = "center", justify = "center", flexGrow = 1 }, {
+    }, {
+      ui.box({
+        fill = fillColor,
+        border = focused and "primary" or "outline",
+        borderWidth = borderW,
+        radius = pillRounded,
+        flexGrow = 1,
+        height = pillHeight,
+      }),
       ui.label({
         text = isSpecial and tostring(id) or conv(id),
         fontSize = 11,
         color = textColor,
-      })
-    })))
+        align = "center",
+      }),
+    }))
   end
   return children
 end
