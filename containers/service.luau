@@ -1239,7 +1239,7 @@ end
 
 local function fetchEngineResources(engine, done)
     local bin = (engine == "podman") and "podman" or "docker"
-    local fmt = (engine == "podman") and "json" or "{{json .}}"
+    local fmt = "{{json .}}"
     local script = table.concat({
         bin .. " images --format '" .. fmt .. "'; echo " .. M.SEP_IMAGES .. ";",
         bin .. " volume ls --format '" .. fmt .. "'; echo " .. M.SEP_VOLUMES .. ";",
