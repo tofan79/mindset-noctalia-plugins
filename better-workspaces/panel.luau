@@ -197,17 +197,17 @@ render = function()
       end),
       ui.separator({}),
       ui.label({ text = "Pill Size", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-      sliderRow("Width", pillWidth, 40, 100, function(val)
+      sliderRow("Width", pillWidth, 0, 100, function(val)
         pillWidth = val
         saveState()
         render()
       end),
-      sliderRow("Height", pillHeight, 20, 50, function(val)
+      sliderRow("Height", pillHeight, 0, 50, function(val)
         pillHeight = val
         saveState()
         render()
       end),
-      sliderRow("Rounded", pillRounded, 0, 25, function(val)
+      sliderRow("Rounded", pillRounded, 0, 20, function(val)
         pillRounded = val
         saveState()
         render()
@@ -227,7 +227,7 @@ render = function()
       }),
       ui.separator({}),
       ui.label({ text = "Gap", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-      sliderRow("Gap", gap, 2, 16, function(val)
+      sliderRow("Gap", gap, 1, 15, function(val)
         gap = val
         saveState()
         render()
