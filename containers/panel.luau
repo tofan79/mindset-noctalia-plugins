@@ -407,7 +407,7 @@ local function statusColor(item)
     if item and item.problem then
         return "error"
     elseif item and item.running then
-        return "success"
+        return "primary"
     end
     return "on_surface_variant"
 end
@@ -784,7 +784,7 @@ local function heroBadge()
     local total = stats.total or 0
     local color = "on_surface"
     if running > 0 and running == total and (stats.unhealthy or 0) == 0 then
-        color = "success"
+        color = "primary"
     elseif (stats.unhealthy or 0) > 0 then
         color = "error"
     end
