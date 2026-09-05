@@ -10,13 +10,6 @@ tags         = ["hyprland", "workspace", "indicator", "bar"]
 
 dependencies = ["hyprctl"]
 
-[[setting]]
-key          = "workspaceConfigPath"
-type         = "string"
-label_key    = "settings.workspaceConfigPath.label"
-description_key = "settings.workspaceConfigPath.description"
-default      = ""
-
 [[widget]]
 id    = "widget"
 entry = "widget.luau"
