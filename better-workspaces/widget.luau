@@ -4,6 +4,7 @@
 -- for the panel, scroll to cycle.
 
 local activeWorkspace = 1
+local activeSpecialName = nil  -- name of current special workspace if on one
 local workspaces = {}          -- keyed by id (numeric): { occupied, name }
 local specialWorkspaces = {}  -- { { name = "gaming" }, ... } from state.json
 local displayMode = "default"
@@ -104,9 +105,16 @@ local function getIds()
   local ids = {}
   for n = 1, workspaceCount do ids[n] = n end
 
-  -- Add all special workspaces from state.json (always shown, even if empty)
+  -- Add special workspaces from state.json that are currently occupied (have windows)
   for _, sw in ipairs(specialWorkspaces) do
-    table.insert(ids, sw.name)
+    for wsId, wsData in pairs(workspaces) do
+      if wsData.name == sw.name and wsData.occupied then
+        local seen = false
+        for _, v in ipairs(ids) do if v == sw.name then seen = true break end end
+        if not seen then table.insert(ids, sw.name) end
+        break
+      end
+    end
   end
 
   return ids
@@ -145,13 +153,7 @@ local function buildPills()
     -- Check if this workspace is currently active
     local focused = false
     if isSpecial then
-      -- Special workspace is active if workspaces table has it with occupied=true
-      for wsId, wsData in pairs(workspaces) do
-        if wsData.name == id and wsData.occupied then
-          focused = true
-          break
-        end
-      end
+      focused = (id == activeSpecialName)
     else
       focused = (id == activeWorkspace)
     end
@@ -205,7 +207,15 @@ local function refresh()
   noctalia.runAsync("hyprctl activeworkspace -j", function(r)
     if r.exitCode == 0 and r.stdout then
       local d = noctalia.json.decode(r.stdout)
-      if d and d.id then activeWorkspace = d.id end
+      if d and d.id then
+        activeWorkspace = d.id
+        activeSpecialName = nil
+        if d.name then
+          for _, sw in ipairs(specialWorkspaces) do
+            if d.name == sw.name then activeSpecialName = sw.name break end
+          end
+        end
+      end
     end
     noctalia.runAsync("hyprctl workspaces -j", function(r2)
       _refreshing = false
