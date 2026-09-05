@@ -10,6 +10,9 @@ local _switching = false
 local pillWidth = 40
 local pillHeight = 20
 local pillVariant = "default"
+local fontSize = 11
+local fontWeight = "normal"
+local textStyle = "normal"
 local gap = 4
 
 local stateFile = (noctalia.pluginDataDir() or "") .. "/state.json"
@@ -21,6 +24,9 @@ local function saveState()
     pillWidth = pillWidth,
     pillHeight = pillHeight,
     pillVariant = pillVariant,
+    fontSize = fontSize,
+    fontWeight = fontWeight,
+    textStyle = textStyle,
     gap = gap,
   }, true))
   if not ok then noctalia.log("better-workspaces: saveState failed: " .. tostring(err)) end
@@ -36,6 +42,9 @@ local function loadState()
       if data.pillWidth then pillWidth = data.pillWidth end
       if data.pillHeight then pillHeight = data.pillHeight end
       if data.pillVariant then pillVariant = data.pillVariant end
+      if data.fontSize then fontSize = data.fontSize end
+      if data.fontWeight then fontWeight = data.fontWeight end
+      if data.textStyle then textStyle = data.textStyle end
       if data.gap then gap = data.gap end
     end
   end
@@ -149,7 +158,9 @@ render = function()
     table.insert(previewPills, ui.button({
       key = "preview-" .. n,
       text = convert(n),
-      fontSize = 11,
+      fontSize = fontSize,
+      fontWeight = fontWeight,
+      textStyle = textStyle,
       width = pillWidth,
       height = pillHeight,
       variant = pillVariant,
@@ -203,6 +214,41 @@ render = function()
         saveState()
         render()
       end),
+      ui.separator({}),
+      ui.label({ text = "Font", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+      sliderRow("Size", fontSize, 8, 20, function(val)
+        fontSize = val
+        saveState()
+        render()
+      end),
+      ui.row({ gap = 8, align = "center" }, {
+        ui.label({ text = "Weight", fontSize = 11, width = 70 }),
+        ui.select({
+          key = "weight-select",
+          options = { "Normal", "Bold" },
+          selectedIndex = fontWeight == "bold" and 1 or 0,
+          controlSize = "sm",
+          onChange = function(idx)
+            fontWeight = (tonumber(idx) == 1) and "bold" or "normal"
+            saveState()
+            render()
+          end,
+        }),
+      }),
+      ui.row({ gap = 8, align = "center" }, {
+        ui.label({ text = "Style", fontSize = 11, width = 70 }),
+        ui.select({
+          key = "style-select",
+          options = { "Normal", "Italic" },
+          selectedIndex = textStyle == "italic" and 1 or 0,
+          controlSize = "sm",
+          onChange = function(idx)
+            textStyle = (tonumber(idx) == 1) and "italic" or "normal"
+            saveState()
+            render()
+          end,
+        }),
+      }),
       ui.separator({}),
       ui.label({ text = "Pill Color", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
       ui.select({

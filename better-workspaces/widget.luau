@@ -13,6 +13,9 @@ local _refreshing = false
 local pillWidth = 40
 local pillHeight = 20
 local pillVariant = "default"
+local fontSize = 11
+local fontWeight = "normal"
+local textStyle = "normal"
 local gap = 4
 
 local stateFile = (noctalia.pluginDataDir() or "") .. "/state.json"
@@ -26,6 +29,9 @@ local function loadState()
       if data.pillWidth then pillWidth = data.pillWidth end
       if data.pillHeight then pillHeight = data.pillHeight end
       if data.pillVariant then pillVariant = data.pillVariant end
+      if data.fontSize then fontSize = data.fontSize end
+      if data.fontWeight then fontWeight = data.fontWeight end
+      if data.textStyle then textStyle = data.textStyle end
       if data.gap then gap = data.gap end
     end
   end
@@ -164,7 +170,9 @@ local function buildPills()
     table.insert(children, ui.button({
       key = "pill-" .. tostring(id),
       text = isSpecial and tostring(id) or conv(id),
-      fontSize = 11,
+      fontSize = fontSize,
+      fontWeight = fontWeight,
+      textStyle = textStyle,
       width = pillWidth,
       height = pillHeight,
       variant = variant,
