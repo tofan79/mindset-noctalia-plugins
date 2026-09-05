@@ -10,10 +10,10 @@ local displayMode = "default"
 local workspaceCount = 9
 local _switching = false
 local _refreshing = false
-local pillWidth = 40
+local pillWidth = 50
 local pillHeight = 20
 local pillVariant = "default"
-local fontSize = 11
+local fontSize = 12
 local fontWeight = "normal"
 local textStyle = "normal"
 local gap = 4
@@ -30,8 +30,6 @@ local function loadState()
       if data.pillHeight then pillHeight = data.pillHeight end
       if data.pillVariant then pillVariant = data.pillVariant end
       if data.fontSize then fontSize = data.fontSize end
-      if data.fontWeight then fontWeight = data.fontWeight end
-      if data.textStyle then textStyle = data.textStyle end
       if data.gap then gap = data.gap end
     end
   end
