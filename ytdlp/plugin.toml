@@ -1,0 +1,24 @@
+id           = "mindset/ytdlp"
+name         = "YT-DLP"
+version      = "1.0.0"
+plugin_api   = 19
+author       = "mindset"
+license      = "MIT"
+icon         = "download"
+description  = "Download media from any URL using yt-dlp directly from your bar."
+tags         = ["media", "download", "bar", "ytdlp"]
+
+dependencies = ["yt-dlp"]
+
+[[widget]]
+id    = "widget"
+entry = "widget.luau"
+
+[[panel]]
+id              = "panel"
+entry           = "panel.luau"
+width           = 380
+height          = 320
+placement       = "floating"
+position        = "center"
+keyboard_focus  = "exclusive"

@@ -1,0 +1,23 @@
+{
+  "title": "YT-DLP Downloader",
+  "tooltip": "YT-DLP Downloader · click to open",
+  "panel": {
+    "url": "URL",
+    "extract": "Extract",
+    "download": "Download",
+    "mode": "Mode",
+    "quality": "Quality",
+    "folder": "Folder"
+  },
+  "status": {
+    "ready": "Ready",
+    "extracting": "Extracting...",
+    "downloading": "Downloading",
+    "done": "Done!"
+  },
+  "error": {
+    "no_url": "Please enter a URL",
+    "extract_failed": "Failed to extract video info",
+    "download_failed": "Download failed"
+  }
+}
