@@ -469,14 +469,17 @@ local function parseJsonRows(text)
     if s == "" then
         return {}
     end
-    -- try full-array
-    local ok, parsed = pcall(function()
-        return noctalia.json.decode(s)
-    end)
-    if ok and type(parsed) == "table" then
-        if parsed[1] ~= nil or next(parsed) == nil then
+    -- Resources use '{{json .}}' (NDJSON: one object per line); stats/system-df use
+    -- '--format json' (a single array document). Peek the first char to pick the cheap,
+    -- correct decoder instead of trying to parse the whole blob both ways every poll.
+    if s:sub(1, 1) == "[" then
+        local ok, parsed = pcall(function()
+            return noctalia.json.decode(s)
+        end)
+        if ok and type(parsed) == "table" then
             return parsed
         end
+        return {}
     end
     -- NDJSON: one object per line
     local rows = {}
