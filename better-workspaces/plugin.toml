@@ -28,7 +28,7 @@ options      = [
   { value = "appIcon",      label_key = "settings.displayMode.appIcon" },
   { value = "appName",      label_key = "settings.displayMode.appName" }
 ]
-default      = "default"
+default      = "kanji"
 
 [[setting]]
 key          = "workspaceCount"

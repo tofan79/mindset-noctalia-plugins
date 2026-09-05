@@ -85,7 +85,7 @@ local function getIds()
 end
 
 local function switchTo(id)
-  noctalia.runAsync("hyprctl dispatch workspace " .. tostring(id), function() end)
+  noctalia.runAsync('hyprctl dispatch hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })', function() end)
 end
 
 -- Workspace pills behave like a normal workspace indicator: left-click a pill
@@ -125,10 +125,6 @@ end
 
 local function render()
   barWidget.render(ui.row({ gap = 4, align = "center" }, buildPills()))
-end
-
-local function switchTo(id)
-  noctalia.runAsync("hyprctl dispatch workspace " .. tostring(id), function() end)
 end
 
 -- Right-click = open panel (settings + per-workspace selection)
@@ -179,6 +175,9 @@ end
 -- count, same way better-displays owns its monitor lines. Runs on every widget
 -- reload (startup and config change); the script no-ops when already in sync.
 local scriptDir = noctalia.pluginDir() .. "/bin"
+local function shellQuote(s)
+  return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
+end
 local function persistWorkspaceRules()
   noctalia.runAsync(shellQuote(scriptDir .. "/better-workspace-persist") .. " " .. tostring(workspaceCount), function() end)
 end
