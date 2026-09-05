@@ -108,14 +108,14 @@ local function getIds()
   for wsId, wsData in pairs(workspaces) do
     if wsData.occupied then
       local isInRange = (type(wsId) == "number" and wsId >= 1 and wsId <= workspaceCount)
-      local isSpecial = isSpecialWorkspaceName(tostring(wsId))
+      local specialName = isSpecialWorkspaceName(wsData.name) and wsData.name or nil
       if not isInRange then
         local seen = false
         for _, v in ipairs(ids) do
-          if v == wsId or (isSpecial and v == wsId) then seen = true break end
+          if v == wsId or (specialName and v == specialName) then seen = true break end
         end
         if not seen then
-          table.insert(ids, wsId)
+          table.insert(ids, specialName or wsId)
         end
       end
     end
