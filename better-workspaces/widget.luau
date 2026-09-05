@@ -171,6 +171,8 @@ end
 local function refresh()
   if _refreshing then return end
   _refreshing = true
+  -- re-read state.json every poll so panel changes are picked up within ~100ms
+  loadState()
   -- displayMode and workspaceCount come from state.json (set by panel), not Noctalia config
 
   noctalia.runAsync("hyprctl activeworkspace -j", function(r)
