@@ -12,21 +12,34 @@ local selectedMode = 1
 local selectedQuality = 1
 local downloadDir = "/home/Downloads"
 
+local LOG_FILE = "/tmp/ytdlp-debug.log"
+local function log(msg)
+  local f = io.open(LOG_FILE, "a")
+  if f then
+    f:write(os.date("%H:%M:%S") .. " " .. tostring(msg) .. "\n")
+    f:close()
+  end
+end
+
+log("panel loaded")
+
 local modeOptions = { "Best Quality", "Video Only", "Audio Only" }
 local qualityOptions = { "Best", "2160p", "1440p", "1080p", "720p", "480p", "360p", "240p" }
 
 local stateFile = (noctalia.pluginDataDir() or "") .. "/state.json"
 
 local function saveState()
+  log("saveState called")
   local ok, err = noctalia.writeFile(stateFile, noctalia.json.encode({
     downloadDir = downloadDir,
     selectedMode = selectedMode,
     selectedQuality = selectedQuality,
   }, true))
-  if not ok then noctalia.log("ytdlp: saveState failed: " .. tostring(err)) end
+  if not ok then log("saveState failed: " .. tostring(err)) end
 end
 
 local function loadState()
+  log("loadState called")
   local raw = noctalia.readFile(stateFile)
   if raw then
     local ok, data = pcall(noctalia.json.decode, raw)
@@ -45,7 +58,9 @@ local function shellQuote(s)
 end
 
 local function doExtract()
+  log("doExtract called, url=" .. tostring(url))
   if not url or url == "" then
+    log("doExtract: no url")
     lastError = "Please enter a URL"
     render()
     return
@@ -56,16 +71,21 @@ local function doExtract()
   render()
 
   local cmd = "yt-dlp -J --no-download --no-warnings " .. shellQuote(url)
+  log("doExtract: running cmd=" .. cmd)
   noctalia.runAsync(cmd, function(r)
+    log("doExtract callback: exitCode=" .. tostring(r.exitCode))
     isExtracting = false
     if r.exitCode == 0 and r.stdout then
       local ok, data = pcall(noctalia.json.decode, r.stdout)
       if ok and data then
+        log("doExtract: parsed ok, title=" .. tostring(data.title))
         videoInfo = data
       else
+        log("doExtract: parse failed")
         lastError = "Failed to parse video info"
       end
     else
+      log("doExtract: cmd failed, stderr=" .. tostring(r.stderr))
       lastError = "Failed to extract: " .. (r.stderr or "Unknown error")
     end
     render()
@@ -73,7 +93,9 @@ local function doExtract()
 end
 
 local function doDownload()
+  log("doDownload called, url=" .. tostring(url))
   if not url or url == "" then
+    log("doDownload: no url")
     lastError = "Please enter a URL"
     render()
     return
@@ -95,8 +117,10 @@ local function doDownload()
     cmd = cmd .. "-f best "
   end
   cmd = cmd .. "-o " .. shellQuote(outputTemplate) .. " " .. shellQuote(url)
+  log("doDownload: running cmd=" .. cmd)
 
   noctalia.runAsync(cmd, function(r)
+    log("doDownload callback: exitCode=" .. tostring(r.exitCode))
     isDownloading = false
     if r.exitCode == 0 then
       downloadProgress = "Done!"
@@ -133,6 +157,7 @@ local function formatSize(bytes)
 end
 
 function onUrlChange(val)
+  log("onUrlChange called, val=" .. tostring(val))
   url = val or ""
 end
 
@@ -144,12 +169,14 @@ function onDirChange(val)
 end
 
 function onModeChange(idx)
+  log("onModeChange called, idx=" .. tostring(idx))
   selectedMode = tonumber(idx) + 1
   saveState()
   render()
 end
 
 function onQualityChange(idx)
+  log("onQualityChange called, idx=" .. tostring(idx))
   selectedQuality = tonumber(idx) + 1
   saveState()
   render()
@@ -158,9 +185,11 @@ end
 local render
 
 render = function()
+  log("render called, url=" .. tostring(url))
   local modeIndex = selectedMode - 1
   local qualityIndex = selectedQuality - 1
   local canExtract = not isExtracting and not isDownloading and url and url ~= ""
+  log("canExtract=" .. tostring(canExtract))
 
   local infoSection = {}
   if videoInfo then
@@ -226,6 +255,7 @@ render = function()
         variant = "primary",
         disabled = not canExtract,
         onClick = function()
+          log("extract btn clicked")
           doExtract()
         end,
       }),
@@ -236,6 +266,7 @@ render = function()
         variant = "primary",
         disabled = not canExtract,
         onClick = function()
+          log("download btn clicked")
           doDownload()
         end,
       }),
@@ -269,6 +300,7 @@ render = function()
 end
 
 function onOpen(_context)
+  log("onOpen called")
   isOpen = true
   loadState()
   render()
