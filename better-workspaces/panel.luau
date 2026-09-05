@@ -47,22 +47,12 @@ local function normalizeName(fullName)
 end
 
 local function resolveHyprConfigDir()
-  local env = os.getenv("HYPRLAND_CONFIG_FILE")
-  if env and env:match("%.lua$") then
-    local dir = env:gsub("/[^/]+$", "")
-    return dir
-  end
-  local env2 = os.getenv("HYPR_CONFIG_DIR")
-  if env2 and env2 ~= "" then
-    return env2
-  end
-  local home = os.getenv("HOME") or ""
-  local xdg = os.getenv("XDG_CONFIG_HOME") or (home .. "/.config")
+  -- Fallback to common path if env not available
+  local home = "/home/mindset"
+  local xdg = home .. "/.config"
   local candidates = {
     xdg .. "/hypr/config",
     xdg .. "/hyprland/config",
-    home .. "/.config/hypr/config",
-    home .. "/.config/hyprland/config",
   }
   for _, dir in ipairs(candidates) do
     local f = io.open(dir .. "/workspaces.lua", "r")
@@ -72,14 +62,8 @@ local function resolveHyprConfigDir()
 end
 
 local function discoverSpecialWorkspaces()
-  -- Use custom path from settings if set, otherwise auto-detect Hyprland config dir.
-  local customPath = noctalia.getConfig("workspaceConfigPath") or ""
-  local configDir
-  if customPath ~= "" then
-    configDir = customPath:gsub("/[^/]+$", "")
-  else
-    configDir = resolveHyprConfigDir()
-  end
+  -- Scan workspaces.lua and main Hyprland config for workspace_rule definitions.
+  local configDir = resolveHyprConfigDir()
   local mainConfigs = {
     configDir .. "/hyprland.lua",
     configDir .. "/hypr.lua",

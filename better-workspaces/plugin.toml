@@ -10,12 +10,6 @@ tags         = ["hyprland", "workspace", "indicator", "bar"]
 
 dependencies = ["hyprctl"]
 
-[[setting]]
-key = "workspaceConfigPath"
-type = "string"
-label = "Custom Workspace Config Path"
-description = "Custom path to workspace config file (e.g. ~/.config/hypr/config/workspaces.lua). Leave empty for auto-detect."
-
 [[widget]]
 id    = "widget"
 entry = "widget.luau"
