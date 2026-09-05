@@ -47,22 +47,17 @@ local function normalizeName(fullName)
 end
 
 local function discoverSpecialWorkspaces()
-  local configs = {
-    "/home/mindset/.config/hypr/config/workspaces.lua",
-    "/home/mindset/.config/hypr/config/binds.lua",
-  }
+  -- Only scan workspaces.lua — it's the authoritative source for named workspaces.
+  -- Skip numeric workspace names (1, 2, 3...) — only real named workspaces.
+  local raw = noctalia.readFile("/home/mindset/.config/hypr/config/workspaces.lua")
+  if not raw then return {} end
   local found = {}
-  for _, fpath in ipairs(configs) do
-    local raw = noctalia.readFile(fpath)
-    if raw then
-      for fullName in raw:gmatch('workspace%s*=%s*"([^"]+)"') do
-        local name = normalizeName(fullName)
-        if name and name ~= "" and not name:match("^%d+$") then
-          local seen = false
-          for _, n in ipairs(found) do if n == name then seen = true break end end
-          if not seen then table.insert(found, name) end
-        end
-      end
+  for fullName in raw:gmatch('workspace%s*=%s*"([^"]+)"') do
+    local name = normalizeName(fullName)
+    if name and name ~= "" and not name:match("^%d+$") then
+      local seen = false
+      for _, n in ipairs(found) do if n == name then seen = true break end end
+      if not seen then table.insert(found, name) end
     end
   end
   return found
@@ -80,15 +75,14 @@ for _, ws in ipairs(specialWorkspaces) do
 end
 specialWorkspaces = cleaned
 
--- Merge discovered workspaces into state (deduped by normalized name)
+-- Replace specialWorkspaces with discovered list from workspaces.lua.
+-- workspaces.lua is the authoritative source for named workspaces.
 local discovered = discoverSpecialWorkspaces()
+local newList = {}
 for _, name in ipairs(discovered) do
-  local seen = false
-  for _, ex in ipairs(specialWorkspaces) do
-    if ex and ex.name and normalizeName(ex.name) == name then seen = true break end
-  end
-  if not seen then table.insert(specialWorkspaces, { name = name }) end
+  table.insert(newList, { name = name })
 end
+specialWorkspaces = newList
 saveState()
 
 -- Forward-declared: loadWorkspaces (defined below) calls render() from an async
