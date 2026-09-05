@@ -12,8 +12,6 @@ local workspaceCount = 9
 local _switching = false
 local _refreshing = false
 local pillSize = "sm"
-local fontWeight = "normal"
-local fontStyle = "normal"
 local pillVariant = "default"
 local gap = 4
 

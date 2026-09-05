@@ -9,8 +9,6 @@ local specialWorkspaces = {}
 local _switching = false
 
 local pillSize = "sm"
-local fontWeight = "normal"
-local fontStyle = "normal"
 local pillVariant = "default"
 local gap = 4
 
@@ -22,8 +20,6 @@ local function saveState()
     workspaceCount = workspaceCount,
     specialWorkspaces = specialWorkspaces,
     pillSize = pillSize,
-    fontWeight = fontWeight,
-    fontStyle = fontStyle,
     pillVariant = pillVariant,
     gap = gap,
   }, true))
@@ -39,8 +35,6 @@ local function loadState()
       if data.workspaceCount then workspaceCount = data.workspaceCount end
       if data.specialWorkspaces then specialWorkspaces = data.specialWorkspaces end
       if data.pillSize then pillSize = data.pillSize end
-      if data.fontWeight then fontWeight = data.fontWeight end
-      if data.fontStyle then fontStyle = data.fontStyle end
       if data.pillVariant then pillVariant = data.pillVariant end
       if data.gap then gap = data.gap end
     end
@@ -53,14 +47,22 @@ local function normalizeName(fullName)
 end
 
 local function discoverSpecialWorkspaces()
-  local wsFile = "/home/mindset/.config/hypr/config/workspaces.lua"
-  local raw = noctalia.readFile(wsFile)
-  if not raw then return {} end
+  local configs = {
+    "/home/mindset/.config/hypr/config/workspaces.lua",
+    "/home/mindset/.config/hypr/config/binds.lua",
+  }
   local found = {}
-  for fullName in raw:gmatch('workspace%s*=%s*"([^"]+)"') do
-    local name = normalizeName(fullName)
-    if name and name ~= "" and not name:match("^%d+$") then
-      table.insert(found, name)
+  for _, fpath in ipairs(configs) do
+    local raw = noctalia.readFile(fpath)
+    if raw then
+      for fullName in raw:gmatch('workspace%s*=%s*"([^"]+)"') do
+        local name = normalizeName(fullName)
+        if name and name ~= "" and not name:match("^%d+$") then
+          local seen = false
+          for _, n in ipairs(found) do if n == name then seen = true break end end
+          if not seen then table.insert(found, name) end
+        end
+      end
     end
   end
   return found
@@ -68,17 +70,22 @@ end
 
 loadState()
 
--- Normalize all existing special workspace names (strip "name:" prefix)
+-- Clean empty entries from specialWorkspaces
+local cleaned = {}
 for _, ws in ipairs(specialWorkspaces) do
-  ws.name = normalizeName(ws.name) or ws.name
+  if ws and ws.name and ws.name ~= "" then
+    ws.name = normalizeName(ws.name) or ws.name
+    table.insert(cleaned, ws)
+  end
 end
+specialWorkspaces = cleaned
 
 -- Merge discovered workspaces into state (deduped by normalized name)
 local discovered = discoverSpecialWorkspaces()
 for _, name in ipairs(discovered) do
   local seen = false
   for _, ex in ipairs(specialWorkspaces) do
-    if normalizeName(ex.name) == name then seen = true break end
+    if ex and ex.name and normalizeName(ex.name) == name then seen = true break end
   end
   if not seen then table.insert(specialWorkspaces, { name = name }) end
 end
@@ -204,20 +211,6 @@ render = function()
   local sizeIndex = 0
   for i, s in ipairs(sizeOptions) do
     if s == pillSize then sizeIndex = i - 1 break end
-  end
-
-  local weightOptions = { "normal", "bold" }
-  local weightLabels = { "Normal", "Bold" }
-  local weightIndex = 0
-  for i, w in ipairs(weightOptions) do
-    if w == fontWeight then weightIndex = i - 1 break end
-  end
-
-  local styleOptions = { "normal", "italic" }
-  local styleLabels = { "Normal", "Italic" }
-  local styleIndex = 0
-  for i, s in ipairs(styleOptions) do
-    if s == fontStyle then styleIndex = i - 1 break end
   end
 
   local variantOptions = { "default", "primary", "secondary" }
