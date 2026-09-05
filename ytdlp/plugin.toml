@@ -4,7 +4,7 @@ version      = "1.0.0"
 plugin_api   = 19
 author       = "mindset"
 license      = "MIT"
-icon         = "download"
+icon         = "brand-youtube-kids"
 description  = "Download media from any URL using yt-dlp directly from your bar."
 tags         = ["media", "download", "bar", "ytdlp"]
 

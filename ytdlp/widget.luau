@@ -8,7 +8,7 @@ local downloadProgress = ""
 local PANEL_ID = "mindset/ytdlp:panel"
 
 local function render()
-  local glyph = isExtracting and "loader" or (isDownloading and "download" or "download")
+  local glyph = isExtracting and "loader" or (isDownloading and "download" or "brand-youtube-kids")
   barWidget.setGlyph(glyph)
   local tooltip = "YT-DLP"
   if isExtracting then
