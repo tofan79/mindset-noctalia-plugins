@@ -61,15 +61,6 @@ local function render()
         tooltip = tostring(state.stats.running .. " | " .. tooltip)
     end
     barWidget.setTooltip(tooltip)
-    local running = (state and state.stats and state.stats.running) or 0
-    local unhealthy = (state and state.stats and state.stats.unhealthy) or 0
-    if unhealthy > 0 then
-        barWidget.setGlyphColor("error")
-    elseif running > 0 then
-        barWidget.setGlyphColor("primary")
-    else
-        barWidget.setGlyphColor("on_surface_variant")
-    end
 end
 
 function M.onClick()
