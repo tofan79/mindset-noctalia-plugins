@@ -98,3 +98,17 @@ description = "Docker and Podman status in the bar: containers, images, volumes,
 deprecated = false
 plugin_api = 19
 tags = ["bar", "panel", "service", "system", "docker", "podman"]
+
+[[plugin]]
+id = "mindset/ytdlp"
+name = "YT-DLP"
+version = "1.0.0"
+updated_at = 1725516600
+added_at = 1725516600
+author = "mindset"
+license = "MIT"
+icon = "download"
+description = "Download media from any URL using yt-dlp directly from your bar. Supports video, audio, and quality selection."
+deprecated = false
+plugin_api = 19
+tags = ["bar", "panel", "media", "download", "ytdlp"]
