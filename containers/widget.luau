@@ -54,7 +54,7 @@ function M.formatTooltip(s)
 end
 
 local function render()
-    barWidget.setGlyph(noctalia.getConfig("glyph") or "container")
+    barWidget.setGlyph(noctalia.getConfig("glyph") or "brand-docker")
     local tooltip = M.formatTooltip(state)
     if noctalia.getConfig("show_running_count") ~= false and state and state.stats then
         tooltip = tostring(state.stats.running .. " | " .. tooltip)

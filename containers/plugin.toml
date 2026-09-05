@@ -6,7 +6,7 @@ author = "mindset"
 license = "MIT"
 dependencies = ["docker", "podman"]
 tags = ["bar", "panel", "service", "system", "docker", "podman"]
-icon = "container"
+icon = "brand-docker"
 description = "Docker and Podman status in the bar: containers, images, volumes, networks, and live stats, with start/stop/restart and removal controls."
 
 [[setting]]
