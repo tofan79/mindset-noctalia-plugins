@@ -32,8 +32,8 @@ tags = ["hyprland", "bar", "panel", "utility"]
 [[plugin]]
 id = "mindset/better-displays"
 name = "Better Displays"
-version = "1.0.0"
-updated_at = 1786340000
+version = "1.0.1"
+updated_at = 1788574966
 added_at = 1786340000
 author = "mindset"
 license = "MIT"
@@ -88,12 +88,12 @@ tags = ["hyprland", "workspace", "indicator", "bar"]
 [[plugin]]
 id = "mindset/containers"
 name = "Containers"
-version = "1.0.0"
-updated_at = 1788493822
+version = "1.0.1"
+updated_at = 1788574966
 added_at = 1788493822
 author = "mindset"
 license = "MIT"
-icon = "container"
+icon = "brand-docker"
 description = "Docker and Podman status in the bar: containers, images, volumes, networks, and live stats, with start/stop/restart and removal controls."
 deprecated = false
 plugin_api = 19
