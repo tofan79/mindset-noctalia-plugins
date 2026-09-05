@@ -199,7 +199,9 @@ render = function()
         selectedIndex = sizeIndex,
         controlSize = "sm",
         onChange = function(idx)
+          noctalia.log("better-workspaces: size changed to idx=" .. tostring(idx) .. " sizeOptions[idx+1]=" .. tostring(sizeOptions[tonumber(idx) + 1]))
           pillSize = sizeOptions[tonumber(idx) + 1]
+          noctalia.log("better-workspaces: pillSize now=" .. tostring(pillSize))
           saveState()
           render()
         end,

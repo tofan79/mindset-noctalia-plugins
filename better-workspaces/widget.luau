@@ -25,6 +25,7 @@ local function loadState()
       if data.pillSize then pillSize = data.pillSize end
       if data.pillVariant then pillVariant = data.pillVariant end
       if data.gap then gap = data.gap end
+      noctalia.log("better-workspaces: loadState pillSize=" .. tostring(pillSize))
     end
   end
 end
