@@ -172,95 +172,7 @@ local function switchWorkspace(id)
   end)
 end
 
-local function loadWorkspaces()
-  noctalia.runAsync("hyprctl workspaces -j", function(result)
-    if result.exitCode == 0 then
-      local data = noctalia.json.decode(result.stdout)
-      if type(data) == "table" then
-        workspaces = {}
-        for _, ws in ipairs(data) do
-          local apps = ""
-          workspaces[ws.id] = {
-            id = ws.id,
-            occupied = ws.windows > 0,
-            focused = (ws.id == currentWorkspace),
-          }
-        end
-      end
-    end
-    -- only render if we got valid data (avoid rendering empty/stale state)
-    if result.exitCode == 0 then render() end
-  end)
-end
-
-local function getWorkspaceIds()
-  local ids = {}
-  for n = 1, workspaceCount do
-    ids[n] = n
-  end
-  if revealOccupied then
-    for id in pairs(workspaces) do
-      if id > workspaceCount and id <= 20 then
-        local exists = false
-        for _, v in ipairs(ids) do
-          if v == id then exists = true break end
-        end
-        if not exists then table.insert(ids, id) end
-      end
-    end
-    table.sort(ids)
-  end
-  return ids
-end
-
-local function renderRow(id, index)
-  local isSelected = (index - 1) == selectedIndex
-  local ws = workspaces[id] or {}
-  local isOccupied = ws.occupied or false
-  local isFocused = ws.focused or (id == currentWorkspace)
-  local opacity = (isOccupied or isFocused or not dimEmpty) and 1 or 0.5
-
-  local displayText = convert(id)
-  if displayMode == "appIcon" and isOccupied then
-    displayText = "🪟"
-  elseif displayMode == "appName" and isOccupied then
-    displayText = id .. " 📱"
-  end
-
-  local children = {}
-  if isSelected then
-    table.insert(children, ui.box({ width = 3, height = 24, radius = 2, fill = "secondary" }))
-  end
-
-  table.insert(children, ui.button({
-    key = "ws-" .. id .. (isSelected and "-sel" or ""),
-    text = displayText,
-    glyph = isFocused and "layout-grid" or nil,
-    variant = isFocused and "primary" or "default",
-    contentAlign = "start",
-    flexGrow = 1,
-    opacity = opacity,
-    onClick = function()
-      switchWorkspace(id)
-    end,
-  }))
-
-  return ui.row({
-    key = "row-" .. id,
-    align = "center",
-    gap = 8,
-    paddingH = 4,
-    paddingV = 1,
-  }, children)
-end
-
 render = function()
-  local rows = {}
-  local ids = getWorkspaceIds()
-  for index, id in ipairs(ids) do
-    table.insert(rows, renderRow(id, index))
-  end
-
   -- Display mode options
   local modeOptions = {
     "default", "roman", "kanji", "arabic", "korean",
@@ -312,26 +224,11 @@ render = function()
         end,
       }),
     }),
-    ui.separator({}),
-    ui.label({ text = noctalia.tr("panel.workspaces"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-    ui.scroll({ flexGrow = 1, gap = 4 }, rows),
   }))
 end
 
 function onOpen(_context)
   isOpen = true
-  selectedIndex = 0
-
-  -- Get current workspace
-  noctalia.runAsync("hyprctl activeworkspace -j", function(result)
-    if result.exitCode == 0 then
-      local data = noctalia.json.decode(result.stdout)
-      if data and data.id then
-        currentWorkspace = data.id
-      end
-    end
-    loadWorkspaces()
-  end)
 end
 
 function onClose()
@@ -348,23 +245,7 @@ end
 
 function onKey(chord, pressed)
   if not pressed then return end
-
-  local ids = getWorkspaceIds()
-  if #ids == 0 then return end
-
-  if chord == "Up" then
-    selectedIndex = selectedIndex - 1
-    if selectedIndex < 0 then selectedIndex = #ids - 1 end
-    render()
-  elseif chord == "Down" then
-    selectedIndex = selectedIndex + 1
-    if selectedIndex >= #ids then selectedIndex = 0 end
-    render()
-  elseif chord == "Return" then
-    if selectedIndex >= 0 and selectedIndex < #ids then
-      switchWorkspace(ids[selectedIndex + 1])
-    end
-  elseif chord == "Escape" then
+  if chord == "Escape" then
     panel.close()
   end
 end
