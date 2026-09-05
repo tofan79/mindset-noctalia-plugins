@@ -72,20 +72,31 @@ local function resolveHyprConfigDir()
 end
 
 local function discoverSpecialWorkspaces()
-  -- Only scan workspaces.lua — it's the authoritative source for named workspaces.
+  -- Scan workspaces.lua AND the main Hyprland config for workspace_rule definitions.
   -- Auto-detect Hyprland config directory.
   local configDir = resolveHyprConfigDir()
-  local raw = noctalia.readFile(configDir .. "/workspaces.lua")
-  if not raw then return {} end
+  local mainConfigs = {
+    configDir .. "/hyprland.lua",
+    configDir .. "/hypr.lua",
+    configDir .. "/init.lua",
+  }
   local found = {}
-  for fullName in raw:gmatch('workspace%s*=%s*"([^"]+)"') do
-    local name = normalizeName(fullName)
-    if name and name ~= "" and not name:match("^%d+$") then
-      local seen = false
-      for _, n in ipairs(found) do if n == name then seen = true break end end
-      if not seen then table.insert(found, name) end
+  local seen = {}
+  local function scanFile(fpath)
+    local raw = noctalia.readFile(fpath)
+    if not raw then return end
+    for fullName in raw:gmatch('workspace%s*=%s*"([^"]+)"') do
+      local name = normalizeName(fullName)
+      if name and name ~= "" and not name:match("^%d+$") and not seen[name] then
+        seen[name] = true
+        table.insert(found, name)
+      end
     end
   end
+  -- Scan main configs first (hyprland.lua, hypr.lua, init.lua)
+  for _, f in ipairs(mainConfigs) do scanFile(f) end
+  -- Also scan workspaces.lua if it exists
+  scanFile(configDir .. "/workspaces.lua")
   return found
 end
 
