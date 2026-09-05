@@ -12,7 +12,6 @@ local _switching = false
 local _refreshing = false
 local pillWidth = 40
 local pillHeight = 20
-local pillRounded = 0
 local pillVariant = "default"
 local gap = 4
 
@@ -26,7 +25,6 @@ local function loadState()
       if data.workspaceCount then workspaceCount = data.workspaceCount end
       if data.pillWidth then pillWidth = data.pillWidth end
       if data.pillHeight then pillHeight = data.pillHeight end
-      if data.pillRounded then pillRounded = data.pillRounded end
       if data.pillVariant then pillVariant = data.pillVariant end
       if data.gap then gap = data.gap end
     end
@@ -154,48 +152,26 @@ local function buildPills()
       focused = (id == activeWorkspace)
     end
 
-    local fillColor
-    local textColor
-
+    local variant
     if focused then
-      fillColor = "primary"
-      textColor = "on_primary"
+      variant = "primary"
     elseif isSpecial then
-      fillColor = "secondary"
-      textColor = "on_secondary"
-    elseif pillVariant == "primary" then
-      fillColor = "primary"
-      textColor = "on_primary"
-    elseif pillVariant == "secondary" then
-      fillColor = "secondary"
-      textColor = "on_secondary"
+      variant = "secondary"
     else
-      fillColor = "surface_container"
-      textColor = "on_surface"
+      variant = pillVariant
     end
 
-    table.insert(children, ui.column({
+    table.insert(children, ui.button({
       key = "pill-" .. tostring(id),
+      text = isSpecial and tostring(id) or conv(id),
+      fontSize = 11,
       width = pillWidth,
       height = pillHeight,
-      align = "center",
-      justify = "center",
+      variant = variant,
+      selected = focused,
       onClick = function()
         switchTo(pid)
       end,
-    }, {
-      ui.box({
-        fill = fillColor,
-        border = focused and "primary" or "outline",
-        borderWidth = focused and 2 or 1,
-        radius = pillRounded,
-        flexGrow = 1,
-      }),
-      ui.label({
-        text = isSpecial and tostring(id) or conv(id),
-        fontSize = 11,
-        color = textColor,
-      }),
     }))
   end
   return children

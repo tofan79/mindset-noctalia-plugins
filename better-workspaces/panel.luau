@@ -9,7 +9,6 @@ local _switching = false
 
 local pillWidth = 40
 local pillHeight = 20
-local pillRounded = 0
 local pillVariant = "default"
 local gap = 4
 
@@ -21,7 +20,6 @@ local function saveState()
     workspaceCount = workspaceCount,
     pillWidth = pillWidth,
     pillHeight = pillHeight,
-    pillRounded = pillRounded,
     pillVariant = pillVariant,
     gap = gap,
   }, true))
@@ -37,7 +35,6 @@ local function loadState()
       if data.workspaceCount then workspaceCount = data.workspaceCount end
       if data.pillWidth then pillWidth = data.pillWidth end
       if data.pillHeight then pillHeight = data.pillHeight end
-      if data.pillRounded then pillRounded = data.pillRounded end
       if data.pillVariant then pillVariant = data.pillVariant end
       if data.gap then gap = data.gap end
     end
@@ -149,24 +146,14 @@ render = function()
 
   local previewPills = {}
   for n = 1, math.min(workspaceCount, 6) do
-    local bgColor = pillVariant == "primary" and "primary" or (pillVariant == "secondary" and "secondary" or "surface_container")
-    local textColor = (pillVariant == "primary" or pillVariant == "secondary") and "on_primary" or "on_surface"
-    local borderColor = pillVariant == "primary" and "primary" or (pillVariant == "secondary" and "secondary" or "outline")
-    table.insert(previewPills, ui.box({
+    table.insert(previewPills, ui.button({
       key = "preview-" .. n,
-      fill = bgColor,
-      border = borderColor,
-      borderWidth = 1,
-      radius = pillRounded,
+      text = convert(n),
+      fontSize = 11,
       width = pillWidth,
       height = pillHeight,
-    }, ui.column({ align = "center", justify = "center", flexGrow = 1 }, {
-      ui.label({
-        text = convert(n),
-        fontSize = 11,
-        color = textColor,
-      })
-    })))
+      variant = pillVariant,
+    }))
   end
 
   local function sliderRow(label, value, min, max, onChange)
@@ -213,11 +200,6 @@ render = function()
       end),
       sliderRow("Height", pillHeight, 0, 50, function(val)
         pillHeight = val
-        saveState()
-        render()
-      end),
-      sliderRow("Rounded", pillRounded, 0, 20, function(val)
-        pillRounded = val
         saveState()
         render()
       end),
