@@ -4,7 +4,8 @@
 -- for the panel, scroll to cycle.
 
 local activeWorkspace = 1
-local workspaces = {}
+local workspaces = {}          -- keyed by id (numeric): { occupied, name }
+local specialWorkspaces = {}  -- { { name = "gaming" }, ... } from state.json
 local displayMode = "default"
 local workspaceCount = 9
 local _switching = false
@@ -20,6 +21,7 @@ local function loadState()
     if ok and data then
       if data.displayMode then displayMode = data.displayMode end
       if data.workspaceCount then workspaceCount = data.workspaceCount end
+      if data.specialWorkspaces then specialWorkspaces = data.specialWorkspaces end
     end
   end
 end
@@ -91,37 +93,21 @@ local function shellQuote(s)
   return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
 end
 
-local function isSpecialWorkspace(id)
-  -- A workspace is "special" if its name differs from its numeric id.
-  -- e.g. id=-1337 name="gaming" -> special; id=3 name="3" -> normal numeric workspace
-  local ws = workspaces[id]
-  if not ws then return false end
-  if not ws.name then return false end
-  if tostring(id) == ws.name then return false end
-  return true
+local function isSpecialWorkspaceName(name)
+  for _, sw in ipairs(specialWorkspaces) do
+    if sw.name == name then return true end
+  end
+  return false
 end
 
 local function getIds()
   local ids = {}
   for n = 1, workspaceCount do ids[n] = n end
 
-  -- Add special occupied workspaces (name starts with "name:") e.g. "name:gaming"
-  for id in pairs(workspaces) do
-    if isSpecialWorkspace(id) and workspaces[id].occupied then
-      local seen = false
-      for _, v in ipairs(ids) do if v == id then seen = true break end end
-      if not seen then table.insert(ids, id) end
-    end
+  -- Add all special workspaces from state.json (always shown, even if empty)
+  for _, sw in ipairs(specialWorkspaces) do
+    table.insert(ids, sw.name)
   end
-
-  -- Sort: positive numbers first (ascending), then special (negative IDs or named) at the end
-  table.sort(ids, function(a, b)
-    local aSpec = isSpecialWorkspace(a)
-    local bSpec = isSpecialWorkspace(b)
-    if aSpec ~= bSpec then return aSpec == false end
-    if type(a) == "number" and type(b) == "number" then return a < b end
-    return tostring(a) < tostring(b)
-  end)
 
   return ids
 end
@@ -129,13 +115,18 @@ end
 local function switchTo(id)
   if _switching then return end
   _switching = true
-  local expr = 'hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })'
+  -- For special workspaces (string name), dispatch by name; for numeric, dispatch by id
+  local expr
+  if type(id) == "string" then
+    expr = 'hl.dsp.focus({ workspace = "' .. id .. '" })'
+  else
+    expr = 'hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })'
+  end
   noctalia.runAsync("hyprctl dispatch " .. shellQuote(expr), function(r)
     _switching = false
     if r.exitCode ~= 0 then
-      noctalia.log("better-workspaces: dispatch to " .. id .. " failed (exit " .. tostring(r.exitCode) .. ")")
+      noctalia.log("better-workspaces: dispatch to " .. tostring(id) .. " failed (exit " .. tostring(r.exitCode) .. ")")
     end
-    -- no render() here — 100ms poll update() catches the change fast enough
   end)
 end
 
@@ -149,20 +140,25 @@ local function buildPills()
   local ids = getIds()
   for _, id in ipairs(ids) do
     local pid = id
-    local wsData = workspaces[id]
-    local isSpecial = wsData and wsData.name and wsData.name:find("^name:") ~= nil
-    local focused = (id == activeWorkspace)
+    local isSpecial = type(id) == "string"
 
-    local text
+    -- Check if this workspace is currently active
+    local focused = false
     if isSpecial then
-      text = wsData.name  -- e.g. "gaming"
+      -- Special workspace is active if workspaces table has it with occupied=true
+      for wsId, wsData in pairs(workspaces) do
+        if wsData.name == id and wsData.occupied then
+          focused = true
+          break
+        end
+      end
     else
-      text = conv(id)
+      focused = (id == activeWorkspace)
     end
 
     table.insert(children, ui.button({
       key = "pill-" .. id,
-      text = text,
+      text = isSpecial and id or conv(id),
       fontSize = 11,
       controlSize = "sm",
       variant = focused and "primary" or (isSpecial and "secondary" or "default"),

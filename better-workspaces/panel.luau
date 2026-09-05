@@ -10,6 +10,7 @@ local dimEmpty = true
 local workspaces = {}
 local selectedIndex = 0
 local _switching = false
+local specialWorkspaces = {}  -- { { name = "gaming" }, ... } discovered from workspaces.lua
 
 -- Persist panel setting changes to a JSON file so the widget can override
 -- Noctalia config without needing a settings-UI round-trip.
@@ -19,6 +20,7 @@ local function saveState()
   local ok, err = noctalia.writeFile(stateFile, noctalia.json.encode({
     displayMode = displayMode,
     workspaceCount = workspaceCount,
+    specialWorkspaces = specialWorkspaces,
   }, true))
   if not ok then noctalia.log("better-workspaces: saveState failed: " .. tostring(err)) end
 end
@@ -30,11 +32,70 @@ local function loadState()
     if ok and data then
       if data.displayMode then displayMode = data.displayMode end
       if data.workspaceCount then workspaceCount = data.workspaceCount end
+      if data.specialWorkspaces then specialWorkspaces = data.specialWorkspaces end
     end
   end
 end
 
+-- Discover named workspaces from ~/.config/hypr/config/workspaces.lua
+-- Returns array of { name = "gaming" } entries
+local function discoverSpecialWorkspaces()
+  local wsFile = "/home/mindset/.config/hypr/config/workspaces.lua"
+  local raw = noctalia.readFile(wsFile)
+  if not raw then return {} end
+  local found = {}
+  for fullName in raw:gmatch('workspace%s*=%s*"([^"]+)"') do
+    if fullName then
+      local name = fullName:gsub("^name:", "")
+      if name and name ~= "" and not name:match("^%d+$") then
+        table.insert(found, { name = name })
+      end
+    end
+  end
+  return found
+end
+
+-- Normalize workspace name: strip "name:" prefix if present (workspaces.lua uses
+-- "name:gaming" but Hyprland returns just "gaming" as the workspace name)
+local function normalizeName(fullName)
+  if not fullName then return nil end
+  return fullName:gsub("^name:", "")
+end
+
+-- Discover named workspaces from ~/.config/hypr/config/workspaces.lua
+-- Returns array of { name = "gaming" } entries (normalized, no "name:" prefix)
+local function discoverSpecialWorkspaces()
+  local wsFile = "/home/mindset/.config/hypr/config/workspaces.lua"
+  local raw = noctalia.readFile(wsFile)
+  if not raw then return {} end
+  local found = {}
+  for fullName in raw:gmatch('workspace%s*=%s*"([^"]+)"') do
+    local name = normalizeName(fullName)
+    if name and name ~= "" and not name:match("^%d+$") then
+      table.insert(found, name)
+    end
+  end
+  return found
+end
+
 loadState()
+
+-- Normalize all existing special workspace names (strip "name:" prefix)
+for _, ws in ipairs(specialWorkspaces) do
+  ws.name = normalizeName(ws.name) or ws.name
+end
+
+-- Merge discovered workspaces into state (deduped by normalized name)
+local discovered = discoverSpecialWorkspaces()
+  for _, ws in ipairs(discovered) do
+    local name = ws.name
+    local seen = false
+    for _, ex in ipairs(specialWorkspaces) do
+      if normalizeName(ex.name) == name then seen = true break end
+    end
+    if not seen then table.insert(specialWorkspaces, { name = name }) end
+  end
+saveState()
 
 -- Forward-declared: loadWorkspaces (defined below) calls render() from an async
 -- callback. Without this the upvalue would be nil and the call would crash.
