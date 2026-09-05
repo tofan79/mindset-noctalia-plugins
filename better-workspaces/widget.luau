@@ -6,7 +6,6 @@
 local activeWorkspace = 1
 local activeSpecialName = nil
 local workspaces = {}
-local specialWorkspaces = {}
 local displayMode = "default"
 local workspaceCount = 9
 local _switching = false
@@ -23,7 +22,6 @@ local function loadState()
     if ok and data then
       if data.displayMode then displayMode = data.displayMode end
       if data.workspaceCount then workspaceCount = data.workspaceCount end
-      if data.specialWorkspaces then specialWorkspaces = data.specialWorkspaces end
       if data.pillSize then pillSize = data.pillSize end
       if data.pillVariant then pillVariant = data.pillVariant end
       if data.gap then gap = data.gap end
@@ -99,38 +97,25 @@ local function shellQuote(s)
 end
 
 local function isSpecialWorkspaceName(name)
-  for _, sw in ipairs(specialWorkspaces) do
-    if sw.name == name then return true end
-  end
-  return false
+  return name and name ~= "" and not name:match("^%d+$")
 end
 
 local function getIds()
   local ids = {}
 
-  -- Always add 1 through workspaceCount (the "always shown" range per slider)
   for n = 1, workspaceCount do ids[n] = n end
 
-  -- Also add workspaces beyond count that are occupied (have windows),
-  -- including special workspaces (gaming, etc.)
   for wsId, wsData in pairs(workspaces) do
     if wsData.occupied then
       local isInRange = (type(wsId) == "number" and wsId >= 1 and wsId <= workspaceCount)
-      local isSpecial = false
-      for _, sw in ipairs(specialWorkspaces) do
-        if wsData.name == sw.name then isSpecial = true break end
-      end
+      local isSpecial = isSpecialWorkspaceName(tostring(wsId))
       if not isInRange then
         local seen = false
         for _, v in ipairs(ids) do
-          if v == wsId or (isSpecial and v == wsData.name) then seen = true break end
+          if v == wsId or (isSpecial and v == wsId) then seen = true break end
         end
         if not seen then
-          if isSpecial then
-            table.insert(ids, wsData.name)
-          else
-            table.insert(ids, wsId)
-          end
+          table.insert(ids, wsId)
         end
       end
     end
@@ -142,13 +127,7 @@ end
 local function switchTo(id)
   if _switching then return end
   _switching = true
-  -- For special workspaces (string name), dispatch by name; for numeric, dispatch by id
-  local expr
-  if type(id) == "string" then
-    expr = 'hl.dsp.focus({ workspace = "' .. id .. '" })'
-  else
-    expr = 'hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })'
-  end
+  local expr = 'hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })'
   noctalia.runAsync("hyprctl dispatch " .. shellQuote(expr), function(r)
     _switching = false
     if r.exitCode ~= 0 then
@@ -157,19 +136,13 @@ local function switchTo(id)
   end)
 end
 
--- Workspace pills behave like a normal workspace indicator: left-click a pill
--- switches to that workspace. `ui.button` is the only reliably interactive
--- element in bar widgets (no keyboard there, so column/label hit-testing is not
--- usable); the active pill is rendered `selected` so its fill tracks the active
--- workspace. Right-click (onRightClick) opens the panel.
 local function buildPills()
   local children = {}
   local ids = getIds()
   for _, id in ipairs(ids) do
     local pid = id
-    local isSpecial = type(id) == "string"
+    local isSpecial = isSpecialWorkspaceName(tostring(id))
 
-    -- Check if this workspace is currently active
     local focused = false
     if isSpecial then
       focused = (id == activeSpecialName)
@@ -178,8 +151,8 @@ local function buildPills()
     end
 
     table.insert(children, ui.button({
-      key = "pill-" .. id,
-      text = isSpecial and id or conv(id),
+      key = "pill-" .. tostring(id),
+      text = isSpecial and tostring(id) or conv(id),
       fontSize = 11,
       controlSize = pillSize,
       variant = focused and "primary" or (isSpecial and "secondary" or pillVariant),
@@ -196,13 +169,10 @@ local function render()
   barWidget.render(ui.row({ gap = gap, align = "center" }, buildPills()))
 end
 
--- Right-click = open panel (settings + per-workspace selection)
 function onRightClick()
   noctalia.togglePanel("mindset/better-workspaces:panel")
 end
 
--- Scroll = cycle workspaces (host calls onScroll(axis, steps, startsGesture);
--- `steps` is negative for up/left. Act once per gesture so a flick doesn't jump several.)
 function onScroll(axis, steps, startsGesture)
   if axis ~= "vertical" then return end
   if not startsGesture then return end
@@ -219,20 +189,18 @@ end
 local function refresh()
   if _refreshing then return end
   _refreshing = true
-  -- re-read state.json every poll so panel changes are picked up within ~100ms
   loadState()
-  -- displayMode and workspaceCount come from state.json (set by panel), not Noctalia config
 
   noctalia.runAsync("hyprctl activeworkspace -j", function(r)
     if r.exitCode == 0 and r.stdout then
       local d = noctalia.json.decode(r.stdout)
       if d and d.id then
-        activeWorkspace = d.id
-        activeSpecialName = nil
-        if d.name then
-          for _, sw in ipairs(specialWorkspaces) do
-            if d.name == sw.name then activeSpecialName = sw.name break end
-          end
+        if isSpecialWorkspaceName(d.name) then
+          activeSpecialName = d.name
+          activeWorkspace = d.id
+        else
+          activeWorkspace = d.id
+          activeSpecialName = nil
         end
       end
     end
@@ -252,12 +220,10 @@ local function refresh()
   end)
 end
 
--- Poll active workspace so the pill fill tracks workspace switches made from
--- outside the widget too (keybinds, other indicators).
 function update()
   refresh()
 end
 
-noctalia.setUpdateInterval(100)  -- 100ms: very responsive, still reasonable load
+noctalia.setUpdateInterval(100)
 
 refresh()

@@ -5,7 +5,6 @@ local isOpen = false
 local currentWorkspace = 1
 local workspaceCount = 9
 local displayMode = "default"
-local specialWorkspaces = {}
 local _switching = false
 
 local pillSize = "sm"
@@ -18,7 +17,6 @@ local function saveState()
   local ok, err = noctalia.writeFile(stateFile, noctalia.json.encode({
     displayMode = displayMode,
     workspaceCount = workspaceCount,
-    specialWorkspaces = specialWorkspaces,
     pillSize = pillSize,
     pillVariant = pillVariant,
     gap = gap,
@@ -33,7 +31,6 @@ local function loadState()
     if ok and data then
       if data.displayMode then displayMode = data.displayMode end
       if data.workspaceCount then workspaceCount = data.workspaceCount end
-      if data.specialWorkspaces then specialWorkspaces = data.specialWorkspaces end
       if data.pillSize then pillSize = data.pillSize end
       if data.pillVariant then pillVariant = data.pillVariant end
       if data.gap then gap = data.gap end
@@ -41,79 +38,10 @@ local function loadState()
   end
 end
 
-local function normalizeName(fullName)
-  if not fullName then return nil end
-  return fullName:gsub("^name:", "")
-end
-
-local function resolveHyprConfigDir()
-  -- Fallback to common path if env not available
-  local home = "/home/mindset"
-  local xdg = home .. "/.config"
-  local candidates = {
-    xdg .. "/hypr/config",
-    xdg .. "/hyprland/config",
-  }
-  for _, dir in ipairs(candidates) do
-    local f = io.open(dir .. "/workspaces.lua", "r")
-    if f then f:close(); return dir end
-  end
-  return xdg .. "/hypr/config"
-end
-
-local function discoverSpecialWorkspaces()
-  -- Scan workspaces.lua and main Hyprland config for workspace_rule definitions.
-  local configDir = resolveHyprConfigDir()
-  local mainConfigs = {
-    configDir .. "/hyprland.lua",
-    configDir .. "/hypr.lua",
-    configDir .. "/init.lua",
-  }
-  local found = {}
-  local seen = {}
-  local function scanFile(fpath)
-    local raw = noctalia.readFile(fpath)
-    if not raw then return end
-    for fullName in raw:gmatch('workspace%s*=%s*"([^"]+)"') do
-      local name = normalizeName(fullName)
-      if name and name ~= "" and not name:match("^%d+$") and not seen[name] then
-        seen[name] = true
-        table.insert(found, name)
-      end
-    end
-  end
-  for _, f in ipairs(mainConfigs) do scanFile(f) end
-  scanFile(configDir .. "/workspaces.lua")
-  return found
-end
-
 loadState()
 
--- Clean empty entries from specialWorkspaces
-local cleaned = {}
-for _, ws in ipairs(specialWorkspaces) do
-  if ws and ws.name and ws.name ~= "" then
-    ws.name = normalizeName(ws.name) or ws.name
-    table.insert(cleaned, ws)
-  end
-end
-specialWorkspaces = cleaned
-
--- Replace specialWorkspaces with discovered list from workspaces.lua.
--- workspaces.lua is the authoritative source for named workspaces.
-local discovered = discoverSpecialWorkspaces()
-local newList = {}
-for _, name in ipairs(discovered) do
-  table.insert(newList, { name = name })
-end
-specialWorkspaces = newList
-saveState()
-
--- Forward-declared: loadWorkspaces (defined below) calls render() from an async
--- callback. Without this the upvalue would be nil and the call would crash.
 local render
 
--- Number to text converters
 local converters = {}
 
 converters["default"] = function(n) return tostring(n) end
@@ -191,20 +119,6 @@ end
 
 local function shellQuote(s)
   return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
-end
-
-local function switchWorkspace(id)
-  if _switching then return end  -- ignore rapid/repeated clicks
-  _switching = true
-  local expr = 'hl.dsp.focus({ workspace = "' .. tostring(id) .. '" })'
-  noctalia.runAsync("hyprctl eval " .. shellQuote(expr), function(result)
-    _switching = false
-    if result.exitCode == 0 then
-      panel.close()
-    else
-      noctalia.notifyError(noctalia.tr("title"), noctalia.tr("error.switch_failed"))
-    end
-  end)
 end
 
 render = function()
@@ -326,20 +240,6 @@ render = function()
     ui.separator({}),
     ui.label({ text = "Preview", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.box({ fill = "secondary", radius = 6 }, ui.row({ gap = gap, align = "center", justify = "center" }, previewPills)),
-    ui.separator({}),
-    ui.row({ align = "center", justify = "space_between" }, {
-      ui.label({ text = "Special Workspaces", fontSize = 11, fontWeight = "bold", color = "on_surface_variant", flexGrow = 1 }),
-      ui.button({ glyph = "refresh", variant = "ghost", controlSize = "sm", tooltip = "Re-scan workspaces.lua", onClick = function()
-        local discovered = discoverSpecialWorkspaces()
-        local newList = {}
-        for _, name in ipairs(discovered) do
-          table.insert(newList, { name = name })
-        end
-        specialWorkspaces = newList
-        saveState()
-        render()
-      end }),
-    }),
     ui.separator({}),
     ui.scroll({ flexGrow = 1, gap = 6 }, scrollBody()),
   }))
