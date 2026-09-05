@@ -7,7 +7,9 @@ local workspaceCount = 9
 local displayMode = "default"
 local _switching = false
 
-local pillSize = "sm"
+local pillWidth = 60
+local pillHeight = 28
+local pillRounded = 6
 local pillVariant = "default"
 local gap = 4
 
@@ -17,7 +19,9 @@ local function saveState()
   local ok, err = noctalia.writeFile(stateFile, noctalia.json.encode({
     displayMode = displayMode,
     workspaceCount = workspaceCount,
-    pillSize = pillSize,
+    pillWidth = pillWidth,
+    pillHeight = pillHeight,
+    pillRounded = pillRounded,
     pillVariant = pillVariant,
     gap = gap,
   }, true))
@@ -31,7 +35,9 @@ local function loadState()
     if ok and data then
       if data.displayMode then displayMode = data.displayMode end
       if data.workspaceCount then workspaceCount = data.workspaceCount end
-      if data.pillSize then pillSize = data.pillSize end
+      if data.pillWidth then pillWidth = data.pillWidth end
+      if data.pillHeight then pillHeight = data.pillHeight end
+      if data.pillRounded then pillRounded = data.pillRounded end
       if data.pillVariant then pillVariant = data.pillVariant end
       if data.gap then gap = data.gap end
     end
@@ -117,10 +123,6 @@ local function convert(n)
   return conv(n)
 end
 
-local function shellQuote(s)
-  return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
-end
-
 render = function()
   local modeOptions = {
     "default", "roman", "kanji", "arabic", "korean",
@@ -138,13 +140,6 @@ render = function()
     if m == displayMode then modeIndex = i - 1 break end
   end
 
-  local sizeOptions = { "sm", "md", "lg" }
-  local sizeLabels = { "Small", "Medium", "Large" }
-  local sizeIndex = 0
-  for i, s in ipairs(sizeOptions) do
-    if s == pillSize then sizeIndex = i - 1 break end
-  end
-
   local variantOptions = { "default", "primary", "secondary" }
   local variantLabels = { "Default", "Primary", "Secondary" }
   local variantIndex = 0
@@ -152,17 +147,31 @@ render = function()
     if v == pillVariant then variantIndex = i - 1 break end
   end
 
-  local heights = { sm = 24, md = 28, lg = 32 }
-  local previewH = heights[pillSize] or 24
   local previewPills = {}
   for n = 1, math.min(workspaceCount, 6) do
     table.insert(previewPills, ui.button({
       key = "preview-" .. n,
       text = convert(n),
       fontSize = 11,
-      height = previewH,
+      width = pillWidth,
+      height = pillHeight,
+      radius = pillRounded,
       variant = pillVariant,
     }))
+  end
+
+  local function sliderRow(label, value, min, max, onChange)
+    return ui.row({ gap = 8, align = "center" }, {
+      ui.label({ text = label, fontSize = 11, width = 70 }),
+      ui.label({ text = tostring(value), fontSize = 11, fontWeight = "bold", width = 28 }),
+      ui.slider({
+        min = min, max = max, step = 1, value = value,
+        controlSize = "sm",
+        onChange = function(val)
+          onChange(tonumber(val))
+        end,
+      }),
+    })
   end
 
   local function scrollBody()
@@ -181,33 +190,28 @@ render = function()
       }),
       ui.separator({}),
       ui.label({ text = noctalia.tr("panel.workspace_count"), fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-      ui.row({ gap = 8, align = "center" }, {
-        ui.label({ text = tostring(workspaceCount), fontSize = 13, fontWeight = "bold", width = 24 }),
-        ui.slider({
-          min = 1, max = 9, step = 1, value = workspaceCount,
-          controlSize = "sm",
-          onChange = function(val)
-            workspaceCount = tonumber(val) or 9
-            saveState()
-            render()
-          end,
-        }),
-      }),
+      sliderRow("Count", workspaceCount, 1, 9, function(val)
+        workspaceCount = val
+        saveState()
+        render()
+      end),
       ui.separator({}),
       ui.label({ text = "Pill Size", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-      ui.select({
-        key = "size-select",
-        options = sizeLabels,
-        selectedIndex = sizeIndex,
-        controlSize = "sm",
-        onChange = function(idx)
-          noctalia.log("better-workspaces: size changed to idx=" .. tostring(idx) .. " sizeOptions[idx+1]=" .. tostring(sizeOptions[tonumber(idx) + 1]))
-          pillSize = sizeOptions[tonumber(idx) + 1]
-          noctalia.log("better-workspaces: pillSize now=" .. tostring(pillSize))
-          saveState()
-          render()
-        end,
-      }),
+      sliderRow("Width", pillWidth, 40, 100, function(val)
+        pillWidth = val
+        saveState()
+        render()
+      end),
+      sliderRow("Height", pillHeight, 20, 50, function(val)
+        pillHeight = val
+        saveState()
+        render()
+      end),
+      sliderRow("Rounded", pillRounded, 0, 25, function(val)
+        pillRounded = val
+        saveState()
+        render()
+      end),
       ui.separator({}),
       ui.label({ text = "Pill Color", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
       ui.select({
@@ -222,16 +226,12 @@ render = function()
         end,
       }),
       ui.separator({}),
-      ui.label({ text = "Gap: " .. gap, fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
-      ui.slider({
-        min = 2, max = 16, step = 1, value = gap,
-        controlSize = "sm",
-        onChange = function(val)
-          gap = tonumber(val) or 4
-          saveState()
-          render()
-        end,
-      }),
+      ui.label({ text = "Gap", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
+      sliderRow("Gap", gap, 2, 16, function(val)
+        gap = val
+        saveState()
+        render()
+      end),
     }
   end
 

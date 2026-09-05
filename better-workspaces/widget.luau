@@ -10,7 +10,9 @@ local displayMode = "default"
 local workspaceCount = 9
 local _switching = false
 local _refreshing = false
-local pillSize = "sm"
+local pillWidth = 60
+local pillHeight = 28
+local pillRounded = 6
 local pillVariant = "default"
 local gap = 4
 
@@ -22,10 +24,11 @@ local function loadState()
     if ok and data then
       if data.displayMode then displayMode = data.displayMode end
       if data.workspaceCount then workspaceCount = data.workspaceCount end
-      if data.pillSize then pillSize = data.pillSize end
+      if data.pillWidth then pillWidth = data.pillWidth end
+      if data.pillHeight then pillHeight = data.pillHeight end
+      if data.pillRounded then pillRounded = data.pillRounded end
       if data.pillVariant then pillVariant = data.pillVariant end
       if data.gap then gap = data.gap end
-      noctalia.log("better-workspaces: loadState pillSize=" .. tostring(pillSize))
     end
   end
 end
@@ -140,8 +143,6 @@ end
 local function buildPills()
   local children = {}
   local ids = getIds()
-  local heights = { sm = 24, md = 28, lg = 32 }
-  local h = heights[pillSize] or 24
   for _, id in ipairs(ids) do
     local pid = id
     local isSpecial = isSpecialWorkspaceName(tostring(id))
@@ -157,7 +158,9 @@ local function buildPills()
       key = "pill-" .. tostring(id),
       text = isSpecial and tostring(id) or conv(id),
       fontSize = 11,
-      height = h,
+      width = pillWidth,
+      height = pillHeight,
+      radius = pillRounded,
       variant = focused and "primary" or (isSpecial and "secondary" or pillVariant),
       selected = focused,
       onClick = function()
