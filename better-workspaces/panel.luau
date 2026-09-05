@@ -303,6 +303,20 @@ render = function()
     ui.label({ text = "Preview", fontSize = 11, fontWeight = "bold", color = "on_surface_variant" }),
     ui.box({ fill = "secondary", radius = 6 }, ui.row({ gap = gap, align = "center", justify = "center" }, previewPills)),
     ui.separator({}),
+    ui.row({ align = "center", justify = "space_between" }, {
+      ui.label({ text = "Special Workspaces", fontSize = 11, fontWeight = "bold", color = "on_surface_variant", flexGrow = 1 }),
+      ui.button({ glyph = "refresh", variant = "ghost", controlSize = "sm", tooltip = "Re-scan workspaces.lua", onClick = function()
+        local discovered = discoverSpecialWorkspaces()
+        local newList = {}
+        for _, name in ipairs(discovered) do
+          table.insert(newList, { name = name })
+        end
+        specialWorkspaces = newList
+        saveState()
+        render()
+      end }),
+    }),
+    ui.separator({}),
     ui.scroll({ flexGrow = 1, gap = 6 }, scrollBody()),
   }))
 end
