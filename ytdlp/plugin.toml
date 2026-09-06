@@ -1,6 +1,6 @@
 id = "mindset/ytdlp"
 name = "YT-DLP"
-version = "1.1.1"
+version = "1.2.1"
 plugin_api = 19
 author = "mindset"
 license = "MIT"
