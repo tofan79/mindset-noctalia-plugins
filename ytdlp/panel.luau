@@ -366,6 +366,47 @@ local function mediaCard()
     })
     children[#children + 1] = ui.separator({})
 
+    local SPONSOR_CATEGORIES = {
+        { key = "sponsor", label = "cat.sponsor" },
+        { key = "selfpromo", label = "cat.selfpromo" },
+        { key = "interaction", label = "cat.interaction" },
+        { key = "intro", label = "cat.intro" },
+        { key = "outro", label = "cat.outro" },
+        { key = "preview", label = "cat.preview" },
+        { key = "filler", label = "cat.filler" },
+        { key = "music_offtopic", label = "cat.music_offtopic" },
+    }
+
+    local function sponsorCategoriesRow()
+        local activeCats = settings.sponsorBlockCategories or {}
+        local chips = {}
+        for _, category in ipairs(SPONSOR_CATEGORIES) do
+            local checked = false
+            for _, active in ipairs(activeCats) do
+                if active == category.key then checked = true break end
+            end
+            chips[#chips + 1] = ui.button({
+                key = "cat-" .. category.key,
+                text = tr(category.label),
+                controlSize = "sm",
+                selected = checked,
+                onClick = function()
+                    local nextCats = {}
+                    if checked then
+                        for _, existing in ipairs(activeCats) do
+                            if existing ~= category.key then nextCats[#nextCats + 1] = existing end
+                        end
+                    else
+                        for _, existing in ipairs(activeCats) do nextCats[#nextCats + 1] = existing end
+                        nextCats[#nextCats + 1] = category.key
+                    end
+                    sendCommand("set_setting", { key = "sponsorBlockCategories", value = nextCats })
+                end,
+            })
+        end
+        return ui.row({ align = "start", gap = 4 }, chips)
+    end
+
     children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
         ui.label({ text = tr("panel.skip_sponsor"), color = "on_surface_variant" }),
         ui.spacer({ flexGrow = 1 }),
@@ -379,47 +420,6 @@ local function mediaCard()
     children[#children + 1] = labelRow(tr("panel.after_download"), selectFor(postActionOptions, settings.postDownloadAction or "nothing", "onPostActionChanged"))
 
     return ui.column({ gap = 8, padding = 10, radius = 8, border = true, borderWidth = 1 }, children)
-end
-
-local SPONSOR_CATEGORIES = {
-    { key = "sponsor", label = "cat.sponsor" },
-    { key = "selfpromo", label = "cat.selfpromo" },
-    { key = "interaction", label = "cat.interaction" },
-    { key = "intro", label = "cat.intro" },
-    { key = "outro", label = "cat.outro" },
-    { key = "preview", label = "cat.preview" },
-    { key = "filler", label = "cat.filler" },
-    { key = "music_offtopic", label = "cat.music_offtopic" },
-}
-
-local function sponsorCategoriesRow()
-    local activeCats = settings.sponsorBlockCategories or {}
-    local chips = {}
-    for _, category in ipairs(SPONSOR_CATEGORIES) do
-        local checked = false
-        for _, active in ipairs(activeCats) do
-            if active == category.key then checked = true break end
-        end
-        chips[#chips + 1] = ui.button({
-            key = "cat-" .. category.key,
-            text = tr(category.label),
-            controlSize = "sm",
-            selected = checked,
-            onClick = function()
-                local nextCats = {}
-                if checked then
-                    for _, existing in ipairs(activeCats) do
-                        if existing ~= category.key then nextCats[#nextCats + 1] = existing end
-                    end
-                else
-                    for _, existing in ipairs(activeCats) do nextCats[#nextCats + 1] = existing end
-                    nextCats[#nextCats + 1] = category.key
-                end
-                sendCommand("set_setting", { key = "sponsorBlockCategories", value = nextCats })
-            end,
-        })
-    end
-    return ui.row({ align = "start", gap = 4 }, chips)
 end
 
 -- ── active job / status card ───────────────────────────────────────────────────
