@@ -653,8 +653,8 @@ function M.infoCommand(url, useWebClient, settings)
   args[#args + 1] = tostring(url)
   -- Cap the producer-side output at 16MB so even a huge auto-mix playlist JSON fits
   -- (a radio mix can exceed 1MiB on its own). "$@" passes each arg as a separate
-  -- parameter and pipefail keeps yt-dlp's exit status through head.
-  local wrapped = { "bash", "-c", "set -o pipefail; exec \"$@\" | head -c 16777216", "ytdlp-info" }
+  -- parameter.
+  local wrapped = { "bash", "-c", "exec \"$@\"", "ytdlp-info" }
   for _, arg in ipairs(args) do
     wrapped[#wrapped + 1] = arg
   end

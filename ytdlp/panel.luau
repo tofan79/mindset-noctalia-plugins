@@ -648,7 +648,9 @@ end
 
 -- ── render ─────────────────────────────────────────────────────────────────────
 
-function render()
+local render
+
+render = function()
     local children = {}
 
     if errorMessage ~= "" then
@@ -707,7 +709,13 @@ function onUrlChanged(text) urlValue = tostring(text or "") end
 
 function onPasteClicked() sendCommand("read_clipboard", { forced = true }) end
 
-function onClearClicked() urlValue = ""; inputSeed = inputSeed + 1 end
+function onClearClicked()
+    urlValue = ""
+    inputSeed = inputSeed + 1
+    media = nil
+    errorMessage = ""
+    render()
+end
 
 local function extractPressed(entry)
     sendCommand("extract", { url = entry or urlValue })
