@@ -1,7 +1,7 @@
 # Mindset Noctalia Plugins
 
 Personal **[Noctalia](https://github.com/noctalia-dev/noctalia) v5** plugin source for
-Hyprland sessions. Six plugins covering display, layout, animation, gaming, reminders,
+Hyprland sessions. Seven plugins covering display, layout, animation, gaming, reminders,
 and container management.
 
 <p align="center">
@@ -25,6 +25,7 @@ and container management.
 | `mindset/today-reminders` | 19 | Set a reminder for later today. Gets dismissed after it fires and never carries into tomorrow. |
 | `mindset/better-workspaces` | 19 | Aesthetic workspace indicator with 12 display modes: Roman, Kanji, Arabic, Korean, Thai, Greek, Emoji, Russian, App Icon, and more. |
 | `mindset/containers` | 19 | Docker and Podman status in the bar: containers, images, volumes, networks, and live stats, with start/stop/restart and removal controls. |
+| `mindset/ytdlp` | 19 | Download media from any URL with yt-dlp right from the bar: search, quality selection, subtitles, SponsorBlock, queue, live progress, pause/resume and history. |
 
 ## Structure
 
@@ -37,7 +38,8 @@ mindset-noctalia-plugins/
 ├── gamer-mode/            # live metrics + gamer toggle
 ├── hypr-animations/      # animation preset picker
 ├── hypr-layouts/          # tiling layout picker
-└── today-reminders/       # quick reminder from the bar
+├── today-reminders/       # quick reminder from the bar
+└── ytdlp/                 # yt-dlp media downloader
 ```
 
 `plugin.toml` is authoritative for each plugin's id, entries, and settings;
@@ -55,6 +57,7 @@ noctalia msg plugins enable mindset/better-displays
 noctalia msg plugins enable mindset/gamer-mode
 noctalia msg plugins enable mindset/today-reminders
 noctalia msg plugins enable mindset/containers
+noctalia msg plugins enable mindset/ytdlp
 ```
 
 Noctalia fetches the source tag at startup, so plugins materialize from this

@@ -102,13 +102,13 @@ tags = ["bar", "panel", "service", "system", "docker", "podman"]
 [[plugin]]
 id = "mindset/ytdlp"
 name = "YT-DLP"
-version = "1.0.0"
-updated_at = 1725516600
+version = "1.1.0"
+updated_at = 1788656174
 added_at = 1725516600
 author = "mindset"
 license = "MIT"
 icon = "brand-youtube-kids"
-description = "Download media from any URL using yt-dlp directly from your bar. Supports video, audio, and quality selection."
+description = "Download media from any URL with yt-dlp right from the bar: search YouTube, pick video/audio/quality, subtitles, SponsorBlock, queue, live progress, pause/resume and history."
 deprecated = false
 plugin_api = 19
 tags = ["bar", "panel", "media", "download", "ytdlp"]

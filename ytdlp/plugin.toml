@@ -1,24 +1,36 @@
-id           = "mindset/ytdlp"
-name         = "YT-DLP"
-version      = "1.0.0"
-plugin_api   = 19
-author       = "mindset"
-license      = "MIT"
-icon         = "brand-youtube-kids"
-description  = "Download media from any URL using yt-dlp directly from your bar."
-tags         = ["media", "download", "bar", "ytdlp"]
+id = "mindset/ytdlp"
+name = "YT-DLP"
+version = "1.1.0"
+plugin_api = 19
+author = "mindset"
+license = "MIT"
+icon = "brand-youtube-kids"
+description = "Download media from any URL with yt-dlp right from the bar: search YouTube, pick video/audio/quality, subtitles, SponsorBlock, queue, live progress, pause/resume and history."
+tags = ["media", "download", "bar", "ytdlp", "youtube", "panel"]
 
-dependencies = ["yt-dlp"]
+dependencies = ["yt-dlp", "ffmpeg", "wl-paste"]
 
-[[widget]]
-id    = "widget"
-entry = "widget.luau"
+[[setting]]
+key = "glyph"
+type = "glyph"
+label_key = "settings.glyph.label"
+description_key = "settings.glyph.description"
+default = "brand-youtube-kids"
+
+[[service]]
+id = "service"
+entry = "service.luau"
 
 [[panel]]
-id              = "panel"
-entry           = "panel.luau"
-width           = 380
-height          = 320
-placement       = "floating"
-position        = "center"
-keyboard_focus  = "exclusive"
+id = "panel"
+entry = "panel.luau"
+width = 560
+height = 700
+placement = "attached"
+position = "auto"
+dismiss_on_outside_click = true
+keyboard_focus = "exclusive"
+
+[[widget]]
+id = "widget"
+entry = "widget.luau"
