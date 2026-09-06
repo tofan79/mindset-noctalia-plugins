@@ -22,6 +22,7 @@ local DATA_DIR = noctalia.pluginDataDir() or ""
 local SETTINGS_PATH = DATA_DIR .. "/settings.json"
 local PID_PATH = DATA_DIR .. "/active.pid"
 local THUMBS_DIR = DATA_DIR .. "/thumbnails"
+local ERROR_LOG_PATH = DATA_DIR .. "/last_error.log"
 
 local HISTORY_LIMIT = 50
 local MAX_LOG = 65536
@@ -531,6 +532,11 @@ function M.capLog(text)
   return value
 end
 
+local function saveLastError(text)
+  if ERROR_LOG_PATH == "" or type(noctalia.writeFile) ~= "function" then return end
+  pcall(noctalia.writeFile, ERROR_LOG_PATH, tostring(text or ""))
+end
+
 function M.guessOutputPath(settings, job)
   local dir = expandHome(settings.downloadDir)
   local title = tostring(job.title or ""):gsub("[/\\?%%*:|%\"<>]", "_")
@@ -823,6 +829,7 @@ function M.startExtraction(raw)
     else
       local errorText = M.friendlyError(tostring(result.stderr or ""), result.exitCode)
       local rawLow = (tostring(result.stderr or "") .. "\n" .. tostring(result.stdout or "")):lower()
+      saveLastError("EXTRACT exit=" .. tostring(result.exitCode) .. "\n" .. tostring(result.stderr or ""))
       -- YouTube rate-limits requests (429) even the info dump. Retry
       -- the same extraction once before surfacing the error.
       if not _extractRetried and containsAny({ "429", "too many requests", "rate limited", "timedtext", "unable to download", "bot" }, rawLow) then
@@ -840,6 +847,7 @@ function M.startExtraction(raw)
             M.handleInfo(tostring(r2.stdout or ""))
           else
             local retryError = M.friendlyError(tostring(r2.stderr or ""), r2.exitCode)
+            saveLastError("EXTRACT(retry) exit=" .. tostring(r2.exitCode) .. "\n" .. tostring(r2.stderr or ""))
             state.errorMessage = retryError
             publishError()
             if state.active.status ~= "downloading" and state.active.status ~= "preparing"
@@ -1032,6 +1040,7 @@ function M.handleDownloadFinished(exitCode)
       setActive({ status = "cancelled", error = "" })
     else
       local errorText = M.friendlyError(active.log or "", code)
+      saveLastError("DOWNLOAD exit=" .. tostring(code) .. "\n" .. tostring(active.log or ""))
       -- Subtitle/caption fetches hit YouTube rate limits (429/timedtext) and
       -- silently kill the whole download. Retry once without subtitle flags so
       -- the media still lands. Match the RAW log: friendlyError rewrites 429
