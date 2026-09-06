@@ -712,7 +712,9 @@ function onPasteClicked() sendCommand("read_clipboard", { forced = true }) end
 function onClearClicked()
     urlValue = ""
     inputSeed = inputSeed + 1
-    media = nil
+    if type(active) ~= "table" or (active.status ~= "downloading" and active.status ~= "preparing") then
+        media = nil
+    end
     errorMessage = ""
     render()
 end
