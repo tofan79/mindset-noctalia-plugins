@@ -25,6 +25,10 @@ local function assertTrue(value, msg)
 end
 
 local function assertContains(list, value)
+  if type(list) == "string" then
+    assertTrue(list:find(value, 1, true) ~= nil, "expected '" .. value .. "' in: " .. list)
+    return
+  end
   for _, entry in ipairs(list) do
     if entry == value then return end
   end

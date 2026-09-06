@@ -62,6 +62,10 @@ local function dur(seconds)
     return string.format("%d:%s", minutes, pad(secs))
 end
 
+local function shellQuote(value)
+    return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
+
 local function sendCommand(action, extra)
     nonceCounter = nonceCounter + 1
     local command = { nonce = (noctalia.nowMs() * 1000) + nonceCounter, action = action }
@@ -752,13 +756,13 @@ function onRetryClicked() sendCommand("download", { job = active and active.job 
 
 function onOpenOutputFileClicked()
     if active and active.outputPath ~= "" then
-        noctalia.runAsync({ "xdg-open", active.outputPath }, function() end)
+        noctalia.runAsync("xdg-open " .. shellQuote(active.outputPath), function() end)
     end
 end
 
 function onOpenFolderClicked()
     if active and active.outputDir ~= "" then
-        noctalia.runAsync({ "xdg-open", active.outputDir }, function() end)
+        noctalia.runAsync("xdg-open " .. shellQuote(active.outputDir), function() end)
     else
         sendCommand("open_folder", {})
     end

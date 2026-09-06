@@ -173,6 +173,16 @@ local function shellQuote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
 end
 
+-- api ≤ 23 runAsync/runStream only accept a shell string, so argv arrays are
+-- joined back into one safely-quoted command line.
+local function shellJoin(argv)
+  local out = {}
+  for i, arg in ipairs(argv) do
+    out[i] = shellQuote(arg)
+  end
+  return table.concat(out, " ")
+end
+
 local function isWebUrl(value)
   return tostring(value or ""):match("^https?://") ~= nil
 end
@@ -754,7 +764,7 @@ function M.startExtraction(raw)
   _extractGeneration = _extractGeneration + 1
   local generation = _extractGeneration
   local args = M.infoCommand(target, _sessionWebClient, _settings)
-  noctalia.runAsync(args, function(result)
+  noctalia.runAsync(shellJoin(args), function(result)
     if generation ~= _extractGeneration then return end
     state.extracting = false
     publishExtracting()
@@ -835,7 +845,7 @@ end
 function M.killActive()
   local pid = retrievePid()
   if pid then
-    noctalia.runAsync({ "kill", "-TERM", pid }, function() end)
+    noctalia.runAsync(shellJoin({ "kill", "-TERM", pid }), function() end)
   end
   clearActivePid()
 end
@@ -869,7 +879,7 @@ function M.startDownload(job)
 
   local dir = trim(_settings.downloadDir)
   if dir == "" then dir = noctalia.getenv("HOME") or "/tmp" end
-  noctalia.runAsync({ "mkdir", "-p", expandHome(dir) }, function(result)
+  noctalia.runAsync(shellJoin({ "mkdir", "-p", expandHome(dir) }), function(result)
     if result.exitCode ~= 0 then
       setActive({
         status = "error",
@@ -962,9 +972,9 @@ function M.handleDownloadFinished(exitCode)
   if action == "copy" and outputPath ~= "" then
     noctalia.copyToClipboard(outputPath, "text/plain")
   elseif action == "open" then
-    noctalia.runAsync({ "xdg-open", state.active.outputDir }, function() end)
+    noctalia.runAsync(shellJoin({ "xdg-open", state.active.outputDir }), function() end)
   elseif action == "openFile" and outputPath ~= "" then
-    noctalia.runAsync({ "xdg-open", outputPath }, function() end)
+    noctalia.runAsync(shellJoin({ "xdg-open", outputPath }), function() end)
   end
 
   if not _panelOpen then
@@ -1106,7 +1116,7 @@ end
 -- ── clipboard ────────────────────────────────────────────────────────────────────
 
 function M.readClipboard(forced)
-  noctalia.runAsync({ "wl-paste", "--no-newline" }, function(result)
+  noctalia.runAsync(shellJoin({ "wl-paste", "--no-newline" }), function(result)
     local text = result.exitCode == 0 and tostring(result.stdout or "") or ""
     _clipboardVersion = _clipboardVersion + 1
     state.clipboard = { text = text, forced = forced == true, version = _clipboardVersion }
@@ -1175,7 +1185,7 @@ function M.handleCommand(command)
     _panelOpen = command.open == true
   elseif action == "open_folder" then
     local dir = expandHome(_settings.downloadDir)
-    noctalia.runAsync({ "xdg-open", dir }, function() end)
+    noctalia.runAsync(shellJoin({ "xdg-open", dir }), function() end)
   end
 end
 
