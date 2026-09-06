@@ -34,6 +34,7 @@ local _sessionWebClient = false
 local _extractGeneration = 0
 local _pauseRequested = false
 local _cancelPending = false
+local _forceNoSubs = false
 local _lastHandledNonce = 0
 local _lastRawInput = ""
 local _lastExtractedUrl = ""
@@ -672,7 +673,7 @@ function M.buildDownloadArgs(job, settings, useWebClient)
     args[#args + 1] = "--embed-metadata"
   end
   local subLanguage = trim(settings.subLanguage)
-  if subLanguage ~= "" and subLanguage ~= "off" then
+  if subLanguage ~= "" and subLanguage ~= "off" and not _forceNoSubs then
     local embedSubs = settings.embedSubs == true and (job.mode or "video") ~= "audio"
     args[#args + 1] = "--sub-langs"
     args[#args + 1] = subLanguage
@@ -912,6 +913,7 @@ function M.startDownload(job)
 
   _pauseRequested = false
   _cancelPending = false
+  _forceNoSubs = false
   state.active = {
     status = "preparing",
     job = job,
@@ -996,6 +998,19 @@ function M.handleDownloadFinished(exitCode)
       setActive({ status = "cancelled", error = "" })
     else
       local errorText = M.friendlyError(active.log or "", code)
+      -- Subtitle/caption fetches hit YouTube rate limits (429/timedtext) and
+      -- silently kill the whole download. Retry once without subtitle flags so
+      -- the media still lands.
+      local subsActive = trim(_settings.subLanguage or "") ~= ""
+        and trim(_settings.subLanguage or "") ~= "off"
+      if subsActive and not _forceNoSubs
+          and containsAny({ "subtitle", "caption", "timedtext", "429", "too many requests", "embed subjective", "error embedding" }, errorText:lower()) then
+        _forceNoSubs = true
+        setActive({ status = "preparing", error = "", log = "Subtitle fetch failed; retrying without subtitles.\n" })
+        publishActive()
+        M.beginDownload()
+        return
+      end
       setActive({ status = "error", error = errorText })
       if not _panelOpen then noctalia.notifyError("YT-DLP", errorText) end
     end
