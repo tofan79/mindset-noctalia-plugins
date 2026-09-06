@@ -35,6 +35,7 @@ local _extractGeneration = 0
 local _pauseRequested = false
 local _cancelPending = false
 local _forceNoSubs = false
+local _extractRetried = false
 local _lastHandledNonce = 0
 local _lastRawInput = ""
 local _lastExtractedUrl = ""
@@ -802,6 +803,7 @@ function M.startExtraction(raw)
   end
   _lastRawInput = tostring(raw or "")
   _lastExtractedUrl = target
+  _extractRetried = false
   state.mediaInfo = nil
   publishMediaInfo()
   state.errorMessage = ""
@@ -820,6 +822,38 @@ function M.startExtraction(raw)
       M.handleInfo(tostring(result.stdout or ""))
     else
       local errorText = M.friendlyError(tostring(result.stderr or ""), result.exitCode)
+      local rawLow = (tostring(result.stderr or "") .. "\n" .. tostring(result.stdout or "")):lower()
+      -- YouTube rate-limits requests (429) even the info dump. Retry
+      -- the same extraction once before surfacing the error.
+      if not _extractRetried and containsAny({ "429", "too many requests", "rate limited", "timedtext", "unable to download", "bot" }, rawLow) then
+        _extractRetried = true
+        state.extracting = true
+        publishExtracting()
+        _extractGeneration = _extractGeneration + 1
+        local retryGen = _extractGeneration
+        local retryArgs = M.infoCommand(target, _sessionWebClient, _settings)
+        noctalia.runAsync(shellJoin(retryArgs), function(r2)
+          if retryGen ~= _extractGeneration then return end
+          state.extracting = false
+          publishExtracting()
+          if r2.exitCode == 0 then
+            M.handleInfo(tostring(r2.stdout or ""))
+          else
+            local retryError = M.friendlyError(tostring(r2.stderr or ""), r2.exitCode)
+            state.errorMessage = retryError
+            publishError()
+            if state.active.status ~= "downloading" and state.active.status ~= "preparing"
+                and containsAny({ "403", "forbidden", "access denied", "sign in", "authentication",
+                  "auth required", "authenticate", "unable to download", "blocked", "geo", "bot" },
+                  retryError:lower()) then
+              state.active.status = "error"
+              state.active.error = retryError
+              publishActive()
+            end
+          end
+        end)
+        return
+      end
       state.errorMessage = errorText
       publishError()
       if state.active.status ~= "downloading" and state.active.status ~= "preparing"
@@ -1000,11 +1034,13 @@ function M.handleDownloadFinished(exitCode)
       local errorText = M.friendlyError(active.log or "", code)
       -- Subtitle/caption fetches hit YouTube rate limits (429/timedtext) and
       -- silently kill the whole download. Retry once without subtitle flags so
-      -- the media still lands.
+      -- the media still lands. Match the RAW log: friendlyError rewrites 429
+      -- into 'Network error.', losing the trigger words.
+      local rawLow = (active.log or ""):lower()
       local subsActive = trim(_settings.subLanguage or "") ~= ""
         and trim(_settings.subLanguage or "") ~= "off"
       if subsActive and not _forceNoSubs
-          and containsAny({ "subtitle", "caption", "timedtext", "429", "too many requests", "embed subjective", "error embedding" }, errorText:lower()) then
+          and containsAny({ "subtitle", "caption", "timedtext", "429", "too many requests", "error embedding" }, rawLow) then
         _forceNoSubs = true
         setActive({ status = "preparing", error = "", log = "Subtitle fetch failed; retrying without subtitles.\n" })
         publishActive()
