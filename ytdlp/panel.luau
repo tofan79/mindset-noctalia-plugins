@@ -23,6 +23,7 @@ local clipboard = {}
 local clipboardVersion = 0
 local seenClipboardVersion = 0
 local urlValue = ""
+local inputSeed = 0
 local nonceCounter = 0
 
 -- option sets rebuilt each render so the selects and their index handlers agree
@@ -197,7 +198,7 @@ end
 local function urlInput()
     -- ui.input is uncontrolled (value seeds once). A forced clipboard read bumps the
     -- key so the field remounts and actually shows what was pasted.
-    local key = "url-" .. tostring(seenClipboardVersion)
+    local key = "url-" .. tostring(seenClipboardVersion) .. "-" .. tostring(inputSeed)
     local seed = ""
     if clipboard.forced == true and clipboardVersion > seenClipboardVersion then
         seenClipboardVersion = clipboardVersion
@@ -657,7 +658,7 @@ function onUrlChanged(text) urlValue = tostring(text or "") end
 
 function onPasteClicked() sendCommand("read_clipboard", { forced = true }) end
 
-function onClearClicked() urlValue = "" end
+function onClearClicked() urlValue = ""; inputSeed = inputSeed + 1 end
 
 local function extractPressed(entry)
     sendCommand("extract", { url = entry or urlValue })
