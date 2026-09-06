@@ -1027,6 +1027,8 @@ function M.handleDownloadFinished(exitCode)
   local code = tonumber(exitCode) or 0
   local job = active.job
 
+  saveLastError("DOWNLOAD exit=" .. tostring(code) .. "\n" .. tostring(active.log or ""))
+
   if _pauseRequested then
     _pauseRequested = false
     _cancelPending = false
@@ -1040,7 +1042,6 @@ function M.handleDownloadFinished(exitCode)
       setActive({ status = "cancelled", error = "" })
     else
       local errorText = M.friendlyError(active.log or "", code)
-      saveLastError("DOWNLOAD exit=" .. tostring(code) .. "\n" .. tostring(active.log or ""))
       -- Subtitle/caption fetches hit YouTube rate limits (429/timedtext) and
       -- silently kill the whole download. Retry once without subtitle flags so
       -- the media still lands. Match the RAW log: friendlyError rewrites 429
@@ -1067,6 +1068,7 @@ function M.handleDownloadFinished(exitCode)
 
   local outputPath = active.outputPath
   if outputPath == "" then outputPath = M.guessOutputPath(_settings, job) end
+  clearActivePid()
   setActive({
     status = "completed",
     outputPath = outputPath,
