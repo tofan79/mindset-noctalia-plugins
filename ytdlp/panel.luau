@@ -714,6 +714,7 @@ function onClearClicked()
     inputSeed = inputSeed + 1
     if type(active) ~= "table" or (active.status ~= "downloading" and active.status ~= "preparing") then
         media = nil
+        noctalia.state.set("media_info", nil)
     end
     errorMessage = ""
     render()
