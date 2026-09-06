@@ -67,6 +67,24 @@ test("cleanUrlText rejects plain text", function()
   assertEqual(service.cleanUrlText("hello world this is text"), "")
 end)
 
+test("cleanUrlText strips radio-mix params from watch URLs", function()
+  assertEqual(
+    service.cleanUrlText("https://www.youtube.com/watch?v=HIJfaBq7T1k&list=RDHIJfaBq7T1k&start_radio=1&pp=oAcB"),
+    "https://www.youtube.com/watch?v=HIJfaBq7T1k")
+  assertEqual(
+    service.cleanUrlText("https://www.youtube.com/watch?v=abc123&list=RDxyz&index=3"),
+    "https://www.youtube.com/watch?v=abc123")
+end)
+
+test("cleanUrlText keeps playlist-only and non-youtube URLs intact", function()
+  assertEqual(
+    service.cleanUrlText("https://www.youtube.com/playlist?list=PLABC123"),
+    "https://www.youtube.com/playlist?list=PLABC123")
+  assertEqual(
+    service.cleanUrlText("https://example.com/watch?v=abc&list=keepme"),
+    "https://example.com/watch?v=abc&list=keepme")
+end)
+
 test("extractTarget wraps search text in ytsearch", function()
   assertEqual(service.extractTarget("lofi beats"), "ytsearch1:lofi beats")
 end)

@@ -196,6 +196,20 @@ local function stripUrlJunk(value)
 end
 
 -- Normalize whatever the user pastes into a usable URL, or "" if it can't be one:
+local function stripYtListParams(url)
+  if not url:match("^https?://[^/]*youtube%.com/watch") then return url end
+  local base, query = url:match("^(.-%?)(.*)$")
+  if not base then return url end
+  local kept = {}
+  for param in query:gmatch("([^&]+)") do
+    local key = param:match("^([^=]+)")
+    if key and key ~= "list" and key ~= "index" and key ~= "start_radio" and key ~= "pp" then
+      kept[#kept + 1] = param
+    end
+  end
+  return base .. table.concat(kept, "&")
+end
+
 -- trim, take the first http(s) URL (even inside prose), strip trailing junk and
 -- auto-prefix https:// for bare hosts (youtube.com/...).
 function M.cleanUrlText(text)
@@ -203,9 +217,11 @@ function M.cleanUrlText(text)
   if t == "" then return "" end
   if t:match("^ytsearch") then return stripUrlJunk(t) end
   local startPos, endPos = t:find("https?://%S+")
-  if startPos then return stripUrlJunk(t:sub(startPos, endPos)) end
+  if startPos then
+    return stripYtListParams(stripUrlJunk(t:sub(startPos, endPos)))
+  end
   if not t:find("%s") and t:match("%.") then
-    return "https://" .. stripUrlJunk(t)
+    return stripYtListParams("https://" .. stripUrlJunk(t))
   end
   return ""
 end
