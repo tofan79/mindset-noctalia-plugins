@@ -1236,6 +1236,11 @@ function M.handleCommand(command)
   elseif action == "open_folder" then
     local dir = expandHome(_settings.downloadDir)
     noctalia.runAsync(shellJoin({ "xdg-open", dir }), function() end)
+  elseif action == "copy_url" then
+    local text = tostring(command.text or "")
+    if text ~= "" then
+      noctalia.runAsync("printf '%s' " .. shellQuote(text) .. " | wl-copy --trim-newline", function() end)
+    end
   end
 end
 

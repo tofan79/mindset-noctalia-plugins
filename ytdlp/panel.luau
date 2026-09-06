@@ -562,7 +562,8 @@ local function historyCard()
                 urlValue = entry
                 pendingUrlSeed = entry
                 inputSeed = inputSeed + 1
-                noctalia.copyToClipboard(entry, "text/plain")
+                sendCommand("copy_url", { text = entry })
+                render()
             end,
         })
     end
@@ -646,7 +647,7 @@ end
 
 -- ── render ─────────────────────────────────────────────────────────────────────
 
-local function render()
+function render()
     local children = {}
 
     if errorMessage ~= "" then
