@@ -29,6 +29,7 @@ local nonceCounter = 0
 -- option sets rebuilt each render so the selects and their index handlers agree
 local qualityOptions = {}
 local videoFormatOptions = {}
+local audioQualityOptions = {}
 local audioFormatOptions = {}
 local audioTrackOptions = {}
 local subLangOptions = {}
@@ -110,6 +111,8 @@ local function jobFor(mediaInfo)
         title = type(mediaInfo) == "table" and mediaInfo.title or "",
         mode = settings.downloadMode or "video",
         quality = settings.quality or "best",
+        videoFormat = settings.videoFormat or "auto",
+        audioQuality = settings.audioQuality or "best",
         audioFormat = settings.audioFormat or "best",
         audioLanguage = settings.audioLanguage or "",
     }
@@ -131,12 +134,21 @@ local function rebuildOptions()
     end
 
 videoFormatOptions = {
-        { label = tr("panel.video_format_auto"), value = "auto" },
+        { label = tr("panel.format_auto"), value = "auto" },
         { label = "mp4", value = "mp4" },
         { label = "mkv", value = "mkv" },
         { label = "webm", value = "webm" },
         { label = "mov", value = "mov" },
         { label = "avi", value = "avi" },
+    }
+
+    audioQualityOptions = {
+        { label = tr("panel.quality_best"), value = "best" },
+        { label = "64k", value = "64" },
+        { label = "128k", value = "128" },
+        { label = "192k", value = "192" },
+        { label = "256k", value = "256" },
+        { label = "320k", value = "320" },
     }
 
     audioFormatOptions = {
@@ -292,9 +304,10 @@ local function mediaCard()
     local mode = settings.downloadMode or "video"
     if mode == "video" then
         children[#children + 1] = labelRow(tr("panel.quality"), selectFor(qualityOptions, settings.quality or "best", "onQualityChanged"))
-        children[#children + 1] = labelRow(tr("panel.video_format"), selectFor(videoFormatOptions, settings.videoFormat or "auto", "onVideoFormatChanged"))
+        children[#children + 1] = labelRow(tr("panel.format"), selectFor(videoFormatOptions, settings.videoFormat or "auto", "onVideoFormatChanged"))
     elseif mode == "audio" then
-        children[#children + 1] = labelRow(tr("panel.audio_format"), selectFor(audioFormatOptions, settings.audioFormat or "best", "onAudioFormatChanged"))
+        children[#children + 1] = labelRow(tr("panel.quality"), selectFor(audioQualityOptions, settings.audioQuality or "best", "onAudioQualityChanged"))
+        children[#children + 1] = labelRow(tr("panel.format"), selectFor(audioFormatOptions, settings.audioFormat or "best", "onAudioFormatChanged"))
         children[#children + 1] = labelRow(tr("panel.audio_track"), selectFor(audioTrackOptions, settings.audioLanguage or "", "onAudioTrackChanged"))
     else
         children[#children + 1] = labelRow(tr("panel.custom_format"), ui.input({
@@ -712,6 +725,11 @@ end
 function onAudioFormatChanged(index)
     local entry = optionAt(audioFormatOptions, index)
     if entry then sendCommand("set_setting", { key = "audioFormat", value = entry.value }) end
+end
+
+function onAudioQualityChanged(index)
+    local entry = optionAt(audioQualityOptions, index)
+    if entry then sendCommand("set_setting", { key = "audioQuality", value = entry.value }) end
 end
 
 function onAudioTrackChanged(index)

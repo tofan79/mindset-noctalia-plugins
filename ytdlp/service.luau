@@ -89,6 +89,7 @@ function M.defaultSettings()
     downloadMode = "video",
     quality = "best",
     videoFormat = "auto",
+    audioQuality = "best",
     audioFormat = "best",
     audioLanguage = "",
     autoClipboard = true,
@@ -691,6 +692,11 @@ function M.buildDownloadArgs(job, settings, useWebClient)
       args[#args + 1] = "--audio-format"
       args[#args + 1] = audioFormat
     end
+    local audioQuality = tostring(job.audioQuality or settings.audioQuality or "best")
+    if audioQuality ~= "" and audioQuality ~= "best" and not audioQuality:match("%D$") then
+      args[#args + 1] = "--audio-quality"
+      args[#args + 1] = audioQuality .. "K"
+    end
     local language = tostring(job.audioLanguage or "")
     if preferDrc or language ~= "" then
       local base = "bestaudio"
@@ -1069,6 +1075,8 @@ function M.retryWebClient(job, url)
         title = state.mediaInfo.title or "",
         mode = "video",
         quality = "best",
+        videoFormat = _settings.videoFormat or "auto",
+        audioQuality = _settings.audioQuality or "best",
         audioFormat = _settings.audioFormat or "best",
         audioLanguage = "",
       }
@@ -1089,6 +1097,7 @@ function M.enqueue(job)
     mode = job.mode or "video",
     quality = tostring(job.quality or "best"),
     audioFormat = tostring(job.audioFormat or _settings.audioFormat or "best"),
+    audioQuality = tostring(job.audioQuality or _settings.audioQuality or "best"),
     audioLanguage = tostring(job.audioLanguage or ""),
   }
   publishQueue()

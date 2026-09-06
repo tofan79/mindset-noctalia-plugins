@@ -261,6 +261,15 @@ test("download args: no container flag in audio mode", function()
   assertTrue(flatten(args):find("--merge-output-format", 1, true) == nil)
 end)
 
+test("download args: audio quality bitrate via --audio-quality", function()
+  local s = defaultSettings()
+  local args = service.buildDownloadArgs({ url = "https://youtu.be/x", mode = "audio", audioFormat = "mp3", audioQuality = "192" }, s, false)
+  assertTrue(flatten(args):find("--audio-quality 192K", 1, true) ~= nil)
+
+  args = service.buildDownloadArgs({ url = "https://youtu.be/x", mode = "audio", audioFormat = "opus", audioQuality = "best" }, s, false)
+  assertTrue(flatten(args):find("--audio-quality", 1, true) == nil)
+end)
+
 test("download args: sponsorblock, thumbnails, subs, archive, rate limit", function()
   local s = defaultSettings()
   s.sponsorBlock = true
