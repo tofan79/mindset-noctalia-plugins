@@ -23,6 +23,7 @@ local clipboardVersion = 0
 local seenClipboardVersion = 0
 local urlValue = ""
 local inputSeed = 0
+local pendingUrlSeed = nil
 local nonceCounter = 0
 
 -- option sets rebuilt each render so the selects and their index handlers agree
@@ -229,6 +230,10 @@ local function urlInput()
     -- key so the field remounts and actually shows what was pasted.
     local key = "url-" .. tostring(seenClipboardVersion) .. "-" .. tostring(inputSeed)
     local seed = ""
+    if pendingUrlSeed ~= nil then
+        seed = pendingUrlSeed
+        pendingUrlSeed = nil
+    end
     if clipboard.forced == true and clipboardVersion > seenClipboardVersion then
         seenClipboardVersion = clipboardVersion
         urlValue = tostring(clipboard.text or "")
@@ -552,9 +557,12 @@ local function historyCard()
             text = entry,
             variant = "ghost",
             controlSize = "sm",
+            tooltip = tr("panel.history_copy"),
             onClick = function()
                 urlValue = entry
-                extractPressed(entry)
+                pendingUrlSeed = entry
+                inputSeed = inputSeed + 1
+                noctalia.copyToClipboard(entry, "text/plain")
             end,
         })
     end

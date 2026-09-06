@@ -118,7 +118,8 @@
         "text_progress": "{size} {speed} {eta}",
         "eta_remaining": "· {eta} remaining",
         "speeds": "at {speed}",
-        "queue_title": "Queue"
+        "queue_title": "Queue",
+        "history_copy": "Copy & fill"
     },
     "error": {
         "no_url": "Enter a URL or search query.",
