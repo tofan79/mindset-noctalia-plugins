@@ -107,6 +107,7 @@ function M.defaultSettings()
     customArgs = "",
     downloadThumbnail = false,
     embedThumbnail = false,
+    embedMetadata = true,
     embedSubs = false,
     includeAutoSubs = false,
     preferDrc = false,
@@ -666,6 +667,9 @@ function M.buildDownloadArgs(job, settings, useWebClient)
   end
   if settings.embedThumbnail == true then
     args[#args + 1] = "--embed-thumbnail"
+  end
+  if settings.embedMetadata ~= false then
+    args[#args + 1] = "--embed-metadata"
   end
   local subLanguage = trim(settings.subLanguage)
   if subLanguage ~= "" and subLanguage ~= "off" then

@@ -351,6 +351,11 @@ local function mediaCard()
         ui.spacer({ flexGrow = 1 }),
         ui.toggle({ checked = settings.embedThumbnail == true, onChange = "onToggleEmbedThumb" }),
     })
+    children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
+        ui.label({ text = tr("panel.embed_metadata"), color = "on_surface_variant" }),
+        ui.spacer({ flexGrow = 1 }),
+        ui.toggle({ checked = settings.embedMetadata ~= false, onChange = "onToggleEmbedMetadata" }),
+    })
     children[#children + 1] = ui.separator({})
 
     children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
@@ -768,6 +773,7 @@ function onToggleEmbedSubs(state) sendCommand("set_setting", { key = "embedSubs"
 function onToggleAutoSubs(state) sendCommand("set_setting", { key = "includeAutoSubs", value = boolFrom(state) }) end
 function onToggleThumbnail(state) sendCommand("set_setting", { key = "downloadThumbnail", value = boolFrom(state) }) end
 function onToggleEmbedThumb(state) sendCommand("set_setting", { key = "embedThumbnail", value = boolFrom(state) }) end
+function onToggleEmbedMetadata(state) sendCommand("set_setting", { key = "embedMetadata", value = boolFrom(state) }) end
 function onToggleSponsorBlock(state) sendCommand("set_setting", { key = "sponsorBlock", value = boolFrom(state) }) end
 function onToggleUseArchive(state) sendCommand("set_setting", { key = "useArchive", value = boolFrom(state) }) end
 function onToggleSaveHistory(state) sendCommand("set_setting", { key = "saveHistory", value = boolFrom(state) }) end
