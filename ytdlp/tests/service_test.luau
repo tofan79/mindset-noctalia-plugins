@@ -308,6 +308,17 @@ test("download args: auto subs pulled when embedding and no manual subs", functi
   assertTrue(flatten(args):find("--write-auto-subs", 1, true) ~= nil)
 end)
 
+test("download args: audio mode writes subs but never embeds them", function()
+  local s = defaultSettings()
+  s.embedSubs = true
+  s.subLanguage = "id"
+  local args = service.buildDownloadArgs({ url = "https://youtu.be/x", mode = "audio", audioFormat = "mp3" }, s, false)
+  local text = flatten(args)
+  assertTrue(text:find("--sub-langs id", 1, true) ~= nil)
+  assertTrue(text:find("--write-subs", 1, true) ~= nil)
+  assertTrue(text:find("--embed-subs", 1, true) == nil)
+end)
+
 -- ── friendlyError ──
 
 test("friendlyError maps 403 to a cookie/web hint", function()

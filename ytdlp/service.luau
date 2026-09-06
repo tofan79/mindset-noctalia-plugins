@@ -673,16 +673,17 @@ function M.buildDownloadArgs(job, settings, useWebClient)
   end
   local subLanguage = trim(settings.subLanguage)
   if subLanguage ~= "" and subLanguage ~= "off" then
+    local embedSubs = settings.embedSubs == true and (job.mode or "video") ~= "audio"
     args[#args + 1] = "--sub-langs"
     args[#args + 1] = subLanguage
     args[#args + 1] = "--write-subs"
-    if settings.embedSubs == true then
+    if embedSubs then
       args[#args + 1] = "--embed-subs"
     end
     -- --embed-subs only fetches manually uploaded subtitles, so pull in the auto
     -- captions when the video has none of its own.
     local wantAuto = settings.includeAutoSubs == true
-      or (settings.embedSubs == true
+      or (embedSubs
         and type(job.info) == "table"
         and job.info.hasSubs == false
         and job.info.hasAutoSubs == true)
