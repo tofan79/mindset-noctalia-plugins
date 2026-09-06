@@ -40,6 +40,8 @@
     "mode_value_custom": "Custom",
     "quality": "Quality",
     "quality_best": "Best",
+    "video_format": "Video format",
+    "video_format_auto": "Auto",
     "audio_format": "Audio format",
     "audio_track": "Track",
     "track_original": "Original",

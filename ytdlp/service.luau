@@ -88,6 +88,7 @@ function M.defaultSettings()
     downloadDir = home .. "/Downloads/Videos/yt-dlp",
     downloadMode = "video",
     quality = "best",
+    videoFormat = "auto",
     audioFormat = "best",
     audioLanguage = "",
     autoClipboard = true,
@@ -717,6 +718,14 @@ function M.buildDownloadArgs(job, settings, useWebClient)
     elseif preferDrc then
       args[#args + 1] = "-f"
       args[#args + 1] = "bestvideo*+bestaudio[format_id$='-drc']/bestvideo*+bestaudio/best"
+    end
+  end
+
+  if mode ~= "audio" then
+    local videoFormat = trim(settings.videoFormat or "")
+    if videoFormat ~= "" and videoFormat ~= "auto" then
+      args[#args + 1] = "--merge-output-format"
+      args[#args + 1] = videoFormat
     end
   end
 

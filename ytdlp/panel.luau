@@ -8,8 +8,8 @@
 
 local M = {}
 
-local CONTROL_LABEL_WIDTH = 150
-local CONTROL_WIDTH = 170
+local CONTROL_LABEL_WIDTH = 180
+local CONTROL_WIDTH = 210
 
 -- ── module state (refreshed from `noctalia.state` on open and on every watch) ───
 
@@ -28,6 +28,7 @@ local nonceCounter = 0
 
 -- option sets rebuilt each render so the selects and their index handlers agree
 local qualityOptions = {}
+local videoFormatOptions = {}
 local audioFormatOptions = {}
 local audioTrackOptions = {}
 local subLangOptions = {}
@@ -128,6 +129,15 @@ local function rebuildOptions()
     for _, quality in ipairs(available) do
         qualityOptions[#qualityOptions + 1] = { label = quality .. "p", value = quality }
     end
+
+videoFormatOptions = {
+        { label = tr("panel.video_format_auto"), value = "auto" },
+        { label = "mp4", value = "mp4" },
+        { label = "mkv", value = "mkv" },
+        { label = "webm", value = "webm" },
+        { label = "mov", value = "mov" },
+        { label = "avi", value = "avi" },
+    }
 
     audioFormatOptions = {
         { label = "Best", value = "best" },
@@ -260,8 +270,8 @@ local function mediaCard()
 
     children[#children + 1] = ui.image({
         path = tostring(media.thumbnailPath or media.thumbnail or ""),
-        width = 320,
-        height = 180,
+        width = 400,
+        height = 225,
         radius = 8,
         fit = "cover",
     })
@@ -282,6 +292,7 @@ local function mediaCard()
     local mode = settings.downloadMode or "video"
     if mode == "video" then
         children[#children + 1] = labelRow(tr("panel.quality"), selectFor(qualityOptions, settings.quality or "best", "onQualityChanged"))
+        children[#children + 1] = labelRow(tr("panel.video_format"), selectFor(videoFormatOptions, settings.videoFormat or "auto", "onVideoFormatChanged"))
     elseif mode == "audio" then
         children[#children + 1] = labelRow(tr("panel.audio_format"), selectFor(audioFormatOptions, settings.audioFormat or "best", "onAudioFormatChanged"))
         children[#children + 1] = labelRow(tr("panel.audio_track"), selectFor(audioTrackOptions, settings.audioLanguage or "", "onAudioTrackChanged"))
@@ -691,6 +702,11 @@ end
 function onQualityChanged(index)
     local entry = optionAt(qualityOptions, index)
     if entry then sendCommand("set_setting", { key = "quality", value = entry.value }) end
+end
+
+function onVideoFormatChanged(index)
+    local entry = optionAt(videoFormatOptions, index)
+    if entry then sendCommand("set_setting", { key = "videoFormat", value = entry.value }) end
 end
 
 function onAudioFormatChanged(index)

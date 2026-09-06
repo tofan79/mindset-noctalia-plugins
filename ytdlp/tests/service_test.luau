@@ -238,6 +238,29 @@ test("download args: custom format selector", function()
   assertTrue(flatten(args):find("bestvideo[ext=webm]+bestaudio", 1, true) ~= nil)
 end)
 
+test("download args: video container via merge-output-format", function()
+  local s = defaultSettings()
+  s.videoFormat = "mp4"
+  local args = service.buildDownloadArgs({ url = "https://youtu.be/x", mode = "video", quality = "best" }, s, false)
+  local text = flatten(args)
+  assertTrue(text:find("--merge-output-format mp4", 1, true) ~= nil)
+
+  s.videoFormat = "mkv"
+  args = service.buildDownloadArgs({ url = "https://youtu.be/x", mode = "video", quality = "720" }, s, false)
+  assertTrue(flatten(args):find("--merge-output-format mkv", 1, true) ~= nil)
+
+  s.videoFormat = "auto"
+  args = service.buildDownloadArgs({ url = "https://youtu.be/x", mode = "video", quality = "best" }, s, false)
+  assertTrue(flatten(args):find("--merge-output-format", 1, true) == nil)
+end)
+
+test("download args: no container flag in audio mode", function()
+  local s = defaultSettings()
+  s.videoFormat = "mp4"
+  local args = service.buildDownloadArgs({ url = "https://youtu.be/x", mode = "audio", audioFormat = "mp3" }, s, false)
+  assertTrue(flatten(args):find("--merge-output-format", 1, true) == nil)
+end)
+
 test("download args: sponsorblock, thumbnails, subs, archive, rate limit", function()
   local s = defaultSettings()
   s.sponsorBlock = true

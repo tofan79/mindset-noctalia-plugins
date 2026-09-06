@@ -24,8 +24,8 @@ entry = "service.luau"
 [[panel]]
 id = "panel"
 entry = "panel.luau"
-width = 560
-height = 700
+width = 640
+height = 760
 placement = "attached"
 position = "auto"
 dismiss_on_outside_click = true
