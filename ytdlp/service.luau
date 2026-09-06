@@ -249,6 +249,58 @@ local function cookiesFromBrowserArg(settings)
   return browser
 end
 
+local ZEN_COOKIE_EXPORT = DATA_DIR .. "/zen_cookies.txt"
+
+local function exportZenCookies()
+  local zen_profiles = {
+    os.getenv("HOME") .. "/.config/zen",
+    os.getenv("HOME") .. "/.zen",
+  }
+  local db_path = nil
+  for _, base in ipairs(zen_profiles) do
+    local handle = io.popen("ls -d " .. base .. "/*/ 2>/dev/null")
+    if handle then
+      for line in handle:lines() do
+        local f = line:gsub("/$", "") .. "/cookies.sqlite"
+        local attr = io.open(f, "rb")
+        if attr then
+          attr:close()
+          db_path = f
+          break
+        end
+      end
+      handle:close()
+      if db_path then break end
+    end
+  end
+  if not db_path then return nil, "no zen profile found" end
+  local tmp = DATA_DIR .. "/zen_ck_copy"
+  os.execute("cp -r " .. db_path:gsub("/cookies.sqlite$", "") .. " " .. tmp .. " 2>/dev/null")
+  local copied = tmp .. "/cookies.sqlite"
+  local cookie_file, err = io.open(copied, "rb")
+  if not cookie_file then return nil, "cannot copy zen db: " .. tostring(err) end
+  cookie_file:close()
+  local cmd = string.format(
+    "python3 -c \"import sqlite3,os;con=sqlite3.connect(f'file:{copied}?mode=ro',uri=True);cur=con.cursor();"
+    .. "rows=cur.execute('SELECT host,name,value,path,expiry,isSecure FROM moz_cookies').fetchall();"
+    .. "lines=['# Netscape HTTP Cookie File'];"
+    .. "keep={'.youtube.com','.google.com','.youtu.be','.doubleclick.net','.googlevideo.com'};"
+    .. "for host,name,value,path,expiry,isSecure in rows:"
+    .. " if not any(host.endswith(d)for d in keep):continue;"
+    .. " tail='TRUE' if host.startswith('.')else'FALSE';"
+    .. " sec='TRUE' if isSecure else'FALSE';"
+    .. " exp=expiry if expiry>100000 else 0;"
+    .. " lines.append(f'{host}\\t{tail}\\t{path}\\t{sec}\\t{exp}\\t{name}\\t{value}');"
+    .. "with open('" .. ZEN_COOKIE_EXPORT .. "','w')as f:f.write('\\n'.join(lines)+'\\n')\"",
+    copied
+  )
+  os.execute(cmd)
+  os.remove(copied)
+  local f = io.open(ZEN_COOKIE_EXPORT, "r")
+  if f then f:close() return ZEN_COOKIE_EXPORT end
+  return nil, "export failed"
+end
+
 local VIDEO_QUALITIES = { 2160, 1440, 1080, 720, 480, 360, 240 }
 
 function M.availableVideoQualities(maxHeight)
@@ -582,9 +634,15 @@ function M.infoCommand(url, useWebClient, settings)
     args[#args + 1] = proxy
   end
   local browserCookies = cookiesFromBrowserArg(settings)
-  if browserCookies then
+  if browserCookies and browserCookies ~= "zen" then
     args[#args + 1] = "--cookies-from-browser"
     args[#args + 1] = browserCookies
+  elseif browserCookies == "zen" then
+    local zen_path = exportZenCookies()
+    if zen_path then
+      args[#args + 1] = "--cookies"
+      args[#args + 1] = zen_path
+    end
   else
     local cookies = trim(settings.cookies)
     if cookies ~= "" then
@@ -630,9 +688,15 @@ function M.buildDownloadArgs(job, settings, useWebClient)
     args[#args + 1] = proxy
   end
   local browserCookies = cookiesFromBrowserArg(settings)
-  if browserCookies then
+  if browserCookies and browserCookies ~= "zen" then
     args[#args + 1] = "--cookies-from-browser"
     args[#args + 1] = browserCookies
+  elseif browserCookies == "zen" then
+    local zen_path = exportZenCookies()
+    if zen_path then
+      args[#args + 1] = "--cookies"
+      args[#args + 1] = zen_path
+    end
   else
     local cookies = trim(settings.cookies)
     if cookies ~= "" then

@@ -195,6 +195,7 @@ videoFormatOptions = {
         { label = "edge", value = "edge" },
         { label = "brave", value = "brave" },
         { label = "safari", value = "safari" },
+        { label = "zen", value = "zen" },
     }
 end
 
