@@ -45,6 +45,7 @@
     "audio_format": "Audio format",
     "audio_track": "Track",
     "track_original": "Original",
+    "sub_off": "Off",
     "custom_format": "yt-dlp format selector",
     "custom_format_placeholder": "e.g. bestvideo[height<=1080]+bestaudio",
     "subtitles": "Subtitles",

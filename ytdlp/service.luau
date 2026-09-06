@@ -115,7 +115,7 @@ function M.defaultSettings()
     useArchive = false,
     saveHistory = true,
     history = {},
-    subLanguage = "all",
+    subLanguage = "off",
     postDownloadAction = "nothing",
   }
 end
@@ -663,11 +663,11 @@ function M.buildDownloadArgs(job, settings, useWebClient)
   if settings.embedThumbnail == true then
     args[#args + 1] = "--embed-thumbnail"
   end
-  if settings.embedSubs == true or settings.includeAutoSubs == true then
-    local subLanguage = trim(settings.subLanguage)
-    if subLanguage == "" then subLanguage = "all" end
+  local subLanguage = trim(settings.subLanguage)
+  if subLanguage ~= "" and subLanguage ~= "off" then
     args[#args + 1] = "--sub-langs"
     args[#args + 1] = subLanguage
+    args[#args + 1] = "--write-subs"
     if settings.embedSubs == true then
       args[#args + 1] = "--embed-subs"
     end

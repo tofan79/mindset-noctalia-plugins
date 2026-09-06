@@ -276,6 +276,7 @@ test("download args: sponsorblock, thumbnails, subs, archive, rate limit", funct
   s.downloadThumbnail = true
   s.embedThumbnail = true
   s.embedSubs = true
+  s.subLanguage = "all"
   s.rateLimit = "10M"
   s.useArchive = true
   local args = service.buildDownloadArgs({ url = "https://youtu.be/x", mode = "video", quality = "best" }, s, false)
@@ -293,6 +294,7 @@ end)
 test("download args: auto subs pulled when embedding and no manual subs", function()
   local s = defaultSettings()
   s.embedSubs = true
+  s.subLanguage = "all"
   local job = {
     url = "https://youtu.be/x",
     mode = "video",

@@ -161,15 +161,23 @@ videoFormatOptions = {
     }
 
     audioTrackOptions = { { label = tr("panel.track_original"), value = "" } }
-    for track = 1, 10 do
-        audioTrackOptions[#audioTrackOptions + 1] = { label = tostring(track), value = tostring(track) }
+    local audioLanguages = (type(media) == "table" and type(media.audioLanguages) == "table")
+        and media.audioLanguages or {}
+    for _, language in ipairs(audioLanguages) do
+        audioTrackOptions[#audioTrackOptions + 1] = { label = language, value = language }
     end
 
-    subLangOptions = { { label = tr("panel.sub_all"), value = "all" } }
+    subLangOptions = { { label = tr("panel.sub_off"), value = "off" } }
     local subLanguages = (type(media) == "table" and type(media.subLanguages) == "table")
         and media.subLanguages or {}
+    if #subLanguages > 0 then
+        subLangOptions[#subLangOptions + 1] = { label = tr("panel.sub_all"), value = "all" }
+    end
     for _, language in ipairs(subLanguages) do
         subLangOptions[#subLangOptions + 1] = { label = language, value = language }
+    end
+    if #subLangOptions == 1 then
+        subLangOptions[#subLangOptions + 1] = { label = tr("panel.sub_all"), value = "all" }
     end
 
     postActionOptions = {
@@ -320,7 +328,7 @@ local function mediaCard()
 
     children[#children + 1] = ui.separator({})
 
-    children[#children + 1] = labelRow(tr("panel.sub_language"), selectFor(subLangOptions, settings.subLanguage or "all", "onSubLangChanged"))
+    children[#children + 1] = labelRow(tr("panel.sub_language"), selectFor(subLangOptions, settings.subLanguage or "off", "onSubLangChanged"))
     children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
         ui.label({ text = tr("panel.embed_subs"), color = "on_surface_variant" }),
         ui.spacer({ flexGrow = 1 }),
