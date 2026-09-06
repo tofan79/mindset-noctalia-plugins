@@ -621,9 +621,7 @@ function M.infoCommand(url, useWebClient, settings)
   -- extraction JSON small.
   local targetUrl = tostring(url)
   local isPlaylist = targetUrl:match("playlist%.") ~= nil or targetUrl:match("list=") ~= nil
-  if not targetUrl:match("^ytsearch") and isPlaylist then
-    args[#args + 1] = "--flat-playlist"
-  end
+  -- NOTE: --flat-playlist removed so full playlist info is extracted for UI display
   if useWebClient then
     args[#args + 1] = "--extractor-args"
     args[#args + 1] = "youtube:player_client=web"
