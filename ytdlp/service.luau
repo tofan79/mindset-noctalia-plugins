@@ -85,7 +85,7 @@ end
 function M.defaultSettings()
   local home = noctalia.getenv("HOME") or ""
   return {
-    downloadDir = home .. "/Downloads",
+    downloadDir = home .. "/Downloads/Videos/yt-dlp",
     downloadMode = "video",
     quality = "best",
     audioFormat = "best",

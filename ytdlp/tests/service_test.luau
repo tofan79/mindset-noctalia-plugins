@@ -450,7 +450,7 @@ test("reset_settings restores defaults", function()
   cmd("set_setting", { key = "rateLimit", value = "1M" })
   cmd("reset_settings")
   assertEqual(noctalia.state.get("settings").rateLimit, "")
-  assertEqual(noctalia.state.get("settings").downloadDir, "/home/test/Downloads")
+  assertEqual(noctalia.state.get("settings").downloadDir, "/home/test/Downloads/Videos/yt-dlp")
 end)
 
 test("read_clipboard writes through to state", function()
