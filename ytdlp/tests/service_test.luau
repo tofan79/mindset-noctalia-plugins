@@ -181,11 +181,15 @@ end
 
 local function flatten(args) return table.concat(args, " ") end
 
-test("infoCommand flat-plays ordinary urls, resolves searches", function()
+test("infoCommand: full info for single videos, flat only for playlists, resolves searches", function()
   local plain = service.infoCommand("https://youtu.be/x", false, defaultSettings())
-  assertTrue(flatten(plain):find("--flat-playlist", 1, true) ~= nil)
+  assertTrue(flatten(plain):find("--flat-playlist", 1, true) == nil)
   local search = service.infoCommand("ytsearch1:lofi", false, defaultSettings())
   assertTrue(flatten(search):find("--flat-playlist", 1, true) == nil)
+  local watch = service.infoCommand("https://www.youtube.com/watch?v=abc", false, defaultSettings())
+  assertTrue(flatten(watch):find("--flat-playlist", 1, true) == nil)
+  local playlist = service.infoCommand("https://www.youtube.com/playlist?list=PLx", false, defaultSettings())
+  assertTrue(flatten(playlist):find("--flat-playlist", 1, true) ~= nil)
 end)
 
 test("infoCommand carries proxy, browser cookies and web client", function()

@@ -555,8 +555,12 @@ function M.infoCommand(url, useWebClient, settings)
     "yt-dlp", "--no-warnings", "--dump-single-json", "--skip-download",
   }
   -- Search queries need real (non-flat) extraction to return the resolved video
-  -- instead of a playlist stub.
-  if not tostring(url):match("^ytsearch") then
+  -- instead of a playlist stub; single-video URLs need full info (formats,
+  -- subtitles, audio languages). Only true playlists stay flat to keep the
+  -- extraction JSON small.
+  local targetUrl = tostring(url)
+  local isPlaylist = targetUrl:match("playlist%.") ~= nil or targetUrl:match("list=") ~= nil
+  if not targetUrl:match("^ytsearch") and isPlaylist then
     args[#args + 1] = "--flat-playlist"
   end
   if useWebClient then
