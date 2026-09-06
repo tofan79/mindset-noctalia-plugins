@@ -725,16 +725,21 @@ function M.buildDownloadArgs(job, settings, useWebClient)
     end
   elseif mode == "video" then
     local quality = tostring(job.quality or "best")
+    local language = tostring(job.audioLanguage or "")
+    local audioPart = "bestaudio"
+    if language ~= "" then audioPart = "bestaudio[language=" .. language .. "]" end
     if quality ~= "best" then
-      local base = "bestvideo[height<=" .. quality .. "]+bestaudio"
+      local base = "bestvideo[height<=" .. quality .. "]+" .. audioPart
       local selector = base
       if preferDrc then selector = selector .. "[format_id$='-drc']/" .. base end
       selector = selector .. "/best[height<=" .. quality .. "]"
       args[#args + 1] = "-f"
       args[#args + 1] = selector
-    elseif preferDrc then
+    elseif preferDrc or language ~= "" then
+      local selector = "bestvideo*+" .. audioPart
+      if preferDrc then selector = "bestvideo*+bestaudio[format_id$='-drc']/" .. selector end
       args[#args + 1] = "-f"
-      args[#args + 1] = "bestvideo*+bestaudio[format_id$='-drc']/bestvideo*+bestaudio/best"
+      args[#args + 1] = selector .. "/bestvideo*+bestaudio/best"
     end
   end
 

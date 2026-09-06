@@ -242,6 +242,15 @@ test("download args: custom format selector", function()
   assertTrue(flatten(args):find("bestvideo[ext=webm]+bestaudio", 1, true) ~= nil)
 end)
 
+test("download args: video mode honors chosen audio language track", function()
+  local s = defaultSettings()
+  local args = service.buildDownloadArgs({ url = "https://youtu.be/x", mode = "video", quality = "1080", audioLanguage = "ja" }, s, false)
+  assertTrue(flatten(args):find("bestvideo[height<=1080]+bestaudio[language=ja]", 1, true) ~= nil)
+
+  args = service.buildDownloadArgs({ url = "https://youtu.be/x", mode = "video", quality = "best", audioLanguage = "en" }, s, false)
+  assertTrue(flatten(args):find("bestvideo*+bestaudio[language=en]", 1, true) ~= nil)
+end)
+
 test("download args: video container via merge-output-format", function()
   local s = defaultSettings()
   s.videoFormat = "mp4"

@@ -312,6 +312,7 @@ local function mediaCard()
     if mode == "video" then
         children[#children + 1] = labelRow(tr("panel.quality"), selectFor(qualityOptions, settings.quality or "best", "onQualityChanged"))
         children[#children + 1] = labelRow(tr("panel.format"), selectFor(videoFormatOptions, settings.videoFormat or "auto", "onVideoFormatChanged"))
+        children[#children + 1] = labelRow(tr("panel.audio_track"), selectFor(audioTrackOptions, settings.audioLanguage or "", "onAudioTrackChanged"))
     elseif mode == "audio" then
         children[#children + 1] = labelRow(tr("panel.quality"), selectFor(audioQualityOptions, settings.audioQuality or "best", "onAudioQualityChanged"))
         children[#children + 1] = labelRow(tr("panel.format"), selectFor(audioFormatOptions, settings.audioFormat or "best", "onAudioFormatChanged"))
@@ -325,20 +326,22 @@ local function mediaCard()
         }))
     end
 
-    children[#children + 1] = ui.separator({})
+    if mode ~= "audio" then
+        children[#children + 1] = ui.separator({})
 
-    children[#children + 1] = labelRow(tr("panel.sub_language"), selectFor(subLangOptions, settings.subLanguage or "off", "onSubLangChanged"))
-    children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
-        ui.label({ text = tr("panel.embed_subs"), color = "on_surface_variant" }),
-        ui.spacer({ flexGrow = 1 }),
-        ui.toggle({ checked = settings.embedSubs == true, onChange = "onToggleEmbedSubs" }),
-    })
-    children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
-        ui.label({ text = tr("panel.include_auto_subs"), color = "on_surface_variant" }),
-        ui.spacer({ flexGrow = 1 }),
-        ui.toggle({ checked = settings.includeAutoSubs == true, onChange = "onToggleAutoSubs" }),
-    })
-    children[#children + 1] = ui.separator({})
+        children[#children + 1] = labelRow(tr("panel.sub_language"), selectFor(subLangOptions, settings.subLanguage or "off", "onSubLangChanged"))
+        children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
+            ui.label({ text = tr("panel.embed_subs"), color = "on_surface_variant" }),
+            ui.spacer({ flexGrow = 1 }),
+            ui.toggle({ checked = settings.embedSubs == true, onChange = "onToggleEmbedSubs" }),
+        })
+        children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
+            ui.label({ text = tr("panel.include_auto_subs"), color = "on_surface_variant" }),
+            ui.spacer({ flexGrow = 1 }),
+            ui.toggle({ checked = settings.includeAutoSubs == true, onChange = "onToggleAutoSubs" }),
+        })
+        children[#children + 1] = ui.separator({})
+    end
 
     children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
         ui.label({ text = tr("panel.save_thumbnail"), color = "on_surface_variant" }),
