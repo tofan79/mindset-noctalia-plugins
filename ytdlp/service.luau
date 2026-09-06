@@ -680,14 +680,16 @@ function M.buildDownloadArgs(job, settings, useWebClient)
     if embedSubs then
       args[#args + 1] = "--embed-subs"
     end
-    -- --embed-subs only fetches manually uploaded subtitles, so pull in the auto
-    -- captions when the video has none of its own.
-    local wantAuto = settings.includeAutoSubs == true
+    -- A specific language may only exist as YouTube auto captions (manual subs
+    -- are often missing), and jobs coming from the panel have no info dict, so
+    -- pull auto captions whenever the user picked one language + embedding.
+    local explicitAuto = settings.includeAutoSubs == true
+      or (subLanguage ~= "all" and settings.embedSubs == true)
       or (embedSubs
         and type(job.info) == "table"
         and job.info.hasSubs == false
         and job.info.hasAutoSubs == true)
-    if wantAuto then
+    if explicitAuto then
       args[#args + 1] = "--write-auto-subs"
     end
   end
