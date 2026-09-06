@@ -8,7 +8,6 @@
 
 local M = {}
 
-local CONTROL_LABEL_WIDTH = 220
 local CONTROL_WIDTH = 270
 
 -- ── module state (refreshed from `noctalia.state` on open and on every watch) ───
@@ -99,7 +98,7 @@ end
 
 local function labelRow(label, control)
     return ui.row({ align = "center", gap = 8 }, {
-        ui.label({ text = label, color = "on_surface_variant", width = CONTROL_LABEL_WIDTH }),
+        ui.label({ text = label, color = "on_surface_variant", maxLines = 1 }),
         ui.spacer({ flexGrow = 1 }),
         control,
     })
@@ -563,7 +562,7 @@ end
 
 local function toggleRow(label, offset, handler, checked)
     return ui.row({ align = "center", gap = 8 }, {
-        ui.label({ text = label, color = "on_surface_variant", width = CONTROL_LABEL_WIDTH + (offset or 0), maxLines = 1 }),
+        ui.label({ text = label, color = "on_surface_variant", maxLines = 1 }),
         ui.spacer({ flexGrow = 1 }),
         ui.toggle({ checked = checked, onChange = handler }),
     })
