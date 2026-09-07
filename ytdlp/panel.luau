@@ -350,7 +350,8 @@ local function playlistSelectionRow()
         if val(entry.duration) > 0 then
             detail = detail .. "  ·  " .. dur(entry.duration)
         end
-        local checked = false
+        -- When allSelected (playlistSelection == nil means all items), all chips show selected.
+        local checked = allSelected
         if playlistSelection then
             for _, selected in ipairs(playlistSelection) do
                 if selected == index then checked = true break end
