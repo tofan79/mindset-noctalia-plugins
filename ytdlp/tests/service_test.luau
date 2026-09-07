@@ -67,13 +67,16 @@ test("cleanUrlText rejects plain text", function()
   assertEqual(service.cleanUrlText("hello world this is text"), "")
 end)
 
-test("cleanUrlText strips radio-mix params from watch URLs", function()
+test("cleanUrlText strips session-only params but keeps RD mix playlists", function()
   assertEqual(
     service.cleanUrlText("https://www.youtube.com/watch?v=HIJfaBq7T1k&list=RDHIJfaBq7T1k&start_radio=1&pp=oAcB"),
-    "https://www.youtube.com/watch?v=HIJfaBq7T1k")
+    "https://www.youtube.com/watch?v=HIJfaBq7T1k&list=RDHIJfaBq7T1k&start_radio=1")
   assertEqual(
     service.cleanUrlText("https://www.youtube.com/watch?v=abc123&list=RDxyz&index=3"),
-    "https://www.youtube.com/watch?v=abc123")
+    "https://www.youtube.com/watch?v=abc123&list=RDxyz")
+  assertEqual(
+    service.cleanUrlText("https://www.youtube.com/watch?v=abc&si=abc123"),
+    "https://www.youtube.com/watch?v=abc")
 end)
 
 test("cleanUrlText keeps playlist-only and non-youtube URLs intact", function()

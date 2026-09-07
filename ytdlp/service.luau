@@ -221,15 +221,10 @@ local function stripYtListParams(url)
       parsed[#parsed + 1] = { key = key, value = value, param = param }
     end
   end
-  local startRadio = false
-  for _, item in ipairs(parsed) do
-    if item.key == "start_radio" and item.value == "1" then startRadio = true end
-  end
   local kept = {}
   for _, item in ipairs(parsed) do
-    local isRadioList = item.key == "list"
-      and (item.value:sub(1, 2) == "RD" or startRadio)
-    if not isRadioList and item.key ~= "index" and item.key ~= "start_radio" and item.key ~= "pp" then
+    -- Strip session-only / player-specific params; keep all list types (PL..., RD..., UL...)
+    if item.key ~= "index" and item.key ~= "pp" and item.key ~= "si" then
       kept[#kept + 1] = item.param
     end
   end
