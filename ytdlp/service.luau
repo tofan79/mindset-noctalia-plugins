@@ -464,7 +464,8 @@ function M.parseInfoDecoded(info)
     end
     -- Keep lightweight per-item stubs (flat playlists come as index/id/title/duration).
     -- The panel renders one selectable chip per item and downloads run with
-    -- `--playlist-items <indices>`. Capped so a huge mix doesn't freeze the UI.
+    -- `--playlist-items <indices>`. Iterate only up to `itemLimit` to avoid
+    -- CPU budget exhaustion in the Lua VM with very large playlists.
     local playlistItems = {}
     local playlistId = tostring(info.id or "")
     -- Mix playlists (RD*) can grow to hundreds; cap them at 50 to avoid UI freeze.
@@ -675,6 +676,13 @@ function M.infoCommand(url, useWebClient, settings)
   -- cheap index/id/title stub that the panel can offer as a selectable chip.
   if isPlaylist then
     args[#args + 1] = "--flat-playlist"
+    -- Mix playlists (RD*) can have thousands of items causing large JSON that
+    -- exhausts the Lua VM CPU budget. Limit to 50 items so the JSON stays small.
+    local listId = targetUrl:match("[?&]list=([A-Za-z0-9_%-]+)")
+    if listId and listId:sub(1, 2) == "RD" then
+      args[#args + 1] = "--playlist-end"
+      args[#args + 1] = "50"
+    end
   end
   if useWebClient then
     args[#args + 1] = "--extractor-args"
