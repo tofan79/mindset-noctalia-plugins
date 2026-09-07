@@ -102,8 +102,8 @@ tags = ["bar", "panel", "service", "system", "docker", "podman"]
 [[plugin]]
 id = "mindset/ytdlp"
 name = "YT-DLP"
-version = "1.2.1"
-updated_at = 1788688000
+version = "1.3.0"
+updated_at = 1788753462
 added_at = 1725516600
 author = "mindset"
 license = "MIT"

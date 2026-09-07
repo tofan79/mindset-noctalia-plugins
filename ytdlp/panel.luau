@@ -21,10 +21,16 @@ local errorMessage = ""
 local clipboard = {}
 local clipboardVersion = 0
 local seenClipboardVersion = 0
+local lastCompleted = nil
 local urlValue = ""
 local inputSeed = 0
 local pendingUrlSeed = nil
 local nonceCounter = 0
+
+-- playlist item selection (indices the user picked on the media card)
+local playlistSelection = nil
+-- identity of the media the selection belongs to; stale selections are dropped
+local playlistSelectionMediaKey = ""
 
 -- option sets rebuilt each render so the selects and their index handlers agree
 local qualityOptions = {}
@@ -120,7 +126,29 @@ end
 
 local function buildJob()
     local job = jobFor(media)
+    if type(media) == "table" and media.isPlaylist == true
+        and type(playlistSelection) == "table" and #playlistSelection > 0
+        and #playlistSelection < #(media.entries or {}) then
+        job.playlistItems = playlistSelection
+    end
     return job
+end
+
+-- A stale playlist selection must never ride along to a different media (the same
+-- media_info republishes when its thumbnail resolves, so compare an identity, not
+-- the pointer, before dropping it).
+local function syncPlaylistSelection()
+    if type(media) == "table" and media.isPlaylist == true
+        and type(media.entries) == "table" and #media.entries > 0 then
+        local key = tostring(media.extractedUrl or "") .. "|" .. tostring(media.webpage_url or "")
+        if key ~= playlistSelectionMediaKey then
+            playlistSelectionMediaKey = key
+            playlistSelection = nil
+        end
+    else
+        playlistSelection = nil
+        playlistSelectionMediaKey = ""
+    end
 end
 
 -- ── option sets ────────────────────────────────────────────────────────────────
@@ -287,6 +315,64 @@ local function modeButtons()
     })
 end
 
+-- Playlist item picker (chip style matches the SponsorBlock category chips). The
+-- selected indices are turned into `--playlist-items` on the download job; selecting
+-- everything leaves it empty so yt-dlp downloads the whole playlist.
+local function playlistSelectionRow()
+    local entries = type(media) == "table" and media.entries or {}
+    if type(entries) ~= "table" or #entries == 0 then return nil end
+    if type(playlistSelection) ~= "table" then playlistSelection = nil end
+    local allSelected = playlistSelection == nil or #playlistSelection >= #entries
+
+    local function toggleIndex(index)
+        local selected = {}
+        for _, existing in ipairs(playlistSelection or {}) do selected[existing] = true end
+        if selected[index] then
+            selected[index] = nil
+        else
+            selected[index] = true
+        end
+        local ordered = {}
+        for i = 1, #entries do
+            if selected[i] then ordered[#ordered + 1] = i end
+        end
+        playlistSelection = (#ordered == #entries) and nil or ordered
+        render()
+    end
+
+    local chips = {}
+    for index, entry in ipairs(entries) do
+        local detail = entry.title
+        if val(entry.duration) > 0 then
+            detail = detail .. "  ·  " .. dur(entry.duration)
+        end
+        local checked = false
+        if playlistSelection then
+            for _, selected in ipairs(playlistSelection) do
+                if selected == index then checked = true break end
+            end
+        end
+        chips[#chips + 1] = ui.button({
+            key = "pl-item-" .. index,
+            text = tostring(detail),
+            controlSize = "sm",
+            selected = checked,
+            tooltip = tostring(entry.id or entry.title or ""),
+            onClick = function() toggleIndex(index) end,
+        })
+    end
+
+    return ui.column({ gap = 6 }, {
+        ui.row({ align = "center", gap = 8 }, {
+            ui.label({ text = tr("panel.playlist_choose"), color = "on_surface_variant", maxLines = 1 }),
+            ui.spacer({ flexGrow = 1 }),
+            ui.button({ text = tr("panel.playlist_all"), controlSize = "sm", variant = "ghost", selected = allSelected, onClick = function() playlistSelection = nil render() end }),
+            ui.button({ text = tr("panel.playlist_none"), controlSize = "sm", variant = "ghost", selected = #entries > 0 and playlistSelection ~= nil and #playlistSelection == 0, onClick = function() playlistSelection = {} render() end }),
+        }),
+        ui.row({ align = "start", gap = 4 }, chips),
+    })
+end
+
 local function mediaCard()
     if media == nil then
         return nil
@@ -311,6 +397,11 @@ local function mediaCard()
     end
     children[#children + 1] = ui.label({ text = tostring(media.title or ""), fontSize = 14, fontWeight = "bold", maxLines = 3 })
     children[#children + 1] = ui.label({ text = sublabel, fontSize = 11, color = "on_surface_variant" })
+
+    if media.isPlaylist == true and type(media.entries) == "table" then
+        children[#children + 1] = playlistSelectionRow()
+    end
+
     children[#children + 1] = ui.separator({})
 
     children[#children + 1] = modeButtons()
@@ -325,6 +416,7 @@ local function mediaCard()
         children[#children + 1] = labelRow(tr("panel.audio_track"), selectFor(audioTrackOptions, settings.audioLanguage or "", "onAudioTrackChanged"))
     else
         children[#children + 1] = labelRow(tr("panel.custom_format"), ui.input({
+            key = "input-custom-format",
             value = tostring(settings.customFormatSelector or ""),
             placeholder = tr("panel.custom_format_placeholder"),
             width = CONTROL_WIDTH,
@@ -510,6 +602,26 @@ end
 
 -- ── queue ──────────────────────────────────────────────────────────────────────
 
+local function lastCompletedCard()
+    if type(lastCompleted) ~= "table" or tostring(lastCompleted.outputPath or "") == "" then
+        return nil
+    end
+    local children = {}
+    children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
+        ui.label({ text = tr("panel.last_output"), color = "primary", fontSize = 12, fontWeight = "bold" }),
+        ui.spacer({ flexGrow = 1 }),
+        ui.button({ glyph = "x", variant = "ghost", controlSize = "sm", tooltip = tr("panel.clear"), onClick = "onClearLastClicked" }),
+    })
+    children[#children + 1] = ui.label({ text = tostring(lastCompleted.title or ""), fontSize = 11, fontWeight = "bold", maxLines = 1 })
+    children[#children + 1] = ui.label({ text = tostring(lastCompleted.outputPath or ""), fontSize = 11, color = "on_surface_variant", maxLines = 2 })
+    children[#children + 1] = ui.row({ align = "center", gap = 8 }, {
+        ui.button({ key = "last-copy", text = tr("panel.post_copy"), controlSize = "sm", onClick = "onCopyLastClicked" }),
+        ui.button({ key = "last-open", text = tr("panel.post_open"), controlSize = "sm", onClick = "onOpenLastFolderClicked" }),
+        ui.button({ key = "last-open-file", text = tr("panel.post_open_file"), controlSize = "sm", onClick = "onOpenLastFileClicked" }),
+    })
+    return ui.column({ gap = 6, padding = 10, radius = 8, border = true, borderWidth = 1 }, children)
+end
+
 local function queueCard()
     if #queue == 0 then
         return nil
@@ -588,12 +700,14 @@ local function advancedSection()
     local children = {}
 
     children[#children + 1] = labelRow(tr("panel.download_dir"), ui.input({
+        key = "input-dir",
         value = tostring(expandHome(settings.downloadDir or "")),
         placeholder = "~/Downloads",
         width = CONTROL_WIDTH,
         onChange = "onDirChanged",
     }))
     children[#children + 1] = labelRow(tr("panel.output_template"), ui.input({
+        key = "input-output-template",
         value = tostring(settings.outputTemplate or ""),
         placeholder = "%(title)s.%(ext)s",
         width = CONTROL_WIDTH,
@@ -601,36 +715,42 @@ local function advancedSection()
     }))
     children[#children + 1] = labelRow(tr("panel.cookies_from_browser"), selectFor(cookiesBrowserOptions, settings.cookiesFromBrowser or "", "onCookiesBrowserChanged"))
     children[#children + 1] = labelRow(tr("panel.cookies_profile"), ui.input({
+        key = "input-cookies-profile",
         value = tostring(settings.cookiesProfile or ""),
         placeholder = tr("panel.cookies_profile"),
         width = CONTROL_WIDTH,
         onChange = "onCookiesProfileChanged",
     }))
     children[#children + 1] = labelRow(tr("panel.cookies_file"), ui.input({
+        key = "input-cookies-file",
         value = tostring(settings.cookies or ""),
         placeholder = tr("panel.cookies_file"),
         width = CONTROL_WIDTH,
         onChange = "onCookiesFileChanged",
     }))
     children[#children + 1] = labelRow(tr("panel.proxy"), ui.input({
+        key = "input-proxy",
         value = tostring(settings.proxy or ""),
         placeholder = "https://user:pass@host:port",
         width = CONTROL_WIDTH,
         onChange = "onProxyChanged",
     }))
     children[#children + 1] = labelRow(tr("panel.rate_limit"), ui.input({
+        key = "input-rate-limit",
         value = tostring(settings.rateLimit or ""),
         placeholder = "10M",
         width = CONTROL_WIDTH,
         onChange = "onRateLimitChanged",
     }))
     children[#children + 1] = labelRow(tr("panel.concurrent_fragments"), ui.input({
+        key = "input-concurrent",
         value = tostring(settings.concurrentFragments or ""),
         placeholder = "5",
         width = CONTROL_WIDTH,
         onChange = "onConcurrentChanged",
     }))
     children[#children + 1] = labelRow(tr("panel.custom_args"), ui.input({
+        key = "input-args",
         value = tostring(settings.customArgs or ""),
         placeholder = "--no-mtime",
         width = CONTROL_WIDTH,
@@ -664,6 +784,8 @@ render = function()
     if card then children[#children + 1] = card end
     local statusCard = activeCard()
     if statusCard then children[#children + 1] = statusCard end
+    local lcard = lastCompletedCard()
+    if lcard then children[#children + 1] = lcard end
     local qcard = queueCard()
     if qcard then children[#children + 1] = qcard end
 
@@ -695,6 +817,8 @@ function onOpen()
     errorMessage = tostring(noctalia.state.get("error_message") or "")
     clipboard = noctalia.state.get("clipboard") or {}
     clipboardVersion = tonumber(clipboard.version) or 0
+    lastCompleted = noctalia.state.get("last_completed")
+    syncPlaylistSelection()
     urlValue = ""
     rebuildOptions()
     sendCommand("panel_open", { open = true })
@@ -846,6 +970,26 @@ function onCopyOutputClicked()
     end
 end
 
+function onClearLastClicked() sendCommand("clear_last", {}) end
+
+function onCopyLastClicked()
+    if type(lastCompleted) == "table" and lastCompleted.outputPath ~= "" then
+        noctalia.copyToClipboard(lastCompleted.outputPath, "text/plain")
+    end
+end
+
+function onOpenLastFolderClicked()
+    if type(lastCompleted) == "table" and lastCompleted.outputDir ~= "" then
+        noctalia.runAsync("xdg-open " .. shellQuote(lastCompleted.outputDir), function() end)
+    end
+end
+
+function onOpenLastFileClicked()
+    if type(lastCompleted) == "table" and lastCompleted.outputPath ~= "" then
+        noctalia.runAsync("xdg-open " .. shellQuote(lastCompleted.outputPath), function() end)
+    end
+end
+
 -- ── state subscriptions ────────────────────────────────────────────────────────
 
 local function refresh(key)
@@ -857,6 +1001,8 @@ local function refresh(key)
     errorMessage = tostring(noctalia.state.get("error_message") or "")
     clipboard = noctalia.state.get("clipboard") or {}
     clipboardVersion = tonumber(clipboard.version) or 0
+    lastCompleted = noctalia.state.get("last_completed")
+    syncPlaylistSelection()
     rebuildOptions()
     render()
 end
@@ -868,5 +1014,6 @@ noctalia.state.watch("queue", refresh)
 noctalia.state.watch("extracting", refresh)
 noctalia.state.watch("error_message", refresh)
 noctalia.state.watch("clipboard", refresh)
+noctalia.state.watch("last_completed", refresh)
 
 return M

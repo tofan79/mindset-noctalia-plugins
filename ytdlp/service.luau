@@ -61,6 +61,7 @@ local state = {
   },
   queue = {},
   clipboard = { text = "", forced = false },
+  lastCompleted = nil,
 }
 
 local function publishSettings() noctalia.state.set("settings", _settings) end
@@ -70,6 +71,7 @@ local function publishQueue() noctalia.state.set("queue", state.queue) end
 local function publishExtracting() noctalia.state.set("extracting", state.extracting) end
 local function publishError() noctalia.state.set("error_message", state.errorMessage) end
 local function publishClipboard() noctalia.state.set("clipboard", state.clipboard) end
+local function publishLastCompleted() noctalia.state.set("last_completed", state.lastCompleted) end
 
 local function publishAll()
   publishSettings()
@@ -79,6 +81,7 @@ local function publishAll()
   publishExtracting()
   publishError()
   publishClipboard()
+  publishLastCompleted()
 end
 
 -- ── settings (persisted JSON, edited from the panel — declared settings cannot be
@@ -437,7 +440,26 @@ function M.parseInfoDecoded(info)
         and type(entries[1].formats) == "table" and #entries[1].formats > 0 then
       return parseVideoInfo(entries[1])
     end
+    -- Keep lightweight per-item stubs (flat playlists come as index/id/title/duration).
+    -- The panel renders one selectable chip per item and downloads run with
+    -- `--playlist-items <indices>`. Capped so a huge mix doesn't freeze the UI.
+    local playlistItems = {}
+    local itemCap = 200
+    local itemLimit = math.min(#entries, itemCap)
+    for i = 1, itemLimit do
+      local e = entries[i]
+      if type(e) == "table" then
+        playlistItems[#playlistItems + 1] = {
+          index = i,
+          id = tostring(e.id or ""),
+          title = tostring(e.title or ""),
+          duration = tonumber(e.duration) or 0,
+          url = tostring(e.webpage_url or e.url or ""),
+        }
+      end
+    end
     return {
+      entries = playlistItems,
       isPlaylist = true,
       title = tostring(info.title or "Playlist"),
       thumbnail = "",
@@ -621,7 +643,12 @@ function M.infoCommand(url, useWebClient, settings)
   -- extraction JSON small.
   local targetUrl = tostring(url)
   local isPlaylist = targetUrl:match("playlist%.") ~= nil or targetUrl:match("list=") ~= nil
-  -- NOTE: --flat-playlist removed so full playlist info is extracted for UI display
+  -- Search queries need real (non-flat) extraction so the resolved video card is
+  -- shown; true playlists stay flat so the JSON stays small and each item comes as a
+  -- cheap index/id/title stub that the panel can offer as a selectable chip.
+  if isPlaylist then
+    args[#args + 1] = "--flat-playlist"
+  end
   if useWebClient then
     args[#args + 1] = "--extractor-args"
     args[#args + 1] = "youtube:player_client=web"
@@ -813,12 +840,17 @@ function M.buildDownloadArgs(job, settings, useWebClient)
     end
   end
 
-  if mode ~= "audio" then
+    if mode ~= "audio" then
     local videoFormat = trim(settings.videoFormat or "")
     if videoFormat ~= "" and videoFormat ~= "auto" then
       args[#args + 1] = "--merge-output-format"
       args[#args + 1] = videoFormat
     end
+  end
+
+  if type(job.playlistItems) == "table" and #job.playlistItems > 0 then
+    args[#args + 1] = "--playlist-items"
+    args[#args + 1] = table.concat(job.playlistItems, ",")
   end
 
   args[#args + 1] = tostring(job.url)
@@ -1152,6 +1184,15 @@ function M.handleDownloadFinished(exitCode)
     noctalia.notify("YT-DLP", "Download complete — " .. tostring(job.title or job.url or ""))
   end
 
+  -- Persist a "last completed" record so the panel can keep offering Copy/Open
+  -- actions even after the next queued job auto-starts and overwrites the active card.
+  state.lastCompleted = {
+    title = tostring(job.title or job.url or "Download"),
+    outputPath = outputPath,
+    outputDir = expandHome(_settings.downloadDir),
+  }
+  publishLastCompleted()
+
   state.active.job = nil
   publishActive()
   M.processQueue()
@@ -1239,6 +1280,7 @@ function M.enqueue(job)
     audioFormat = tostring(job.audioFormat or _settings.audioFormat or "best"),
     audioQuality = tostring(job.audioQuality or _settings.audioQuality or "best"),
     audioLanguage = tostring(job.audioLanguage or ""),
+    playlistItems = job.playlistItems,
   }
   publishQueue()
 end
@@ -1360,6 +1402,9 @@ function M.handleCommand(command)
   elseif action == "open_folder" then
     local dir = expandHome(_settings.downloadDir)
     noctalia.runAsync(shellJoin({ "xdg-open", dir }), function() end)
+  elseif action == "clear_last" then
+    state.lastCompleted = nil
+    publishLastCompleted()
   elseif action == "copy_url" then
     local text = tostring(command.text or "")
     if text ~= "" then

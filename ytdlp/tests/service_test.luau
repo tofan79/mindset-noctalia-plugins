@@ -120,6 +120,27 @@ test("parseInfoDecoded builds a playlist card from entries", function()
   assertEqual(info.count, 10)
 end)
 
+test("parseInfoDecoded keeps lightweight per-item stubs for a playlist", function()
+  local entries = {}
+  for i = 1, 10 do
+    entries[i] = { id = "v" .. i, title = "clip " .. i, duration = i * 60, url = "https://youtu.be/v" .. i }
+  end
+  local info = service.parseInfoDecoded({ _type = "playlist", title = "Mix", entries = entries })
+  assertEqual(#info.entries, 10)
+  assertEqual(info.entries[3].index, 3)
+  assertEqual(info.entries[3].id, "v3")
+  assertEqual(info.entries[3].url, "https://youtu.be/v3")
+  assertEqual(info.entries[4].duration, 240)
+end)
+
+test("parseInfoDecoded caps playlist item stubs", function()
+  local entries = {}
+  for i = 1, 500 do entries[i] = { title = "clip " .. i } end
+  local info = service.parseInfoDecoded({ _type = "playlist", title = "Mix", entries = entries })
+  assertEqual(#info.entries, 200)
+  assertEqual(info.count, 500)
+end)
+
 test("parseInfoDecoded rewrites webp thumbnails to jpg", function()
   local info = service.parseInfoDecoded({
     title = "webp only",
@@ -240,6 +261,20 @@ test("download args: custom format selector", function()
   s.customFormatSelector = "bestvideo[ext=webm]+bestaudio"
   local args = service.buildDownloadArgs({ url = "https://youtu.be/x", mode = "custom" }, s, false)
   assertTrue(flatten(args):find("bestvideo[ext=webm]+bestaudio", 1, true) ~= nil)
+end)
+
+test("download args: playlist item selection passes --playlist-items", function()
+  local args = service.buildDownloadArgs({
+    url = "https://www.youtube.com/playlist?list=PLx",
+    playlistItems = { 2, 5, 8 },
+  }, defaultSettings(), false)
+  local text = flatten(args)
+  assertTrue(text:find("--playlist-items 2,5,8", 1, true) ~= nil, "selected indices joined")
+end)
+
+test("download args: no --playlist-items when nothing selected", function()
+  local args = service.buildDownloadArgs({ url = "https://www.youtube.com/playlist?list=PLx" }, defaultSettings(), false)
+  assertTrue(flatten(args):find("--playlist-items", 1, true) == nil)
 end)
 
 test("download args: video mode honors chosen audio language track", function()

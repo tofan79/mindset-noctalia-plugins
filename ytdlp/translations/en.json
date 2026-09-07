@@ -28,6 +28,9 @@
         "hint_extract": "Press Enter to extract",
         "playlist": "Playlist",
         "playlist_items": "{count} items",
+        "playlist_choose": "Items to download",
+        "playlist_all": "All",
+        "playlist_none": "None",
         "mode": "Mode",
         "mode_video": "Video",
         "mode_audio": "Audio",
@@ -119,7 +122,8 @@
         "eta_remaining": "· {eta} remaining",
         "speeds": "at {speed}",
         "queue_title": "Queue",
-        "history_copy": "Copy & fill"
+        "history_copy": "Copy & fill",
+        "last_output": "Last finished download"
     },
     "error": {
         "no_url": "Enter a URL or search query.",
