@@ -373,7 +373,7 @@ local function playlistSelectionRow()
             ui.button({ text = tr("panel.playlist_all"), controlSize = "sm", variant = "ghost", selected = allSelected, onClick = function() playlistSelection = nil render() end }),
             ui.button({ text = tr("panel.playlist_none"), controlSize = "sm", variant = "ghost", selected = #entries > 0 and playlistSelection ~= nil and #playlistSelection == 0, onClick = function() playlistSelection = {} render() end }),
         }),
-        ui.row({ align = "start", gap = 4 }, chips),
+        ui.column({ gap = 4 }, chips),
     })
 end
 
