@@ -27,6 +27,10 @@ local inputSeed = 0
 local pendingUrlSeed = nil
 local nonceCounter = 0
 
+-- forward declaration: render() is referenced by closures created before it is
+-- defined; closing over a hoisted local (instead of a global nil) keeps them live
+local render
+
 -- playlist item selection (indices the user picked on the media card)
 local playlistSelection = nil
 -- identity of the media the selection belongs to; stale selections are dropped
@@ -767,8 +771,6 @@ local function advancedSection()
 end
 
 -- ── render ─────────────────────────────────────────────────────────────────────
-
-local render
 
 render = function()
     local children = {}
