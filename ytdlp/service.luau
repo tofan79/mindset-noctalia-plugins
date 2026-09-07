@@ -204,16 +204,32 @@ local function stripUrlJunk(value)
   return tostring(value or ""):gsub(JUNK_TAIL, "")
 end
 
--- Normalize whatever the user pastes into a usable URL, or "" if it can't be one:
+-- Normalize a watch URL into a usable one, or "" if it can't be: keep a real
+-- playlist (`list=PL...`) so the panel can offer per-item selection, but strip
+-- radio-mix cruft — `list=RD...`, `start_radio=1`, `index`, and the `pp` player
+-- params resolve back to a single video, not a browsable playlist.
 local function stripYtListParams(url)
   if not url:match("^https?://[^/]*youtube%.com/watch") then return url end
   local base, query = url:match("^(.-%?)(.*)$")
   if not base then return url end
-  local kept = {}
+  local parsed = {}
   for param in query:gmatch("([^&]+)") do
-    local key = param:match("^([^=]+)")
-    if key and key ~= "list" and key ~= "index" and key ~= "start_radio" and key ~= "pp" then
-      kept[#kept + 1] = param
+    local key = param:match("^[^=]+")
+    local value = param:match("=(.*)$") or ""
+    if key then
+      parsed[#parsed + 1] = { key = key, value = value, param = param }
+    end
+  end
+  local startRadio = false
+  for _, item in ipairs(parsed) do
+    if item.key == "start_radio" and item.value == "1" then startRadio = true end
+  end
+  local kept = {}
+  for _, item in ipairs(parsed) do
+    local isRadioList = item.key == "list"
+      and (item.value:sub(1, 2) == "RD" or startRadio)
+    if not isRadioList and item.key ~= "index" and item.key ~= "start_radio" and item.key ~= "pp" then
+      kept[#kept + 1] = item.param
     end
   end
   return base .. table.concat(kept, "&")

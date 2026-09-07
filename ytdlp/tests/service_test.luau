@@ -85,6 +85,12 @@ test("cleanUrlText keeps playlist-only and non-youtube URLs intact", function()
     "https://example.com/watch?v=abc&list=keepme")
 end)
 
+test("cleanUrlText keeps a real list on watch URLs for playlist selection", function()
+  assertEqual(
+    service.cleanUrlText("https://www.youtube.com/watch?v=abc&list=PLILLJnHxU89&pp=0gcJCf8COCosWNin"),
+    "https://www.youtube.com/watch?v=abc&list=PLILLJnHxU89")
+end)
+
 test("extractTarget wraps search text in ytsearch", function()
   assertEqual(service.extractTarget("lofi beats"), "ytsearch1:lofi beats")
 end)

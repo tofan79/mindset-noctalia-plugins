@@ -28,7 +28,6 @@ width = 800
 height = 760
 placement = "attached"
 position = "auto"
-dismiss_on_outside_click = true
 keyboard_focus = "exclusive"
 
 [[widget]]
