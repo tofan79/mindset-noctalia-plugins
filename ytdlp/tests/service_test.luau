@@ -48,7 +48,7 @@ end
 -- ── cleanUrlText / extractTarget ──
 
 test("cleanUrlText trims whitespace and trailing junk", function()
-  assertEqual(service.cleanUrlText("  https://youtu.be/aBc?si=x123   "), "https://youtu.be/aBc?si=x123")
+  assertEqual(service.cleanUrlText("  https://youtu.be/aBc?si=x123   "), "https://youtu.be/aBc")
   assertEqual(service.cleanUrlText("https://example.com/video.mp4."), "https://example.com/video.mp4")
   assertEqual(service.cleanUrlText("https://example.com/video.mp4),"), "https://example.com/video.mp4")
 end)

@@ -210,25 +210,35 @@ end
 -- radio-mix cruft — `list=RD...`, `start_radio=1`, `index`, and the `pp` player
 -- params resolve back to a single video, not a browsable playlist.
 local function stripYtListParams(url)
-  if not url:match("^https?://[^/]*youtube%.com/watch") then return url end
-  local base, query = url:match("^(.-%?)(.*)$")
-  if not base then return url end
-  local parsed = {}
-  for param in query:gmatch("([^&]+)") do
-    local key = param:match("^[^=]+")
-    local value = param:match("=(.*)$") or ""
-    if key then
-      parsed[#parsed + 1] = { key = key, value = value, param = param }
+  -- For watch URLs: strip session/signed params (index, pp, si).
+  -- For short URLs (youtu.be): strip si (signed IP fingerprint).
+  local isWatchUrl = url:match("^https?://[^/]*youtube%.com/watch")
+  local isShortUrl = url:match("^https?://[^/]*youtu%.be/")
+  if not isWatchUrl and not isShortUrl then return url end
+
+  if isWatchUrl then
+    local base, query = url:match("^(.-%?)(.*)$")
+    if not base then return url end
+    local parsed = {}
+    for param in query:gmatch("([^&]+)") do
+      local key = param:match("^[^=]+")
+      local value = param:match("=(.*)$") or ""
+      if key then
+        parsed[#parsed + 1] = { key = key, value = value, param = param }
+      end
     end
-  end
-  local kept = {}
-  for _, item in ipairs(parsed) do
-    -- Strip session-only / player-specific params; keep all list types (PL..., RD..., UL...)
-    if item.key ~= "index" and item.key ~= "pp" and item.key ~= "si" then
-      kept[#kept + 1] = item.param
+    local kept = {}
+    for _, item in ipairs(parsed) do
+      -- Strip session / player-specific params; keep all list= types (PL, RD, UL...)
+      if item.key ~= "index" and item.key ~= "pp" and item.key ~= "si" then
+        kept[#kept + 1] = item.param
+      end
     end
+    return base .. table.concat(kept, "&")
   end
-  return base .. table.concat(kept, "&")
+
+  -- youtu.be: strip si= only
+  return (url:gsub("%?si=[^&]+", ""):gsub("&si=[^&]+", ""))
 end
 
 -- trim, take the first http(s) URL (even inside prose), strip trailing junk and
