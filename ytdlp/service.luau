@@ -466,7 +466,12 @@ function M.parseInfoDecoded(info)
     -- The panel renders one selectable chip per item and downloads run with
     -- `--playlist-items <indices>`. Capped so a huge mix doesn't freeze the UI.
     local playlistItems = {}
+    local playlistId = tostring(info.id or "")
+    -- Mix playlists (RD*) can grow to hundreds; cap them at 50 to avoid UI freeze.
     local itemCap = 200
+    if playlistId:sub(1, 2) == "RD" then
+      itemCap = 50
+    end
     local itemLimit = math.min(#entries, itemCap)
     for i = 1, itemLimit do
       local e = entries[i]
