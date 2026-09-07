@@ -480,6 +480,31 @@ test("download failure flags error", function()
   assertTrue(host.errorNotificationCount() >= 1, "error notification sent when no panel")
 end)
 
+test("sponsorblock concat failure retries once without sponsorblock flags", function()
+  host.resetRuntime()
+  service.resetFlow()
+  service.setSetting("sponsorBlock", true)
+  service.setSetting("sponsorBlockCategories", { "music_offtopic" })
+  cmd("download", { job = defaultJob("https://youtu.be/x", "x") })
+  host.completeAsync(1, { exitCode = 0 })
+  assertTrue(host.streamCount() == 1)
+  local firstHasSB = (host.streamRequest(1) or ""):find("--sponsorblock-remove", 1, true) ~= nil
+  assertTrue(firstHasSB, "first attempt has sponsorblock")
+
+  host.feedStreamLine(1, "ERROR: Postprocessing: Error opening input files: Numerical result out of range")
+  host.feedStreamLine(1, "__YTDLP_EXIT__1")
+  assertTrue(host.streamCount() == 2, "retried with a fresh download")
+  assertEqual(noctalia.state.get("active_job").status, "downloading")
+  local retryCmd = host.streamRequest(2) or ""
+  assertTrue(retryCmd:find("--sponsorblock-remove", 1, true) == nil, "retry omits sponsorblock flags")
+
+  host.completeAsync(2, { exitCode = 0 })
+  host.feedStreamLine(2, "__YTDLP_EXIT__0")
+  assertEqual(noctalia.state.get("active_job").status, "completed")
+
+  service.resetSettings()
+end)
+
 test("cancel marks the job cancelled", function()
   host.resetRuntime()
   service.resetFlow()

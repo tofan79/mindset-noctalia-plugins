@@ -205,6 +205,10 @@ local host = {
     return true
   end,
   streamCount = function() return #streamRequests end,
+  streamRequest = function(index)
+    local request = streamRequests[index]
+    return request ~= nil and request.command or nil
+  end,
   feedStreamLine = function(index, line)
     local request = streamRequests[index]
     if request == nil or request.completed then return false end

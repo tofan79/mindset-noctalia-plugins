@@ -36,6 +36,7 @@ local _extractGeneration = 0
 local _pauseRequested = false
 local _cancelPending = false
 local _forceNoSubs = false
+local _forceNoSponsorBlock = false
 local _extractRetried = false
 local _lastHandledNonce = 0
 local _lastRawInput = ""
@@ -761,7 +762,7 @@ function M.buildDownloadArgs(job, settings, useWebClient)
       args[#args + 1] = token
     end
   end
-  if settings.sponsorBlock == true then
+  if settings.sponsorBlock == true and not _forceNoSponsorBlock then
     local categories = type(settings.sponsorBlockCategories) == "table" and settings.sponsorBlockCategories or {}
     local joined = table.concat(categories, ",")
     if joined ~= "" then
@@ -1066,6 +1067,7 @@ function M.startDownload(job)
   _pauseRequested = false
   _cancelPending = false
   _forceNoSubs = false
+  _forceNoSponsorBlock = false
   state.active = {
     status = "preparing",
     job = job,
@@ -1152,11 +1154,24 @@ function M.handleDownloadFinished(exitCode)
       setActive({ status = "cancelled", error = "" })
     else
       local errorText = M.friendlyError(active.log or "", code)
+      local rawLow = (active.log or ""):lower()
+      -- SponsorBlock segment cutting concatenates a .vtt/.srt with ffmpeg
+      -- `inpoint` and can die with "Numerical result out of range" on some
+      -- videos (known yt-dlp/ffmpeg concat bug). Retry once without the
+      -- sponsorblock flags so the media still lands.
+      local sbActive = _settings.sponsorBlock == true
+      if sbActive and not _forceNoSponsorBlock
+          and containsAny({ "numerical result out of range", "error opening input files", "error opening input file" }, rawLow) then
+        _forceNoSponsorBlock = true
+        setActive({ status = "preparing", error = "", log = "SponsorBlock cutting failed; retrying without SponsorBlock.\n" })
+        publishActive()
+        M.beginDownload()
+        return
+      end
       -- Subtitle/caption fetches hit YouTube rate limits (429/timedtext) and
       -- silently kill the whole download. Retry once without subtitle flags so
       -- the media still lands. Match the RAW log: friendlyError rewrites 429
       -- into 'Network error.', losing the trigger words.
-      local rawLow = (active.log or ""):lower()
       local subsActive = trim(_settings.subLanguage or "") ~= ""
         and trim(_settings.subLanguage or "") ~= "off"
       if subsActive and not _forceNoSubs
