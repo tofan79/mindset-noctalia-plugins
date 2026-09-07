@@ -14,8 +14,6 @@ local pillWidth = 50
 local pillHeight = 20
 local pillVariant = "default"
 local fontSize = 12
-local fontWeight = "normal"
-local textStyle = "normal"
 local gap = 4
 
 local stateFile = (noctalia.pluginDataDir() or "") .. "/state.json"
@@ -168,8 +166,6 @@ local function buildPills()
       key = "pill-" .. tostring(id),
       text = isSpecial and tostring(id) or conv(id),
       fontSize = fontSize,
-      fontWeight = fontWeight,
-      textStyle = textStyle,
       width = pillWidth,
       height = pillHeight,
       variant = variant,

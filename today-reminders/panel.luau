@@ -130,11 +130,16 @@ end
 -- ── shell entry points ────────────────────────────────────────────────────────
 
 function onOpen()
-    -- force fresh read on every open
-    noctalia.state.watch("reminders", function()
-        render()
-    end)
+    -- fresh read on every open; the top-level watch below handles live updates
     render()
 end
+
+-- Live updates: re-render whenever the service broadcasts the reminder list.
+-- Registered at top level (not inside onOpen) so the panel VM follows the state
+-- bus however the shell opens/closes it; the initial nil delivery is a no-op.
+noctalia.state.watch("reminders", function(value)
+    if value == nil then return end
+    render()
+end)
 
 return M

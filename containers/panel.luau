@@ -623,7 +623,7 @@ local function searchRow()
     return ui.row({ align = "center", gap = 6 }, {
         ui.glyph({ name = "search", size = 14, color = "on_surface_variant" }),
         ui.input({
-            key = "container-search-" .. uiState.revision,
+            key = "container-search",
             placeholder = tr("panel.search"),
             value = uiState.query,
             flexGrow = 1,

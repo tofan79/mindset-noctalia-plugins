@@ -119,26 +119,21 @@ end
 
 function M.init()
     M.reminders = load()
+    -- nextId is not persisted; derive it from loaded data so a plugin reload
+    -- can never reuse an id that is already in the file (id collisions hid
+    -- reminders and overwrote entries).
+    M.nextId = 1
+    for id in pairs(M.reminders) do
+        if type(id) == "number" and id >= M.nextId then
+            M.nextId = id + 1
+        end
+    end
     broadcast()
     noctalia.setUpdateInterval(1000)
 end
 
-function update()
-    tick()
-    local now = os.time()
-    local anyCleared = false
-    for id, r in pairs(M.reminders) do
-        if r.done and r.firedAt and (now - r.firedAt) >= 3 then
-            M.reminders[id] = nil
-            anyCleared = true
-        end
-    end
-    if anyCleared then save(); broadcast() end
-end
-
 function onConfigChanged() end
 function onIpc(event, payload)
-    noctalia.log("onIpc: event=" .. tostring(event) .. " payload=" .. tostring(payload))
     if type(payload) == "string" then
         local ok, decoded = pcall(noctalia.json.decode, payload)
         if ok and type(decoded) == "table" then payload = decoded end

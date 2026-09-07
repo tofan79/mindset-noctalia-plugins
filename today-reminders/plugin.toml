@@ -1,6 +1,6 @@
 id = "mindset/today-reminders"
 name = "Today Reminders"
-version = "1.0.1"
+version = "1.0.2"
 plugin_api = 19
 author = "mindset"
 license = "MIT"

@@ -1182,6 +1182,20 @@ local function publishState()
     })
 end
 
+-- api ≤ 23 runAsync/runStream only accept a shell string, so argv arrays are
+-- joined back into one safely-quoted command line (same workaround as ytdlp).
+local function shellQuote(value)
+    return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
+
+local function shellJoin(argv)
+    local out = {}
+    for i, arg in ipairs(argv) do
+        out[i] = shellQuote(arg)
+    end
+    return table.concat(out, " ")
+end
+
 function M.fetchEngineList(engine, done)
     local command
     if engine == "podman" then
@@ -1189,7 +1203,7 @@ function M.fetchEngineList(engine, done)
     else
         command = { "docker", "ps", "-a", "--format", "{{json .}}" }
     end
-    noctalia.runAsync(command, function(result)
+    noctalia.runAsync(shellJoin(command), function(result)
         local ok = result and result.exitCode == 0
         local parsed = ok and parseList(result.stdout, engine) or { ok = false }
         done(ok, ok and parsed.containers or {})
@@ -1227,7 +1241,7 @@ local function fetchEngineResource(engine, sub, parse, done)
     else
         cmd = { bin, "network", "ls", "--format", "{{json .}}" }
     end
-    noctalia.runAsync(cmd, function(result)
+    noctalia.runAsync(shellJoin(cmd), function(result)
         local out = (result and result.stdout) or ""
         local parsed = {}
         if result and result.exitCode == 0 then
@@ -1269,7 +1283,7 @@ end
 local HOST_SCRIPT = "cpu=$(nproc); mem=$(awk '/^MemTotal:/{print $2; exit}' /proc/meminfo); df -B1 / | awk 'NR==2{print $2}' | { read disk; printf '{\"cpuTotal\":%s,\"memTotal\":%s,\"diskTotal\":%s}\\n' $cpu $((mem * 1024)) $disk; }"
 
 local function refreshHost(done)
-    noctalia.runAsync({ "sh", "-c", HOST_SCRIPT }, function(result)
+    noctalia.runAsync(HOST_SCRIPT, function(result)
         if result and result.exitCode == 0 then
             host = M.parseHost(result.stdout)
         end
@@ -1280,7 +1294,7 @@ end
 local function dfUsed(engine, done)
     local bin = (engine == "podman") and "podman" or "docker"
     local fmt = (engine == "podman") and "json" or "{{json .}}"
-    noctalia.runAsync({ bin, "system", "df", "--format", fmt }, function(result)
+    noctalia.runAsync(shellJoin({ bin, "system", "df", "--format", fmt }), function(result)
         local used = 0
         if result and result.exitCode == 0 then
             used = M.parseSystemDf(result.stdout).used
@@ -1315,7 +1329,7 @@ local function refreshStats(done)
     end
     local bin = (engine == "podman") and "podman" or "docker"
     local fmt = (engine == "podman") and "json" or "{{json .}}"
-    noctalia.runAsync({ bin, "stats", "--no-stream", "--format", fmt }, function(result)
+    noctalia.runAsync(shellJoin({ bin, "stats", "--no-stream", "--format", fmt }), function(result)
         if result and result.exitCode == 0 then
             local parsed = M.parseStats(result.stdout)
             statRows = parsed.rows
