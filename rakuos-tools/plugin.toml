@@ -1,6 +1,6 @@
 id = "mindset/rakuos-tools"
 name = "RakuOS Tools"
-version = "0.1.0"
+version = "0.1.1"
 plugin_api = 19
 author = "mindset"
 license = "MIT"
@@ -26,13 +26,18 @@ description_key = "settings.show_badge.description"
 default = true
 
 [[setting]]
-key = "check_interval_min"
-type = "int"
-label_key = "settings.check_interval_min.label"
-description_key = "settings.check_interval_min.description"
-default = 30
-min = 5
-max = 1440
+key = "check_interval"
+type = "select"
+label_key = "settings.check_interval.label"
+description_key = "settings.check_interval.description"
+default = "1d"
+options = [
+  { value = "6h", label_key = "settings.check_interval.opt.6h" },
+  { value = "12h", label_key = "settings.check_interval.opt.12h" },
+  { value = "1d", label_key = "settings.check_interval.opt.1d" },
+  { value = "1w", label_key = "settings.check_interval.opt.1w" },
+  { value = "manual", label_key = "settings.check_interval.opt.manual" },
+]
 
 [[setting]]
 key = "check_packages"

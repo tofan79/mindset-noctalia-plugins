@@ -6,7 +6,7 @@ args, zram and image switch — all headless via `sudo-rs` + a baked NOPASSWD
 sudoers drop-in (no `pkexec` dialogs).
 
 - **id:** `mindset/rakuos-tools`
-- **version:** 0.1.0 · **plugin_api:** 19 (like the other `mindset` plugins)
+- **version:** 0.1.1 · **plugin_api:** 19 (like the other `mindset` plugins)
 - **requires:** Noctalia v5, `rum`, `bootc`, `sudo-rs`, `notify-send`
 
 ## Features
@@ -52,7 +52,8 @@ signature is persisted in `pluginDataDir("notify_signature.txt")`.
 
 - `glyph` — bar glyph when everything is up to date.
 - `show_badge` — show the update count next to the glyph.
-- `check_interval_min` (5–1440, default 30) — service check interval.
+- `check_interval` — automatic check schedule: `6h`, `12h`, `1d` (10:00 AM),
+  `1w` (10:00 AM), or `manual` (only via the panel "Check now" button).
 - `check_packages` — also run `rum check-upgrade` each cycle.
 - `notify_on_updates` — desktop notification on new updates.
 

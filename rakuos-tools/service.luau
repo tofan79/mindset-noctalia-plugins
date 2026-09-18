@@ -214,14 +214,43 @@ end
 
 -- ── host hooks ────────────────────────────────────────────────────────────────
 
+-- `check_interval` select: 6h / 12h / 1d / 1w / manual.
+-- Day and week schedules always land on 10:00 local (drift-free).
+local function next10am(days)
+    local now = os.time()
+    local t = os.date("*t", now)
+    local nextEpoch = os.time({
+        year = t.year,
+        month = t.month,
+        day = t.day,
+        hour = 10,
+        min = 0,
+        sec = 0,
+    })
+    while nextEpoch <= now do
+        nextEpoch = nextEpoch + days * 86400
+    end
+    return (nextEpoch - now) * 1000
+end
+
 local function applyInterval()
-    local mins = tonumber(noctalia.getConfig("check_interval_min") or 30) or 30
-    mins = math.max(5, math.min(mins, 1440))
-    noctalia.setUpdateInterval(mins * 60000)
+    local choice = tostring(noctalia.getConfig("check_interval") or "1d")
+    if choice == "manual" then
+        noctalia.setUpdateInterval(365 * 86400000)
+    elseif choice == "6h" then
+        noctalia.setUpdateInterval(6 * 3600000)
+    elseif choice == "12h" then
+        noctalia.setUpdateInterval(12 * 3600000)
+    elseif choice == "1w" then
+        noctalia.setUpdateInterval(next10am(7))
+    else
+        noctalia.setUpdateInterval(next10am(1))
+    end
 end
 
 function update()
     M.check()
+    applyInterval()
 end
 
 function onIpc(event, _payload)

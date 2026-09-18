@@ -102,8 +102,8 @@ tags = ["bar", "panel", "media", "download", "ytdlp"]
 [[plugin]]
 id = "mindset/rakuos-tools"
 name = "RakuOS Tools"
-version = "0.1.0"
-updated_at = 1789720337
+version = "0.1.1"
+updated_at = 1789730168
 added_at = 1789720337
 author = "mindset"
 license = "MIT"
