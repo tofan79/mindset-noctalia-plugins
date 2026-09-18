@@ -2,7 +2,7 @@
 --
 -- YT-DLP service: owns every yt-dlp subprocess and all plugin state. The panel and the
 -- widget are thin readers of `noctalia.state`; every mutation arrives here as a
--- `command` state write (same split as gamer-mode).
+-- `command` state write (same split as the other service plugins).
 --
 -- Downloads stream live progress through `noctalia.runStream`. A small `sh` wrapper
 -- writes its own pid to the data dir so the panel can pause/cancel by signalling it,

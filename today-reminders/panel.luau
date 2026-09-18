@@ -1,7 +1,7 @@
 --!nonstrict
 --
--- Today Reminders panel — minutes-from-now input.
--- Uses closures for onClick (api ≥ 9).
+-- Today Reminders panel — minutes-from-now input only.
+-- Label-above-field form (no history/list). Uses closures for onClick (api ≥ 9).
 --
 
 local M = {}
@@ -29,13 +29,6 @@ function addReminder()
     panel.close()
 end
 
-function dismissReminder(_)
-    local rid = pendingDismissId
-    pendingDismissId = nil
-    if not rid then return end
-    noctalia.state.set("reminders_cmd", { action = "dismiss", id = rid })
-end
-
 function onAddMinutesChanged(v)
     addMinutesVal = v or ""
 end
@@ -44,102 +37,48 @@ function onAddTextChanged(v)
     addTextVal = v or ""
 end
 
--- ── UI helpers ────────────────────────────────────────────────────────────────
+-- ── Form field helper: label above the input ──────────────────────────────────
 
-local function reminderRow(r)
-    local minsLeft = math.max(0, math.floor((r.fireAt - os.time()) / 60))
-    local label = r.done and "✓ done" or (minsLeft > 0 and ("in " .. minsLeft .. " min") or "now")
-    local text = r.text and r.text ~= "" and r.text or "(no text)"
-    local rid = tostring(r.id)
-    local dismissFn = function()
-        pendingDismissId = r.id
-        dismissReminder(nil)
-    end
-    local rowChildren = {
-        ui.label({ text = label, fontSize = 12, color = r.done and "secondary" or "on_surface_variant" }),
-        ui.label({ text = text, flexGrow = 1, color = r.done and "secondary" or "on_surface_variant", opacity = r.done and 0.5 or 1 }),
-    }
-    if not r.done then
-        table.insert(rowChildren, ui.button({
-            glyph = "x", variant = "ghost", controlSize = "sm",
-            tooltip = tr("panel.remove"),
-            onClick = dismissFn,
-        }))
-    end
-    return ui.row({ gap = 6, align = "center", key = "row-" .. rid }, rowChildren)
-end
-
-local function emptyState()
-    return ui.column({ align = "center", gap = 8, padding = 24 }, {
-        ui.glyph({ name = "bell-off", size = 32, color = "on_surface_variant" }),
-        ui.label({ text = tr("panel.empty"), color = "on_surface_variant" }),
+local function field(label, input)
+    return ui.column({ gap = 4 }, {
+        ui.label({
+            text = label, color = "on_surface",
+            fontSize = 11, fontWeight = "bold",
+        }),
+        input,
     })
 end
 
 -- ── Render ────────────────────────────────────────────────────────────────────
 
 function render()
-    -- Always read fresh from state — never trust a cached variable
-    local s = noctalia.state.get("reminders") or { reminders = {}, count = 0 }
-    local listChildren = {}
-    local reminders = s.reminders or {}
-    for _, r in pairs(reminders) do
-        listChildren[#listChildren + 1] = reminderRow(r)
-    end
-    if #listChildren == 0 then
-        listChildren[#listChildren + 1] = emptyState()
-    end
-
-    panel.render(ui.column({ flexGrow = 1, gap = 8, padding = 12 }, {
-        ui.column({ gap = 6 }, {
-            ui.label({
-                text = tr("panel.add_header"), color = "on_surface",
-                fontSize = 11, fontWeight = "bold",
-            }),
-            ui.row({ gap = 6 }, {
-                ui.input({
-                    key = "add-minutes",
-                    placeholder = tr("panel.minutes_placeholder"),
-                    value = addMinutesVal,
-                    flexGrow = 0,
-                    onChange = "onAddMinutesChanged",
-                }),
-                ui.input({
-                    key = "add-text",
-                    placeholder = tr("panel.text_placeholder"),
-                    value = addTextVal,
-                    flexGrow = 1,
-                    onChange = "onAddTextChanged",
-                }),
-                ui.button({
-                    glyph = "plus", variant = "primary",
-                    tooltip = tr("panel.add"),
-                    onClick = "addReminder",
-                }),
-            }),
+    panel.render(ui.column({ flexGrow = 1, gap = 12, padding = 12 }, {
+        field(tr("panel.time_label"), ui.input({
+            key = "add-minutes",
+            placeholder = tr("panel.minutes_placeholder"),
+            value = addMinutesVal,
+            onChange = "onAddMinutesChanged",
+        })),
+        field(tr("panel.message_label"), ui.input({
+            key = "add-text",
+            placeholder = tr("panel.text_placeholder"),
+            value = addTextVal,
+            onChange = "onAddTextChanged",
+        })),
+        ui.button({
+            glyph = "plus",
+            text = tr("panel.add"),
+            variant = "primary",
+            align = "center",
+            onClick = "addReminder",
         }),
-        ui.separator(),
-        ui.label({
-            text = tr("panel.list_header"), color = "on_surface",
-            fontSize = 11, fontWeight = "bold",
-        }),
-        ui.scroll({ flexGrow = 1, gap = 4 }, listChildren),
     }))
 end
 
 -- ── shell entry points ────────────────────────────────────────────────────────
 
 function onOpen()
-    -- fresh read on every open; the top-level watch below handles live updates
     render()
 end
-
--- Live updates: re-render whenever the service broadcasts the reminder list.
--- Registered at top level (not inside onOpen) so the panel VM follows the state
--- bus however the shell opens/closes it; the initial nil delivery is a no-op.
-noctalia.state.watch("reminders", function(value)
-    if value == nil then return end
-    render()
-end)
 
 return M

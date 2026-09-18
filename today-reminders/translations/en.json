@@ -4,10 +4,9 @@
   "widget.count_plural": "{{count}} reminders",
   "widget.none": "No reminders",
   "panel.add_header": "Add reminder",
-  "panel.list_header": "Reminders",
-  "panel.empty": "No reminders set",
   "panel.add": "Add",
-  "panel.remove": "Remove",
-  "panel.minutes_placeholder": "Minutes",
-  "panel.text_placeholder": "Reminder text"
+  "panel.time_label": "Time (minutes)",
+  "panel.message_label": "Reminder message",
+  "panel.minutes_placeholder": "e.g. 5, 30, 120",
+  "panel.text_placeholder": "What should the reminder say?"
 }

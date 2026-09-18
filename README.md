@@ -1,7 +1,7 @@
 # Mindset Noctalia Plugins
 
 Personal **[Noctalia](https://github.com/noctalia-dev/noctalia) v5** plugin source for
-Hyprland sessions. Seven plugins covering display, layout, animation, gaming, reminders,
+Hyprland sessions. Six plugins covering display, layout, animation, reminders,
 and container management.
 
 <p align="center">
@@ -21,7 +21,6 @@ and container management.
 | `mindset/hypr-layouts` | 13 | Per-workspace tiling layout picker; auto-detects custom `lua:` layouts from `~/.config/hypr/layouts` on top of the four built-ins. |
 | `mindset/hypr-animations` | 13 | Animation preset picker from `~/.config/hypr/config/animations_presets`. |
 | `mindset/better-displays` | 19 | Per-monitor resolution, scale, position, transform, VRR and per-terminal font sizes. |
-| `mindset/gamer-mode` | 19 | Live CPU/RAM/GPU metrics and one-click gamer mode. |
 | `mindset/today-reminders` | 19 | Set a reminder for later today. Gets dismissed after it fires and never carries into tomorrow. |
 | `mindset/better-workspaces` | 19 | Aesthetic workspace indicator with 12 display modes: Roman, Kanji, Arabic, Korean, Thai, Greek, Emoji, Russian, App Icon, and more. |
 | `mindset/containers` | 19 | Docker and Podman status in the bar: containers, images, volumes, networks, and live stats, with start/stop/restart and removal controls. |
@@ -35,7 +34,6 @@ mindset-noctalia-plugins/
 ├── README.md              # this file
 ├── better-displays/       # monitor & terminal font config
 ├── containers/            # Docker & Podman manager
-├── gamer-mode/            # live metrics + gamer toggle
 ├── hypr-animations/      # animation preset picker
 ├── hypr-layouts/          # tiling layout picker
 ├── today-reminders/       # quick reminder from the bar
@@ -54,7 +52,6 @@ noctalia msg plugins source add mindset git https://github.com/tofan79/mindset-n
 noctalia msg plugins enable mindset/hypr-layouts
 noctalia msg plugins enable mindset/hypr-animations
 noctalia msg plugins enable mindset/better-displays
-noctalia msg plugins enable mindset/gamer-mode
 noctalia msg plugins enable mindset/today-reminders
 noctalia msg plugins enable mindset/containers
 noctalia msg plugins enable mindset/ytdlp

@@ -44,24 +44,10 @@ plugin_api = 13
 tags = ["hyprland", "display", "monitor", "resolution"]
 
 [[plugin]]
-id = "mindset/gamer-mode"
-name = "Gamer Mode"
-version = "0.9.0"
-updated_at = 1786340000
-added_at = 1786340000
-author = "mindset"
-license = "MIT"
-icon = "device-gamepad-2"
-description = "Live CPU/RAM/GPU metrics and a one-click gamer mode that suspends background resource hogs and strips Hyprland decorations for maximum FPS."
-deprecated = false
-plugin_api = 19
-tags = ["bar", "panel", "service", "gaming", "system", "hardware"]
-
-[[plugin]]
 id = "mindset/today-reminders"
 name = "Today Reminders"
-version = "1.0.2"
-updated_at = 1788751896
+version = "1.0.3"
+updated_at = 1789718703
 added_at = 1788493822
 author = "mindset"
 license = "MIT"
