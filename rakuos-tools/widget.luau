@@ -28,7 +28,7 @@ end
 local function render()
     local checking = state.checking == true
     local count = countAvailable()
-    local glyph = noctalia.getConfig("glyph") or "system-software-update"
+    local glyph = noctalia.getConfig("glyph") or "package"
     if checking then glyph = "loader" end
     barWidget.setGlyph(glyph)
 

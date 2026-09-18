@@ -40,7 +40,7 @@ end
 
 local function render()
     shortcut.setLabel(labelFor())
-    shortcut.setIcon(state.checking and "loader" or (noctalia.getConfig("glyph") or "system-software-update"))
+    shortcut.setIcon(state.checking and "loader" or (noctalia.getConfig("glyph") or "package"))
     shortcut.setActive(
         state.checking == true
         or countAvailable() > 0

@@ -6,7 +6,7 @@ author = "mindset"
 license = "MIT"
 dependencies = ["rum", "bootc", "sudo-rs", "notify-send"]
 tags = ["system", "updates", "rakuos", "maintenance"]
-icon = "system-software-update"
+icon = "package"
 description = "Check/update image and overlay packages, rollback, reset overlay, manage zram/kernel-args/repos — the RakuOS update center without software center."
 
 # ── Plugin-level settings (seeded to every entry) ─────────────────────────────
@@ -16,7 +16,7 @@ key = "glyph"
 type = "glyph"
 label_key = "settings.glyph.label"
 description_key = "settings.glyph.description"
-default = "system-software-update"
+default = "package"
 
 [[setting]]
 key = "show_badge"
