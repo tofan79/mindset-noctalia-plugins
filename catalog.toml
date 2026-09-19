@@ -98,17 +98,3 @@ description = "Download media from any URL with yt-dlp right from the bar: searc
 deprecated = false
 plugin_api = 19
 tags = ["bar", "panel", "media", "download", "ytdlp"]
-
-[[plugin]]
-id = "mindset/rakuos-tools"
-name = "RakuOS Tools"
-version = "0.1.1"
-updated_at = 1789730168
-added_at = 1789720337
-author = "mindset"
-license = "MIT"
-icon = "package"
-description = "Check/update image (bootc) and overlay packages (rum), Flatpak, rollback, overlay reset, kernel args, zram and image switch - RakuOS update center without the software center."
-deprecated = false
-plugin_api = 19
-tags = ["system", "updates", "rakuos", "maintenance"]
