@@ -137,26 +137,28 @@ local function applyFilter()
 end
 
 local function selectPreset(preset)
-  -- Read only the chosen file, and do it asynchronously. Reading every preset
-  -- in onOpen exceeded Noctalia's CPU callback budget and left the panel black.
-  noctalia.runAsync("cat " .. shellQuote(DIR .. "/" .. preset.file), function(read)
-    if read.exitCode ~= 0 then
+  -- Read only the chosen file here. Reading every preset in onOpen exceeded
+  -- Noctalia's CPU callback budget and left the panel black. Do not shell out
+  -- to `cat`: a quoted `~/...` path is not expanded by the shell, so the read
+  -- failed and Hyprland never received the preset.
+  local text = noctalia.readFile(DIR .. "/" .. preset.file)
+  if text == nil then
+    noctalia.log("cannot apply animation preset: missing " .. DIR .. "/" .. preset.file)
+    noctalia.notifyError(noctalia.tr("title"), noctalia.tr("error.apply_failed"))
+    panel.close()
+    return
+  end
+  local code = HYDE_SHIM .. stripCode(text)
+  noctalia.runAsync("hyprctl eval " .. shellQuote(code), function(result)
+    if result.exitCode == 0 then
+      activeFile = preset.file
+      saveActive(preset.file)
+      persistActive(preset.file)
+      noctalia.notify(noctalia.tr("title"), noctalia.tr("notification.switched", { name = preset.name }))
+    else
       noctalia.notifyError(noctalia.tr("title"), noctalia.tr("error.apply_failed"))
-      panel.close()
-      return
     end
-    local code = HYDE_SHIM .. stripCode(read.stdout)
-    noctalia.runAsync("hyprctl eval " .. shellQuote(code), function(result)
-      if result.exitCode == 0 then
-        activeFile = preset.file
-        saveActive(preset.file)
-        persistActive(preset.file)
-        noctalia.notify(noctalia.tr("title"), noctalia.tr("notification.switched", { name = preset.name }))
-      else
-        noctalia.notifyError(noctalia.tr("title"), noctalia.tr("error.apply_failed"))
-      end
-      panel.close()
-    end)
+    panel.close()
   end)
 end
 
