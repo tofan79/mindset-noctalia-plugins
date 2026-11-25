@@ -23,11 +23,13 @@ local glyphs = {
 local current = ""
 
 local function render()
-  barWidget.setGlyph(glyphs[current] or "layout-grid")
-  barWidget.setText(display[current] or "")
-  barWidget.setTooltip(noctalia.tr("tooltip.description", {
-    name = display[current] or current or noctalia.tr("tooltip.unknown"),
-  }))
+  -- Hyprland reports custom layouts as "lua:deck"; the display tables are
+  -- keyed by the bare registered name.
+  local key = current:gsub("^lua:", "")
+  barWidget.setGlyph(glyphs[key] or "layout-grid")
+  local name = display[key] or (key ~= "" and key or nil) or noctalia.tr("tooltip.unknown")
+  barWidget.setText(display[key] or "")
+  barWidget.setTooltip(noctalia.tr("tooltip.description", { name = name }))
 end
 
 noctalia.state.watch("hypr_layouts_state", function(value)

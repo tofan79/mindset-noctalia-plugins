@@ -4,13 +4,13 @@
 [[plugin]]
 id = "mindset/hypr-layouts"
 name = "Hypr Layouts"
-version = "1.0.0"
-updated_at = 1786340000
+version = "1.1.1"
+updated_at = 1795627561
 added_at = 1786340000
 author = "mindset"
 license = "MIT"
 icon = "layout-grid"
-description = "Pick the tiling layout of the active workspace from a centered panel. Replaces the rofi layout picker."
+description = "Pick and persist the Hyprland tiling layout from a centered panel. Replaces the rofi layout picker."
 deprecated = false
 plugin_api = 13
 tags = ["hyprland", "bar", "panel", "service", "indicator"]
@@ -18,13 +18,13 @@ tags = ["hyprland", "bar", "panel", "service", "indicator"]
 [[plugin]]
 id = "mindset/hypr-animations"
 name = "Hypr Animations"
-version = "1.0.0"
-updated_at = 1786340000
+version = "1.1.0"
+updated_at = 1795627561
 added_at = 1786340000
 author = "mindset"
 license = "MIT"
 icon = "palette"
-description = "Pick an animation preset from ~/.config/hypr/config/animations_presets. Replaces the rofi animation picker."
+description = "Pick and persist an animation preset from ~/.config/hypr/config/animations_presets. Replaces the rofi animation picker."
 deprecated = false
 plugin_api = 13
 tags = ["hyprland", "bar", "panel", "utility"]

@@ -1,16 +1,20 @@
 --!nonstrict
 -- Animation preset picker, replacing the rofi animation picker.
--- Lists ~/.config/hypr/animations/*.lua and applies the chosen file with
--- `hyprctl eval` after stripping `--` comments, exactly like
--- ~/.config/hypr/scripts/switch-animations.sh.
+-- Lists ~/.config/hypr/config/animations_presets/*.lua, applies the chosen file
+-- with `hyprctl eval`, and updates ANIMATION_PRESET in animations.lua so the
+-- choice survives a Hyprland config reload or reboot.
 --
 -- Keyboard: type to filter, Up/Down to move, Enter to apply (capture_keys).
 
 local PLUGIN_ID = "mindset/hypr-animations"
 local DEFAULT_DIR = "~/.config/hypr/config/animations_presets"
+local DEFAULT_CONFIG = "~/.config/hypr/config/animations.lua"
 local DIR = DEFAULT_DIR
 local GLYPH = "palette"
 local NAME_PATTERN = 'name%s+"([^"]*)"'
+-- Hyde-derived presets call hyde.config.anim.duration_scale. Hyprland's Lua
+-- context has no `hyde`, so provide a neutral scale of 1 before the preset.
+local HYDE_SHIM = 'hyde = hyde or { config = { anim = { duration_scale = 1 } } }\n'
 
 local presets = {}
 local filtered = {}
@@ -50,6 +54,56 @@ local function saveActive(file)
   end
 end
 
+local function presetStem(file)
+  return tostring(file or ""):match("^([%w_%-]+)%.lua$")
+end
+
+local function configPath()
+  return noctalia.getConfig("config_file") or DEFAULT_CONFIG
+end
+
+local function readConfigPreset()
+  local text = noctalia.readFile(configPath())
+  if text == nil then
+    return nil
+  end
+  return text:match('ANIMATION_PRESET%s*=%s*"([%w_%-]+)"')
+end
+
+-- Persist the picked preset in animations.lua, the same way Better Displays
+-- persists monitor settings into monitors.lua. A runtime eval alone is lost on
+-- `hyprctl reload`, which made the panel appear to forget the selection.
+local function persistActive(file)
+  local stem = presetStem(file)
+  if stem == nil then
+    noctalia.log("cannot persist animation preset: invalid file name " .. tostring(file))
+    return
+  end
+  local path = configPath()
+  local text = noctalia.readFile(path)
+  if text == nil then
+    noctalia.log("cannot persist animation preset: missing " .. path)
+    return
+  end
+  local updated, count = text:gsub('ANIMATION_PRESET%s*=%s*"[^"]*"', 'ANIMATION_PRESET = "' .. stem .. '"', 1)
+  if count == 0 then
+    updated, count = updated:gsub('(require%s*%(%s*"config%.animations_presets%.)([^"]*)(")%s*%)', function(prefix, _old, quote)
+      return prefix .. stem .. quote .. ")"
+    end, 1)
+  end
+  if count == 0 then
+    noctalia.log("cannot persist animation preset: no ANIMATION_PRESET line in " .. path)
+    return
+  end
+  if updated == text then
+    return
+  end
+  local ok, err = noctalia.writeFile(path, updated)
+  if not ok then
+    noctalia.log("could not persist active preset: " .. tostring(err))
+  end
+end
+
 local function extractName(text, fallback)
   local name = string.match(text or "", NAME_PATTERN)
   if name == nil or name == "" then
@@ -74,7 +128,7 @@ local function stripCode(text)
     body = noctalia.string.trim(body)
     table.insert(parts, body)
   end
-  return table.concat(parts, "")
+  return table.concat(parts, "\n")
 end
 
 local function shellQuote(value)
@@ -98,10 +152,12 @@ local function applyFilter()
 end
 
 local function selectPreset(preset)
-  noctalia.runAsync("hyprctl eval " .. shellQuote(preset.code), function(result)
+  local code = HYDE_SHIM .. preset.code
+  noctalia.runAsync("hyprctl eval " .. shellQuote(code), function(result)
     if result.exitCode == 0 then
       activeFile = preset.file
       saveActive(preset.file)
+      persistActive(preset.file)
       noctalia.notify(noctalia.tr("title"), noctalia.tr("notification.switched", { name = preset.name }))
     else
       noctalia.notifyError(noctalia.tr("title"), noctalia.tr("error.apply_failed"))
@@ -178,6 +234,12 @@ function onOpen(_context)
   searchRevision += 1
   DIR = noctalia.getConfig("presets_dir") or DEFAULT_DIR
   loadActive()
+  -- The config file is authoritative: it is what survives a reload. The cache
+  -- is only a fallback when animations.lua cannot be read.
+  local configured = readConfigPreset()
+  if configured ~= nil and configured ~= "" then
+    activeFile = configured .. ".lua"
+  end
   local entries, err = noctalia.listDir(DIR)
   if entries == nil then
     status = noctalia.tr("error.read_dir", { dir = DIR }) .. (err ~= nil and " · " .. err or "")

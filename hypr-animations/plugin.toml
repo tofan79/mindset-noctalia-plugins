@@ -1,6 +1,6 @@
 id = "mindset/hypr-animations"
 name = "Hypr Animations"
-version = "1.0.0"
+version = "1.1.0"
 plugin_api = 13
 author = "mindset"
 license = "MIT"
@@ -15,6 +15,13 @@ type = "string"
 label_key = "settings.presets_dir.label"
 description_key = "settings.presets_dir.description"
 default = "~/.config/hypr/config/animations_presets"
+
+[[setting]]
+key = "config_file"
+type = "string"
+label_key = "settings.config_file.label"
+description_key = "settings.config_file.description"
+default = "~/.config/hypr/config/animations.lua"
 
 [[widget]]
 id = "toggle"

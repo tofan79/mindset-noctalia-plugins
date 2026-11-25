@@ -1,11 +1,11 @@
 id = "mindset/hypr-layouts"
 name = "Hypr Layouts"
-version = "1.0.0"
+version = "1.1.1"
 plugin_api = 13
 author = "mindset"
 license = "MIT"
 icon = "layout-grid"
-description = "Pick the tiling layout of the active workspace from a centered panel. Replaces the rofi layout picker."
+description = "Pick and persist the Hyprland tiling layout from a centered panel. Replaces the rofi layout picker."
 tags = ["hyprland", "bar", "panel", "service", "indicator"]
 dependencies = ["hyprland"]
 
@@ -15,6 +15,13 @@ type = "string"
 label_key = "settings.layouts_dir.label"
 description_key = "settings.layouts_dir.description"
 default = "~/.config/hypr/layouts"
+
+[[setting]]
+key = "config_file"
+type = "string"
+label_key = "settings.config_file.label"
+description_key = "settings.config_file.description"
+default = "~/.config/hypr/config/misc.lua"
 
 [[service]]
 id = "poller"

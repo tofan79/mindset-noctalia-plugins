@@ -19,6 +19,10 @@
     "layouts_dir": {
       "label": "Layouts directory",
       "description": "Folder scanned for *.lua layouts. Each file that calls hl.layout.register becomes a selectable layout, on top of the four built-ins."
+    },
+    "config_file": {
+      "label": "Hyprland config",
+      "description": "misc.lua whose general.layout value is updated when you pick a layout."
     }
   }
 }

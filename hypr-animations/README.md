@@ -41,23 +41,27 @@ noctalia msg panel-toggle mindset/hypr-animations:panel
 ```
 
 Applying a preset calls `hyprctl eval` with the file's code after stripping `--`
-comment lines, so the animations take effect immediately and are not persisted
-into your static config.
+comment lines. Lines are joined with real newlines (so keywords such as `then`
+and `end` stay separate), and a small `hyde` shim is prepended for presets
+ported from Hyde. The chosen file name is then written to `ANIMATION_PRESET` in
+`animations.lua`, so the animation survives `hyprctl reload` and reboots.
 
 ## Settings
 
 | Setting | Default | Description |
 | --- | --- | --- |
 | `presets_dir` | `~/.config/hypr/config/animations_presets` | Directory scanned for `*.lua` animation presets. |
+| `config_file` | `~/.config/hypr/config/animations.lua` | File whose `ANIMATION_PRESET` value is updated after a successful apply. |
 
 ## Notes
 
-- The active preset file name is cached in `current.txt` in Noctalia's plugin
-  data directory so the panel can highlight it across restarts.
+- `animations.lua` is authoritative on open; `current.txt` in the plugin data
+  directory is only a fallback when that file cannot be read.
 - A preset file whose `name = "..."` is missing, repeated, or empty simply
   falls back to its file name; there is no validation beyond that.
-- Nothing edits your `hyprland.conf`. The plugin only evaluates the chosen
-  animation code at runtime.
+- The plugin edits only the `ANIMATION_PRESET = "..."` line (or the matching
+  `require("config.animations_presets....")` call) in `config_file`. It never
+  touches `hyprland.conf`.
 - No network requests are made.
 
 ## License

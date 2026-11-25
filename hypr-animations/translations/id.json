@@ -17,6 +17,10 @@
     "presets_dir": {
       "label": "Direktori preset",
       "description": "Folder berisi preset animasi *.lua."
+    },
+    "config_file": {
+      "label": "File config animasi",
+      "description": "animations.lua yang baris ANIMATION_PRESET-nya diperbarui saat preset dipilih."
     }
   }
 }

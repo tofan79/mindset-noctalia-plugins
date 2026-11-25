@@ -17,6 +17,10 @@
     "presets_dir": {
       "label": "Presets directory",
       "description": "Folder containing *.lua animation presets."
+    },
+    "config_file": {
+      "label": "Animations config",
+      "description": "animations.lua whose ANIMATION_PRESET line is updated when you pick a preset."
     }
   }
 }
