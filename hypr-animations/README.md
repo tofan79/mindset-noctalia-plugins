@@ -55,8 +55,10 @@ ported from Hyde. The chosen file name is then written to `ANIMATION_PRESET` in
 
 ## Notes
 
-- `animations.lua` is authoritative on open; `current.txt` in the plugin data
-  directory is only a fallback when that file cannot be read.
+- The panel highlights `current.txt` in the plugin data directory, which is
+  written together with `animations.lua` on every successful apply. Reading
+  `animations.lua` during `onOpen` exceeded Noctalia's CPU callback budget, so
+  the panel does not re-read it on open.
 - A preset file whose `name = "..."` is missing, repeated, or empty simply
   falls back to its file name; there is no validation beyond that.
 - The plugin edits only the `ANIMATION_PRESET = "..."` line (or the matching

@@ -62,14 +62,6 @@ local function configPath()
   return noctalia.getConfig("config_file") or DEFAULT_CONFIG
 end
 
-local function readConfigPreset()
-  local text = noctalia.readFile(configPath())
-  if text == nil then
-    return nil
-  end
-  return text:match('ANIMATION_PRESET%s*=%s*"([%w_%-]+)"')
-end
-
 -- Persist the picked preset in animations.lua, the same way Better Displays
 -- persists monitor settings into monitors.lua. A runtime eval alone is lost on
 -- `hyprctl reload`, which made the panel appear to forget the selection.
@@ -233,13 +225,10 @@ function onOpen(_context)
   searchText = ""
   searchRevision += 1
   DIR = noctalia.getConfig("presets_dir") or DEFAULT_DIR
+  -- Keep this callback light: reading animations.lua here pushed the panel
+  -- over Noctalia's CPU budget. current.txt is written on every apply, so it
+  -- already tracks the persisted choice.
   loadActive()
-  -- The config file is authoritative: it is what survives a reload. The cache
-  -- is only a fallback when animations.lua cannot be read.
-  local configured = readConfigPreset()
-  if configured ~= nil and configured ~= "" then
-    activeFile = configured .. ".lua"
-  end
   local entries, err = noctalia.listDir(DIR)
   if entries == nil then
     status = noctalia.tr("error.read_dir", { dir = DIR }) .. (err ~= nil and " · " .. err or "")

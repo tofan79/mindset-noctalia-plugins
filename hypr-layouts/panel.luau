@@ -178,15 +178,6 @@ local function applyFilter()
   end
 end
 
-local function finishOpen()
-  local idx = activeLayoutIndex()
-  selectedIndex = (idx ~= nil) and (idx - 1) or 0
-  applyFilter()
-  if isOpen then
-    render()
-  end
-end
-
 local function renderRow(layout, index)
   local isSelected = (index - 1) == selectedIndex
   local isActive = activeLayoutIndex() == index
@@ -239,6 +230,17 @@ local function render()
     }),
     ui.scroll({ flexGrow = 1, gap = 4 }, rows),
   }))
+end
+
+-- Defined after render(): Luau locals are only visible to closures declared
+-- after them, so calling render() from an earlier local caused a nil call.
+local function finishOpen()
+  local idx = activeLayoutIndex()
+  selectedIndex = (idx ~= nil) and (idx - 1) or 0
+  applyFilter()
+  if isOpen then
+    render()
+  end
 end
 
 function onOpen(_context)
