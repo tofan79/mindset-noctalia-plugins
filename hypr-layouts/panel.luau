@@ -248,6 +248,10 @@ function onOpen(_context)
   searchText = ""
   searchRevision += 1
   loadLayouts()
+  -- Draw immediately; the async hyprctl result only refines the highlight.
+  -- Waiting for the callback left an empty black panel if hyprctl was slow.
+  applyFilter()
+  render()
   noctalia.runAsync("hyprctl getoption general:layout -j", function(result)
     if result.exitCode == 0 then
       local data = noctalia.json.decode(result.stdout)

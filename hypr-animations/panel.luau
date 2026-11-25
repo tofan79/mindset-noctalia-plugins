@@ -11,7 +11,6 @@ local DEFAULT_DIR = "~/.config/hypr/config/animations_presets"
 local DEFAULT_CONFIG = "~/.config/hypr/config/animations.lua"
 local DIR = DEFAULT_DIR
 local GLYPH = "palette"
-local NAME_PATTERN = 'name%s+"([^"]*)"'
 -- Hyde-derived presets call hyde.config.anim.duration_scale. Hyprland's Lua
 -- context has no `hyde`, so provide a neutral scale of 1 before the preset.
 local HYDE_SHIM = 'hyde = hyde or { config = { anim = { duration_scale = 1 } } }\n'
@@ -96,17 +95,11 @@ local function persistActive(file)
   end
 end
 
-local function extractName(text, fallback)
-  local name = string.match(text or "", NAME_PATTERN)
-  if name == nil or name == "" then
-    name = fallback
-    if name ~= nil then
-      name = noctalia.string.trim(name)
-      name = name:gsub("[_%s]+", " ")
-      name = name:gsub("^(%l)", string.upper)
-    end
-  end
-  return name
+local function prettyName(file)
+  local s = tostring(file or ""):gsub("%.lua$", ""):gsub("[_%-]+", " ")
+  return s:gsub("(%a)([%w]*)", function(a, rest)
+    return string.upper(a) .. string.lower(rest)
+  end)
 end
 
 local function stripCode(text)
@@ -144,17 +137,26 @@ local function applyFilter()
 end
 
 local function selectPreset(preset)
-  local code = HYDE_SHIM .. preset.code
-  noctalia.runAsync("hyprctl eval " .. shellQuote(code), function(result)
-    if result.exitCode == 0 then
-      activeFile = preset.file
-      saveActive(preset.file)
-      persistActive(preset.file)
-      noctalia.notify(noctalia.tr("title"), noctalia.tr("notification.switched", { name = preset.name }))
-    else
+  -- Read only the chosen file, and do it asynchronously. Reading every preset
+  -- in onOpen exceeded Noctalia's CPU callback budget and left the panel black.
+  noctalia.runAsync("cat " .. shellQuote(DIR .. "/" .. preset.file), function(read)
+    if read.exitCode ~= 0 then
       noctalia.notifyError(noctalia.tr("title"), noctalia.tr("error.apply_failed"))
+      panel.close()
+      return
     end
-    panel.close()
+    local code = HYDE_SHIM .. stripCode(read.stdout)
+    noctalia.runAsync("hyprctl eval " .. shellQuote(code), function(result)
+      if result.exitCode == 0 then
+        activeFile = preset.file
+        saveActive(preset.file)
+        persistActive(preset.file)
+        noctalia.notify(noctalia.tr("title"), noctalia.tr("notification.switched", { name = preset.name }))
+      else
+        noctalia.notifyError(noctalia.tr("title"), noctalia.tr("error.apply_failed"))
+      end
+      panel.close()
+    end)
   end)
 end
 
@@ -225,9 +227,6 @@ function onOpen(_context)
   searchText = ""
   searchRevision += 1
   DIR = noctalia.getConfig("presets_dir") or DEFAULT_DIR
-  -- Keep this callback light: reading animations.lua here pushed the panel
-  -- over Noctalia's CPU budget. current.txt is written on every apply, so it
-  -- already tracks the persisted choice.
   loadActive()
   local entries, err = noctalia.listDir(DIR)
   if entries == nil then
@@ -236,14 +235,14 @@ function onOpen(_context)
     return
   end
   table.sort(entries)
+  -- Only build the list here. Reading and stripping all 32 preset files in
+  -- onOpen exceeded Noctalia's CPU callback budget and produced a black panel.
+  -- The chosen file is read asynchronously in selectPreset instead.
   for _, name in ipairs(entries) do
     if string.sub(name, -4) == ".lua" then
-      local text = noctalia.readFile(DIR .. "/" .. name)
-      local fallback = string.sub(name, 1, #name - 4)
       table.insert(presets, {
-        name = extractName(text, fallback),
+        name = prettyName(name),
         file = name,
-        code = stripCode(text),
       })
     end
   end
